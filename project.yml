@@ -63,9 +63,6 @@ targets:
           PRODUCT_NAME: "CaptionsAI"
     entitlements:
       path: CaptionsAI/CaptionsAI.entitlements
-      properties:
-        com.apple.developer.in-app-payments:
-          - merchant.com.lalitkhatri.CaptionsAI
 
   CaptionsAITests:
     type: bundle.unit-test
