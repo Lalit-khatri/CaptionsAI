@@ -1,0 +1,19 @@
+{
+  "colors" : {
+    "AccentColor" : {
+      "color" : {
+        "color-space" : "srgb",
+        "components" : {
+          "red" : "0.486",
+          "green" : "0.227",
+          "blue" : "0.929",
+          "alpha" : "1.000"
+        }
+      }
+    }
+  },
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
