@@ -65,4 +65,4 @@ CaptionsAI/
 
 ## 📄 License
 
-MIT License — see [LICENSE](LICENSE) for details.
+Copyright © 2026 Lalit Khatri. All Rights Reserved. See [LICENSE](LICENSE) for details.
