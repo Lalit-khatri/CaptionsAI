@@ -68,7 +68,7 @@ final class StoreKitManager {
     // MARK: - Purchase
     
     @MainActor
-    func purchase(_ product: Product) async throws -> Transaction? {
+    func purchase(_ product: Product) async throws -> StoreKit.Transaction? {
         let result = try await product.purchase()
         
         switch result {

@@ -1,0 +1,617 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0BA86D227F7D581A59437B19 /* ExportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D872D8F2BDD38338FA14C0 /* ExportEngine.swift */; };
+		0BC4AFDD8E0924202BEA0405 /* CaptionsAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE2E393DF96A0754B8B08C4 /* CaptionsAIApp.swift */; };
+		1E8EE4924E4E86D25E17329D /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8858CF02420B48AA4BFF8525 /* StoreKitManager.swift */; };
+		22399F1670973AA041FFA8BF /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44995F8F24B14003537F677E /* OnboardingView.swift */; };
+		2CC1B14CDBB4F7F6E143D145 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80481E07F6399994E9CFE03B /* ContentView.swift */; };
+		32801A118CEDD35278550F59 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16C639767CD744B6E6A8C175 /* AppState.swift */; };
+		3362F39FF3F33A04A8BCB6B1 /* SpeechRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CF79984A8C41683CEC5E2F5 /* SpeechRecognizer.swift */; };
+		3A0CB21A9DDB527A4BD76686 /* Configuration.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 4B200BED6BDFDB00A490DDEF /* Configuration.storekit */; };
+		46935D3BA7A2305F2BDD68DD /* ExportPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 629B016620BAF01D07D399EF /* ExportPreset.swift */; };
+		54C15498F088D3741B778C2B /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF39C0CEB2CE7C2B0B7D3F0A /* ImportView.swift */; };
+		64F521319F78D98926DF8CA4 /* EditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5712D44A70F455A23E2C9FB7 /* EditorView.swift */; };
+		66E55E75EEF555F08D6F23E3 /* ProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40EC74D72366198DF91583C /* ProcessingView.swift */; };
+		7B0E9E3D652F71744FE1DF57 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 270E011C0E2517111ECE2EDA /* PaywallView.swift */; };
+		8326856C610B50314DDF657D /* CaptionSegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = E059F095E53C2C304FE5D3FB /* CaptionSegment.swift */; };
+		85283D06777E425416E7E46C /* CaptionsAITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D7986E774433D922AE4529F /* CaptionsAITests.swift */; };
+		878A24A90C942697DFDFB88B /* VideoThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = D546312541718D08F88712F8 /* VideoThumbnail.swift */; };
+		9688B0114F73D05372F8CF11 /* CaptionStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C65F4898A54E11AA3F374675 /* CaptionStyle.swift */; };
+		AAEF9F7A81DFA089859AAA7C /* EditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4425D6E91833FF1719401F07 /* EditorViewModel.swift */; };
+		AFEBCD9451D01A694B014679 /* CaptionOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = E546BC6CE545E2352AC51C63 /* CaptionOverlay.swift */; };
+		C2D7B0C3B6DE66F59A1FD6CA /* ExportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F0C0A7014C49481E6D5F07 /* ExportViewModel.swift */; };
+		C3328083D01D0A7E1E94B185 /* AnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F84B416129369C4C7EE6560 /* AnalyticsService.swift */; };
+		CE80E7E39A1D57CB4E867F3F /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC0E100ED30C21DEB653D710 /* Project.swift */; };
+		D97C60140DD94AD183325974 /* ExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AA6320597B191875A567F05 /* ExportView.swift */; };
+		D9ACA8C955804C24B22BC438 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B818688246AAB8BE72995CB7 /* PreviewView.swift */; };
+		E0138C4B789F24614C431381 /* CaptionRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CA30DA3EF7A4598D8179622 /* CaptionRenderer.swift */; };
+		E4C11B45C29F78FDEF77571B /* StylePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16042D71017F60B36F63A9C /* StylePickerView.swift */; };
+		F069657EF60C8567408FDC61 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 78A3BF1F01051843A4243B3B /* Assets.xcassets */; };
+		F4D174EF04E72F9FF6C80D7C /* WordTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 807662A26587FA40CBC818E0 /* WordTimeline.swift */; };
+		FBEFBF9984C9B7783A1E386B /* ImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744A113A558B9FEC2EEE1A8F /* ImportViewModel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A4F8A0EF99D5D128CF8F2A23 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4422E1BCC43554DB3BA236B6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A9787EACBF8C5DDD473DBE32;
+			remoteInfo = CaptionsAI;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		03F0C0A7014C49481E6D5F07 /* ExportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportViewModel.swift; sourceTree = "<group>"; };
+		0D7986E774433D922AE4529F /* CaptionsAITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionsAITests.swift; sourceTree = "<group>"; };
+		16C639767CD744B6E6A8C175 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		1CF79984A8C41683CEC5E2F5 /* SpeechRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognizer.swift; sourceTree = "<group>"; };
+		270E011C0E2517111ECE2EDA /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		4425D6E91833FF1719401F07 /* EditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewModel.swift; sourceTree = "<group>"; };
+		44995F8F24B14003537F677E /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		4B200BED6BDFDB00A490DDEF /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
+		4F84B416129369C4C7EE6560 /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
+		5712D44A70F455A23E2C9FB7 /* EditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorView.swift; sourceTree = "<group>"; };
+		629B016620BAF01D07D399EF /* ExportPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPreset.swift; sourceTree = "<group>"; };
+		66D872D8F2BDD38338FA14C0 /* ExportEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportEngine.swift; sourceTree = "<group>"; };
+		744A113A558B9FEC2EEE1A8F /* ImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModel.swift; sourceTree = "<group>"; };
+		744BEFE6BC01F1F55F8DEA4A /* CaptionsAITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CaptionsAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		78A3BF1F01051843A4243B3B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7AA6320597B191875A567F05 /* ExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportView.swift; sourceTree = "<group>"; };
+		80481E07F6399994E9CFE03B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		807662A26587FA40CBC818E0 /* WordTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTimeline.swift; sourceTree = "<group>"; };
+		8858CF02420B48AA4BFF8525 /* StoreKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
+		8EE2E393DF96A0754B8B08C4 /* CaptionsAIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionsAIApp.swift; sourceTree = "<group>"; };
+		9B49B6881A8209954170CDEB /* CaptionsAI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CaptionsAI.entitlements; sourceTree = "<group>"; };
+		9CA30DA3EF7A4598D8179622 /* CaptionRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionRenderer.swift; sourceTree = "<group>"; };
+		A16042D71017F60B36F63A9C /* StylePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StylePickerView.swift; sourceTree = "<group>"; };
+		B818688246AAB8BE72995CB7 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
+		BF39C0CEB2CE7C2B0B7D3F0A /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
+		C40EC74D72366198DF91583C /* ProcessingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingView.swift; sourceTree = "<group>"; };
+		C65F4898A54E11AA3F374675 /* CaptionStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionStyle.swift; sourceTree = "<group>"; };
+		C731DE915721617B485E706D /* CaptionsAI (Dev).app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CaptionsAI (Dev).app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D546312541718D08F88712F8 /* VideoThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoThumbnail.swift; sourceTree = "<group>"; };
+		E059F095E53C2C304FE5D3FB /* CaptionSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionSegment.swift; sourceTree = "<group>"; };
+		E546BC6CE545E2352AC51C63 /* CaptionOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionOverlay.swift; sourceTree = "<group>"; };
+		EC0E100ED30C21DEB653D710 /* Project.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
+		FC00610324D2B09C073B8318 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1085E6AF6100FF5FF65A3763 /* CaptionsAI */ = {
+			isa = PBXGroup;
+			children = (
+				26524697B1E032B98515449C /* App */,
+				E8716A1A15873A4333C2FB7B /* Engine */,
+				B152F64278560BD35464F906 /* Models */,
+				CABE564D3A91F943AB9519F4 /* Resources */,
+				22CF49BD04DF236DBF718A5A /* Services */,
+				E4AEBD11F9284F7277D57FC9 /* ViewModels */,
+				A428DCFA024F276B5B9FBE1A /* Views */,
+				9B49B6881A8209954170CDEB /* CaptionsAI.entitlements */,
+				4B200BED6BDFDB00A490DDEF /* Configuration.storekit */,
+				FC00610324D2B09C073B8318 /* Info.plist */,
+			);
+			path = CaptionsAI;
+			sourceTree = "<group>";
+		};
+		22CF49BD04DF236DBF718A5A /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				4F84B416129369C4C7EE6560 /* AnalyticsService.swift */,
+				8858CF02420B48AA4BFF8525 /* StoreKitManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		24BA061379A7C3C7FD585170 /* CaptionsAITests */ = {
+			isa = PBXGroup;
+			children = (
+				0D7986E774433D922AE4529F /* CaptionsAITests.swift */,
+			);
+			path = CaptionsAITests;
+			sourceTree = "<group>";
+		};
+		26524697B1E032B98515449C /* App */ = {
+			isa = PBXGroup;
+			children = (
+				16C639767CD744B6E6A8C175 /* AppState.swift */,
+				8EE2E393DF96A0754B8B08C4 /* CaptionsAIApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		29FD7BCFB0387866CE5592BD = {
+			isa = PBXGroup;
+			children = (
+				1085E6AF6100FF5FF65A3763 /* CaptionsAI */,
+				24BA061379A7C3C7FD585170 /* CaptionsAITests */,
+				45641D1A86480BADE069D637 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		45641D1A86480BADE069D637 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C731DE915721617B485E706D /* CaptionsAI (Dev).app */,
+				744BEFE6BC01F1F55F8DEA4A /* CaptionsAITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A428DCFA024F276B5B9FBE1A /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F307807E504308331EC070B6 /* Components */,
+				80481E07F6399994E9CFE03B /* ContentView.swift */,
+				5712D44A70F455A23E2C9FB7 /* EditorView.swift */,
+				7AA6320597B191875A567F05 /* ExportView.swift */,
+				BF39C0CEB2CE7C2B0B7D3F0A /* ImportView.swift */,
+				44995F8F24B14003537F677E /* OnboardingView.swift */,
+				270E011C0E2517111ECE2EDA /* PaywallView.swift */,
+				B818688246AAB8BE72995CB7 /* PreviewView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		B152F64278560BD35464F906 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				E059F095E53C2C304FE5D3FB /* CaptionSegment.swift */,
+				C65F4898A54E11AA3F374675 /* CaptionStyle.swift */,
+				629B016620BAF01D07D399EF /* ExportPreset.swift */,
+				EC0E100ED30C21DEB653D710 /* Project.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		CABE564D3A91F943AB9519F4 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				78A3BF1F01051843A4243B3B /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		E4AEBD11F9284F7277D57FC9 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				4425D6E91833FF1719401F07 /* EditorViewModel.swift */,
+				03F0C0A7014C49481E6D5F07 /* ExportViewModel.swift */,
+				744A113A558B9FEC2EEE1A8F /* ImportViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		E8716A1A15873A4333C2FB7B /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				9CA30DA3EF7A4598D8179622 /* CaptionRenderer.swift */,
+				66D872D8F2BDD38338FA14C0 /* ExportEngine.swift */,
+				1CF79984A8C41683CEC5E2F5 /* SpeechRecognizer.swift */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		F307807E504308331EC070B6 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				E546BC6CE545E2352AC51C63 /* CaptionOverlay.swift */,
+				C40EC74D72366198DF91583C /* ProcessingView.swift */,
+				A16042D71017F60B36F63A9C /* StylePickerView.swift */,
+				D546312541718D08F88712F8 /* VideoThumbnail.swift */,
+				807662A26587FA40CBC818E0 /* WordTimeline.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A38DA9F6F9552F676FFAF79B /* CaptionsAITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A2AF69355495E4003F5F88D5 /* Build configuration list for PBXNativeTarget "CaptionsAITests" */;
+			buildPhases = (
+				A53C7A4406340784C3FDFDA0 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4B4211C54A29A7BAD617EDFE /* PBXTargetDependency */,
+			);
+			name = CaptionsAITests;
+			packageProductDependencies = (
+			);
+			productName = CaptionsAITests;
+			productReference = 744BEFE6BC01F1F55F8DEA4A /* CaptionsAITests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A9787EACBF8C5DDD473DBE32 /* CaptionsAI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 26EE1784DA900AEECBBA5E2F /* Build configuration list for PBXNativeTarget "CaptionsAI" */;
+			buildPhases = (
+				FA6E3080DFB590464F3A5CDA /* Sources */,
+				5DBE458A2D71454FD03F88FD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CaptionsAI;
+			packageProductDependencies = (
+			);
+			productName = CaptionsAI;
+			productReference = C731DE915721617B485E706D /* CaptionsAI (Dev).app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4422E1BCC43554DB3BA236B6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A38DA9F6F9552F676FFAF79B = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					A9787EACBF8C5DDD473DBE32 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = CF75A45490EEA60625129DEC /* Build configuration list for PBXProject "CaptionsAI" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 29FD7BCFB0387866CE5592BD;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 45641D1A86480BADE069D637 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A9787EACBF8C5DDD473DBE32 /* CaptionsAI */,
+				A38DA9F6F9552F676FFAF79B /* CaptionsAITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5DBE458A2D71454FD03F88FD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F069657EF60C8567408FDC61 /* Assets.xcassets in Resources */,
+				3A0CB21A9DDB527A4BD76686 /* Configuration.storekit in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A53C7A4406340784C3FDFDA0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85283D06777E425416E7E46C /* CaptionsAITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA6E3080DFB590464F3A5CDA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C3328083D01D0A7E1E94B185 /* AnalyticsService.swift in Sources */,
+				32801A118CEDD35278550F59 /* AppState.swift in Sources */,
+				AFEBCD9451D01A694B014679 /* CaptionOverlay.swift in Sources */,
+				E0138C4B789F24614C431381 /* CaptionRenderer.swift in Sources */,
+				8326856C610B50314DDF657D /* CaptionSegment.swift in Sources */,
+				9688B0114F73D05372F8CF11 /* CaptionStyle.swift in Sources */,
+				0BC4AFDD8E0924202BEA0405 /* CaptionsAIApp.swift in Sources */,
+				2CC1B14CDBB4F7F6E143D145 /* ContentView.swift in Sources */,
+				64F521319F78D98926DF8CA4 /* EditorView.swift in Sources */,
+				AAEF9F7A81DFA089859AAA7C /* EditorViewModel.swift in Sources */,
+				0BA86D227F7D581A59437B19 /* ExportEngine.swift in Sources */,
+				46935D3BA7A2305F2BDD68DD /* ExportPreset.swift in Sources */,
+				D97C60140DD94AD183325974 /* ExportView.swift in Sources */,
+				C2D7B0C3B6DE66F59A1FD6CA /* ExportViewModel.swift in Sources */,
+				54C15498F088D3741B778C2B /* ImportView.swift in Sources */,
+				FBEFBF9984C9B7783A1E386B /* ImportViewModel.swift in Sources */,
+				22399F1670973AA041FFA8BF /* OnboardingView.swift in Sources */,
+				7B0E9E3D652F71744FE1DF57 /* PaywallView.swift in Sources */,
+				D9ACA8C955804C24B22BC438 /* PreviewView.swift in Sources */,
+				66E55E75EEF555F08D6F23E3 /* ProcessingView.swift in Sources */,
+				CE80E7E39A1D57CB4E867F3F /* Project.swift in Sources */,
+				3362F39FF3F33A04A8BCB6B1 /* SpeechRecognizer.swift in Sources */,
+				1E8EE4924E4E86D25E17329D /* StoreKitManager.swift in Sources */,
+				E4C11B45C29F78FDEF77571B /* StylePickerView.swift in Sources */,
+				878A24A90C942697DFDFB88B /* VideoThumbnail.swift in Sources */,
+				F4D174EF04E72F9FF6C80D7C /* WordTimeline.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4B4211C54A29A7BAD617EDFE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A9787EACBF8C5DDD473DBE32 /* CaptionsAI */;
+			targetProxy = A4F8A0EF99D5D128CF8F2A23 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1243033BB94B5BB050FBB69F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = CaptionsAI;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		4EA68A5D7B39143C411EBC52 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lalitkhatri.CaptionsAITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CaptionsAI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CaptionsAI";
+			};
+			name = Debug;
+		};
+		7D82DAF31F63645234E0F97D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CaptionsAI/CaptionsAI.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 99PCVG84CK;
+				INFOPLIST_FILE = CaptionsAI/Info.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CaptionsAI needs microphone access for speech recognition.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "CaptionsAI needs permission to save exported videos to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "CaptionsAI needs access to your photos to import videos.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CaptionsAI needs speech recognition to generate captions from your video's audio.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lalitkhatri.CaptionsAI;
+				PRODUCT_NAME = "CaptionsAI (Dev)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		80BA5E66BD4AB5213F71626E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lalitkhatri.CaptionsAITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CaptionsAI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CaptionsAI";
+			};
+			name = Release;
+		};
+		9AACF359AA4E901454D7DBE2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = CaptionsAI;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F3A835B3A25EC0B2A28821D4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CaptionsAI/CaptionsAI.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 99PCVG84CK;
+				INFOPLIST_FILE = CaptionsAI/Info.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CaptionsAI needs microphone access for speech recognition.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "CaptionsAI needs permission to save exported videos to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "CaptionsAI needs access to your photos to import videos.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CaptionsAI needs speech recognition to generate captions from your video's audio.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lalitkhatri.CaptionsAI;
+				PRODUCT_NAME = CaptionsAI;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		26EE1784DA900AEECBBA5E2F /* Build configuration list for PBXNativeTarget "CaptionsAI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7D82DAF31F63645234E0F97D /* Debug */,
+				F3A835B3A25EC0B2A28821D4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A2AF69355495E4003F5F88D5 /* Build configuration list for PBXNativeTarget "CaptionsAITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4EA68A5D7B39143C411EBC52 /* Debug */,
+				80BA5E66BD4AB5213F71626E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CF75A45490EEA60625129DEC /* Build configuration list for PBXProject "CaptionsAI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9AACF359AA4E901454D7DBE2 /* Debug */,
+				1243033BB94B5BB050FBB69F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 4422E1BCC43554DB3BA236B6 /* Project object */;
+}

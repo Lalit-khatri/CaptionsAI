@@ -57,6 +57,7 @@ struct OnboardingView: View {
                 Button {
                     withAnimation {
                         appState.hasCompletedOnboarding = true
+                        
                     }
                 } label: {
                     Text("Get Started")

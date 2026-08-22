@@ -1,4 +1,5 @@
 import AVFoundation
+import SwiftUI
 import CoreImage
 import UIKit
 
@@ -34,8 +35,7 @@ final class CaptionRenderer {
         
         // Set up source track ID
         if let videoTrack = try await asset.loadTracks(withMediaType: .video).first {
-            let trackID = try await videoTrack.load(.trackID)
-            instruction.requiredSourceTrackIDs = [NSValue(value: trackID)]
+          instruction.requiredSourceTrackIDs = [NSValue(nonretainedObject: videoTrack.trackID)]
         }
         
         composition.instructions = [instruction]
@@ -216,12 +216,19 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
     
     private func processRequest(_ request: AVAsynchronousVideoCompositionRequest) {
         guard let instruction = request.videoCompositionInstruction as? CaptionCompositionInstruction,
-              let trackID = instruction.requiredSourceTrackIDs?.first?.int32Value,
-              let sourceBuffer = request.sourceFrame(byTrackID: trackID) else {
+              let firstTrackIDValue = instruction.requiredSourceTrackIDs?.first else {
             request.finish(with: NSError(domain: "CaptionCompositor", code: -1))
             return
         }
-        
+
+                var trackID: CMPersistentTrackID = 0
+              firstTrackIDValue.getValue(&trackID)
+
+              guard let sourceBuffer = request.sourceFrame(byTrackID: trackID) else {
+                  request.finish(with: NSError(domain: "CaptionCompositor", code: -1))
+                  return
+              }
+
         var sourceImage = CIImage(cvPixelBuffer: sourceBuffer)
         let currentTime = CMTimeGetSeconds(request.compositionTime)
         

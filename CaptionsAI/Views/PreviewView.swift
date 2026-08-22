@@ -11,7 +11,11 @@ struct PreviewView: View {
     @State private var duration: Double = 0
     @State private var isPlaying = false
     private var timeObserver: Any?
-    
+
+    init(project: Project) {
+    self.project = project
+  }
+
     var body: some View {
         VStack(spacing: 0) {
             // Video with captions
