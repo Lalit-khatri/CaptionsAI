@@ -48,21 +48,30 @@ struct CaptionOverlay: View {
     private func wordByWordText(for segment: CaptionSegment) -> some View {
         let words = segment.words
         
-        return HStack(spacing: 4) {
-            ForEach(words) { word in
-                let isActive = currentTime >= word.startTime && currentTime < word.endTime
-                Text(word.word)
-                    .font(style.font)
-                    .foregroundColor(isActive ? style.highlightColor.color : style.textColor.color)
-                    .scaleEffect(isActive ? 1.1 : 1.0)
-                    .animation(.easeInOut(duration: 0.1), value: isActive)
-            }
+        if words.isEmpty {
+            return Text(segment.text)
+                .font(style.font)
+                .foregroundColor(style.textColor.color)
+                .multilineTextAlignment(.center)
         }
-        .shadow(
-            color: style.shadowColor.color,
-            radius: style.shadowRadius,
-            x: 0, y: 1
-        )
+        
+        var combined = Text("")
+        for (index, word) in words.enumerated() {
+            let isActive = currentTime >= word.startTime && currentTime < word.endTime
+            let wordText = Text(word.word + (index < words.count - 1 ? " " : ""))
+                .font(style.font)
+                .foregroundColor(isActive ? style.highlightColor.color : style.textColor.color)
+                .fontWeight(isActive ? .heavy : (style.fontName.contains("Bold") ? .bold : .regular))
+            combined = combined + wordText
+        }
+        
+        return combined
+            .multilineTextAlignment(.center)
+            .shadow(
+                color: style.shadowColor.color,
+                radius: style.shadowRadius,
+                x: 0, y: 1
+            )
     }
 }
 
@@ -71,7 +80,7 @@ struct CaptionOverlay: View {
 extension View {
     func captionBackground(style: CaptionStyle) -> some View {
         self
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background(
                 Group {
@@ -81,6 +90,5 @@ extension View {
                     }
                 }
             )
-            .frame(maxWidth: UIScreen.main.bounds.width * 0.85)
     }
 }
