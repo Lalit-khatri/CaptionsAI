@@ -46,17 +46,33 @@ struct CaptionOverlay: View {
     
     // MARK: - Word-by-Word
     
+    @ViewBuilder
     private func wordByWordText(for segment: CaptionSegment) -> some View {
         let words = segment.words
         
         if words.isEmpty {
             let displayText = style.isUppercase ? segment.text.uppercased() : segment.text
-            return Text(displayText)
+            Text(displayText)
                 .font(style.font)
                 .foregroundColor(style.textColor.color)
                 .multilineTextAlignment(.center)
+                .shadow(
+                    color: style.shadowColor.color,
+                    radius: style.shadowRadius,
+                    x: 0, y: 1
+                )
+        } else {
+            formattedWordText(for: words)
+                .multilineTextAlignment(.center)
+                .shadow(
+                    color: style.shadowColor.color,
+                    radius: style.shadowRadius,
+                    x: 0, y: 1
+                )
         }
-        
+    }
+    
+    private func formattedWordText(for words: [CaptionWord]) -> Text {
         var combined = Text("")
         for (index, word) in words.enumerated() {
             let isActive = currentTime >= word.startTime && currentTime < word.endTime
@@ -67,14 +83,7 @@ struct CaptionOverlay: View {
                 .fontWeight(isActive ? .heavy : (style.fontName.contains("Bold") || style.fontName.contains("Heavy") ? .bold : .regular))
             combined = combined + wordText
         }
-        
         return combined
-            .multilineTextAlignment(.center)
-            .shadow(
-                color: style.shadowColor.color,
-                radius: style.shadowRadius,
-                x: 0, y: 1
-            )
     }
 }
 
