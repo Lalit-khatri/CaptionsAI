@@ -35,7 +35,7 @@ final class CaptionRenderer {
         
         // Set up source track ID
         if let videoTrack = try await asset.loadTracks(withMediaType: .video).first {
-            instruction.requiredSourceTrackIDs = [NSValue(value: videoTrack.trackID)]
+            instruction.requiredSourceTrackIDs = [NSNumber(value: videoTrack.trackID)]
         }
         
         composition.instructions = [instruction]
@@ -216,13 +216,12 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
     
     private func processRequest(_ request: AVAsynchronousVideoCompositionRequest) {
         guard let instruction = request.videoCompositionInstruction as? CaptionCompositionInstruction,
-              let firstTrackIDValue = instruction.requiredSourceTrackIDs?.first else {
+              let trackIDNumber = instruction.requiredSourceTrackIDs?.first as? NSNumber else {
             request.finish(with: NSError(domain: "CaptionCompositor", code: -1))
             return
         }
         
-        var trackID: CMPersistentTrackID = 0
-        firstTrackIDValue.getValue(&trackID)
+        let trackID = CMPersistentTrackID(trackIDNumber.int32Value)
         
         guard let sourceBuffer = request.sourceFrame(byTrackID: trackID) else {
             request.finish(with: NSError(domain: "CaptionCompositor", code: -1))
