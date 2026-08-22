@@ -89,31 +89,52 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
     var wordByWordHighlight: Bool
     var shadowRadius: CGFloat
     var shadowColor: CodableColor
+    var isUppercase: Bool = false
     
     // MARK: - SwiftUI Helpers
     
     var font: Font {
-        if fontName == ".SFUI-Regular" || fontName == "System" {
-            return .system(size: fontSize)
-        } else if fontName == ".SFUI-Bold" || fontName == "System-Bold" {
+        if fontName.contains("Rounded") {
+            return .system(size: fontSize, weight: .heavy, design: .rounded)
+        } else if fontName.contains("Heavy") || fontName.contains("Black") {
+            return .system(size: fontSize, weight: .heavy)
+        } else if fontName.contains("Bold") {
             return .system(size: fontSize, weight: .bold)
-        } else if fontName == ".SFUI-Light" || fontName == "System-Light" {
+        } else if fontName.contains("Light") {
             return .system(size: fontSize, weight: .light)
-        } else {
+        } else if fontName.contains("Medium") {
+            return .system(size: fontSize, weight: .medium)
+        } else if fontName == "Menlo" {
+            return .custom("Menlo-Bold", size: fontSize)
+        } else if UIFont(name: fontName, size: fontSize) != nil {
             return .custom(fontName, size: fontSize)
+        } else {
+            return .system(size: fontSize, weight: .bold)
         }
     }
     
     var uiFont: UIFont {
-        if fontName.contains("System") || fontName.contains("SFUI") {
-            if fontName.contains("Bold") {
-                return .systemFont(ofSize: fontSize, weight: .bold)
-            } else if fontName.contains("Light") {
-                return .systemFont(ofSize: fontSize, weight: .light)
-            }
-            return .systemFont(ofSize: fontSize)
+        if let custom = UIFont(name: fontName, size: fontSize) {
+            return custom
         }
-        return UIFont(name: fontName, size: fontSize) ?? .systemFont(ofSize: fontSize)
+        if fontName.contains("Rounded") {
+            if let descriptor = UIFont.systemFont(ofSize: fontSize, weight: .heavy).fontDescriptor.withDesign(.rounded) {
+                return UIFont(descriptor: descriptor, size: fontSize)
+            }
+        }
+        if fontName.contains("Heavy") || fontName.contains("Black") {
+            return .systemFont(ofSize: fontSize, weight: .heavy)
+        }
+        if fontName.contains("Bold") {
+            return .systemFont(ofSize: fontSize, weight: .bold)
+        }
+        if fontName.contains("Light") {
+            return .systemFont(ofSize: fontSize, weight: .light)
+        }
+        if fontName.contains("Medium") {
+            return .systemFont(ofSize: fontSize, weight: .medium)
+        }
+        return .systemFont(ofSize: fontSize, weight: .bold)
     }
 }
 
