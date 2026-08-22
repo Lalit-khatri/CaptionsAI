@@ -3,22 +3,22 @@ import Foundation
 // MARK: - Hormozi Style Preset
 
 extension CaptionStyle {
-    /// Hormozi — White bold text with word-by-word yellow highlight on a black
-    /// background box, center position. Inspired by Alex Hormozi's Reels/podcast
-    /// caption style that dominates short-form content.
+    /// Hormozi — The #1 viral caption style on Reels, TikTok & Shorts.
+    /// Bold uppercase text with word-by-word electric lime/yellow highlight on a sleek black box.
     static let hormozi = CaptionStyle(
         name: "Hormozi",
-        fontName: "System-Bold",
+        fontName: "System-Heavy",
         fontSize: 32,
         textColor: CodableColor("#FFFFFF"),
-        highlightColor: CodableColor("#FFD700"),
+        highlightColor: CodableColor("#39FF14"),
         backgroundColor: CodableColor("#000000"),
         backgroundOpacity: 0.85,
-        cornerRadius: 10,
+        cornerRadius: 12,
         position: .center,
         animation: .highlight,
         wordByWordHighlight: true,
-        shadowRadius: 2,
-        shadowColor: CodableColor("#000000")
+        shadowRadius: 3,
+        shadowColor: CodableColor("#000000"),
+        isUppercase: true
     )
 }

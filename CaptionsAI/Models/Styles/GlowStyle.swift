@@ -3,21 +3,22 @@ import Foundation
 // MARK: - Glow Style Preset
 
 extension CaptionStyle {
-    /// Glow — Bold white text with a strong neon cyan glow effect, no background.
-    /// Mimics the look of neon signs floating over video content.
+    /// Glow — Captions.ai Cyberpunk Neon aesthetic.
+    /// Punchy cyan uppercase text with an intense glowing aura and hot pink highlights.
     static let glow = CaptionStyle(
-        name: "Glow",
-        fontName: "System-Bold",
-        fontSize: 30,
-        textColor: CodableColor("#FFFFFF"),
-        highlightColor: CodableColor("#FFFFFF"),
+        name: "Cyber Glow",
+        fontName: "System-Heavy",
+        fontSize: 32,
+        textColor: CodableColor("#00FFFF"),
+        highlightColor: CodableColor("#FF007F"),
         backgroundColor: CodableColor("#000000"),
         backgroundOpacity: 0.0,
         cornerRadius: 0,
         position: .center,
         animation: .fadeIn,
-        wordByWordHighlight: false,
-        shadowRadius: 16,
-        shadowColor: CodableColor("#00FFFF")
+        wordByWordHighlight: true,
+        shadowRadius: 18,
+        shadowColor: CodableColor("#00FFFF"),
+        isUppercase: true
     )
 }

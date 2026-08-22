@@ -141,17 +141,17 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
 // MARK: - Style Presets
 
 extension CaptionStyle {
-    /// All available caption style presets (each defined in its own file in Models/Styles/)
+    /// Top 10 viral caption style presets (each defined in its own file in Models/Styles/)
     static let presets: [CaptionStyle] = [
         hormozi,
+        beast,
+        submagic,
+        aliAbdaal,
         glow,
         karaoke,
-        minimal,
-        boldBox,
-        gradientPop,
-        typewriter,
         cinema,
         fire,
+        boldBox,
         outline
     ]
 }

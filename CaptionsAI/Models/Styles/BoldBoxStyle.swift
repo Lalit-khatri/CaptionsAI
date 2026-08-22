@@ -3,21 +3,22 @@ import Foundation
 // MARK: - Bold Box Style Preset
 
 extension CaptionStyle {
-    /// Bold Box — White bold text sitting on a solid black rounded box at the
-    /// bottom. The classic YouTube / broadcast subtitle style everyone recognizes.
+    /// Bold Box — Vox / Bloomberg / YouTube classic broadcast subtitle.
+    /// Crisp high-contrast white text on a solid black box at the bottom.
     static let boldBox = CaptionStyle(
-        name: "Bold Box",
-        fontName: "System-Bold",
+        name: "Vox Box",
+        fontName: "System-Heavy",
         fontSize: 24,
         textColor: CodableColor("#FFFFFF"),
         highlightColor: CodableColor("#FFFFFF"),
         backgroundColor: CodableColor("#000000"),
-        backgroundOpacity: 0.85,
-        cornerRadius: 8,
+        backgroundOpacity: 0.95,
+        cornerRadius: 6,
         position: .bottomCenter,
         animation: .none,
         wordByWordHighlight: false,
         shadowRadius: 0,
-        shadowColor: CodableColor("#000000")
+        shadowColor: CodableColor("#000000"),
+        isUppercase: true
     )
 }

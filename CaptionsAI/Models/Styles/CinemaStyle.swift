@@ -3,11 +3,11 @@ import Foundation
 // MARK: - Cinema Style Preset
 
 extension CaptionStyle {
-    /// Cinema — Gold-yellow text in a light-weight font at the bottom with a
-    /// subtle shadow and no background. The timeless movie subtitle look.
+    /// Cinema — Timeless movie & documentary subtitle style (Netflix / HBO style).
+    /// Classic warm gold-yellow text placed at bottom center with subtle drop shadow.
     static let cinema = CaptionStyle(
         name: "Cinema",
-        fontName: "System-Light",
+        fontName: "System-Medium",
         fontSize: 24,
         textColor: CodableColor("#FFD700"),
         highlightColor: CodableColor("#FFD700"),
@@ -18,6 +18,7 @@ extension CaptionStyle {
         animation: .fadeIn,
         wordByWordHighlight: false,
         shadowRadius: 3,
-        shadowColor: CodableColor("#000000")
+        shadowColor: CodableColor("#000000"),
+        isUppercase: false
     )
 }
