@@ -7,9 +7,9 @@ import PhotosUI
 /// Home screen for importing videos and viewing recent projects.
 struct ImportView: View {
     @Environment(\.modelContext) private var modelContext
+    @Binding var navigationPath: NavigationPath
     @State private var viewModel = ImportViewModel()
     @State private var selectedItem: PhotosPickerItem?
-    @State private var navigateToEditor = false
     
     var body: some View {
         ScrollView {
@@ -33,14 +33,9 @@ struct ImportView: View {
                 selectedItem = nil
             }
         }
-        .navigationDestination(isPresented: $navigateToEditor) {
-            if let project = viewModel.createdProject {
-                EditorView(project: project)
-            }
-        }
         .onChange(of: viewModel.createdProject) { _, project in
-            if project != nil {
-                navigateToEditor = true
+            if let project {
+                navigationPath.append(AppScreen.editor(project))
             }
         }
         .onAppear {

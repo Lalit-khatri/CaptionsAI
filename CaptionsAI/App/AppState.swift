@@ -13,9 +13,9 @@ final class AppState {
     // MARK: - User Preferences
     
     var hasCompletedOnboarding: Bool = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
-          didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding") }
-      }
-
+        didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding") }
+    }
+    
     var dailyExportCount: Int {
         get {
             resetExportCountIfNewDay()

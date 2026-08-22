@@ -174,7 +174,8 @@ final class SpeechRecognizer {
             AVNumberOfChannelsKey: 1,
             AVLinearPCMBitDepthKey: 16,
             AVLinearPCMIsFloatKey: false,
-            AVLinearPCMIsBigEndianKey: false
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false
         ]
         let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: writerSettings)
         writer.add(writerInput)
