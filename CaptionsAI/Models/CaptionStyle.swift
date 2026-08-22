@@ -122,87 +122,64 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
 extension CaptionStyle {
     /// All available caption style presets
     static let presets: [CaptionStyle] = [
-        clean, bold, neon, minimal, highlight, typewriter, subtitle, pop
+        hormozi, glow, karaoke, minimal, boldBox,
+        gradientPop, typewriter, cinema, fire, outline
     ]
     
-    /// Clean — White SF Pro with subtle shadow (like Apple Live Captions)
-    static let clean = CaptionStyle(
-        name: "Clean",
-        fontName: "System",
-        fontSize: 22,
-        textColor: CodableColor("#FFFFFF"),
-        highlightColor: CodableColor("#FFFFFF"),
-        backgroundColor: CodableColor("#000000"),
-        backgroundOpacity: 0.0,
-        cornerRadius: 8,
-        position: .bottomCenter,
-        animation: .fadeIn,
-        wordByWordHighlight: false,
-        shadowRadius: 4,
-        shadowColor: CodableColor("#000000")
-    )
+    // MARK: 1. Hormozi
     
-    /// Bold — White text on black background box (classic YouTube)
-    static let bold = CaptionStyle(
-        name: "Bold",
+    /// Hormozi — White bold text with word-by-word yellow highlight on a black
+    /// background box, center position. Inspired by Alex Hormozi's Reels/podcast
+    /// caption style that dominates short-form content.
+    static let hormozi = CaptionStyle(
+        name: "Hormozi",
         fontName: "System-Bold",
-        fontSize: 24,
+        fontSize: 32,
         textColor: CodableColor("#FFFFFF"),
-        highlightColor: CodableColor("#FFFFFF"),
+        highlightColor: CodableColor("#FFD700"),
         backgroundColor: CodableColor("#000000"),
-        backgroundOpacity: 0.8,
-        cornerRadius: 8,
-        position: .bottomCenter,
-        animation: .none,
-        wordByWordHighlight: false,
-        shadowRadius: 0,
-        shadowColor: CodableColor("#000000")
-    )
-    
-    /// Neon — Rounded font with colored glow on dark bg (TikTok trending)
-    static let neon = CaptionStyle(
-        name: "Neon",
-        fontName: "System-Bold",
-        fontSize: 26,
-        textColor: CodableColor("#00FFFF"),
-        highlightColor: CodableColor("#FF00FF"),
-        backgroundColor: CodableColor("#1A1A2E"),
-        backgroundOpacity: 0.7,
-        cornerRadius: 12,
+        backgroundOpacity: 0.85,
+        cornerRadius: 10,
         position: .center,
-        animation: .fadeIn,
-        wordByWordHighlight: false,
-        shadowRadius: 12,
-        shadowColor: CodableColor("#00FFFF")
+        animation: .highlight,
+        wordByWordHighlight: true,
+        shadowRadius: 2,
+        shadowColor: CodableColor("#000000")
     )
     
-    /// Minimal — Thin font, bottom center, no background (professional/cinematic)
-    static let minimal = CaptionStyle(
-        name: "Minimal",
-        fontName: "System-Light",
-        fontSize: 20,
+    // MARK: 2. Glow
+    
+    /// Glow — Bold white text with a strong neon glow effect, no background.
+    /// Mimics the look of neon signs floating over video content.
+    static let glow = CaptionStyle(
+        name: "Glow",
+        fontName: "System-Bold",
+        fontSize: 30,
         textColor: CodableColor("#FFFFFF"),
         highlightColor: CodableColor("#FFFFFF"),
         backgroundColor: CodableColor("#000000"),
         backgroundOpacity: 0.0,
         cornerRadius: 0,
-        position: .bottomCenter,
+        position: .center,
         animation: .fadeIn,
         wordByWordHighlight: false,
-        shadowRadius: 2,
-        shadowColor: CodableColor("#000000")
+        shadowRadius: 16,
+        shadowColor: CodableColor("#00FFFF")
     )
     
-    /// Highlight — Word-by-word highlight in yellow (Hormozi/podcast style)
-    static let highlight = CaptionStyle(
-        name: "Highlight",
+    // MARK: 3. Karaoke
+    
+    /// Karaoke — Large bold text with active word highlighted in bright blue.
+    /// Word-by-word timing makes it feel like a real karaoke teleprompter.
+    static let karaoke = CaptionStyle(
+        name: "Karaoke",
         fontName: "System-Bold",
-        fontSize: 28,
+        fontSize: 34,
         textColor: CodableColor("#FFFFFF"),
-        highlightColor: CodableColor("#FFD700"),
+        highlightColor: CodableColor("#4A90FF"),
         backgroundColor: CodableColor("#000000"),
-        backgroundOpacity: 0.5,
-        cornerRadius: 8,
+        backgroundOpacity: 0.0,
+        cornerRadius: 0,
         position: .center,
         animation: .highlight,
         wordByWordHighlight: true,
@@ -210,54 +187,145 @@ extension CaptionStyle {
         shadowColor: CodableColor("#000000")
     )
     
-    /// Typewriter — Monospace, appear letter by letter (storytelling)
+    // MARK: 4. Minimal
+    
+    /// Minimal — Small, light-weight white text at the bottom with a subtle
+    /// shadow and no background. Clean, cinematic look for professional edits.
+    static let minimal = CaptionStyle(
+        name: "Minimal",
+        fontName: "System-Light",
+        fontSize: 22,
+        textColor: CodableColor("#FFFFFF"),
+        highlightColor: CodableColor("#FFFFFF"),
+        backgroundColor: CodableColor("#000000"),
+        backgroundOpacity: 0.0,
+        cornerRadius: 0,
+        position: .bottomCenter,
+        animation: .fadeIn,
+        wordByWordHighlight: false,
+        shadowRadius: 3,
+        shadowColor: CodableColor("#000000")
+    )
+    
+    // MARK: 5. Bold Box
+    
+    /// Bold Box — White bold text sitting on a solid black rounded box at the
+    /// bottom. The classic YouTube / broadcast subtitle style everyone recognizes.
+    static let boldBox = CaptionStyle(
+        name: "Bold Box",
+        fontName: "System-Bold",
+        fontSize: 24,
+        textColor: CodableColor("#FFFFFF"),
+        highlightColor: CodableColor("#FFFFFF"),
+        backgroundColor: CodableColor("#000000"),
+        backgroundOpacity: 0.85,
+        cornerRadius: 8,
+        position: .bottomCenter,
+        animation: .none,
+        wordByWordHighlight: false,
+        shadowRadius: 0,
+        shadowColor: CodableColor("#000000")
+    )
+    
+    // MARK: 6. Gradient Pop
+    
+    /// Gradient Pop — Bold white text with a warm glow, near-opaque white
+    /// background, and a playful bounce animation. Perfect for high-energy,
+    /// colorful content.
+    static let gradientPop = CaptionStyle(
+        name: "Gradient Pop",
+        fontName: "System-Bold",
+        fontSize: 30,
+        textColor: CodableColor("#FFFFFF"),
+        highlightColor: CodableColor("#FF6B6B"),
+        backgroundColor: CodableColor("#FFFFFF"),
+        backgroundOpacity: 0.9,
+        cornerRadius: 16,
+        position: .center,
+        animation: .bounce,
+        wordByWordHighlight: false,
+        shadowRadius: 10,
+        shadowColor: CodableColor("#FF6B6B")
+    )
+    
+    // MARK: 7. Typewriter
+    
+    /// Typewriter — Menlo monospace font in terminal green on a transparent
+    /// background with typewriter animation. Hacker / coding aesthetic.
     static let typewriter = CaptionStyle(
         name: "Typewriter",
         fontName: "Menlo",
-        fontSize: 20,
-        textColor: CodableColor("#E0E0E0"),
-        highlightColor: CodableColor("#FFFFFF"),
+        fontSize: 22,
+        textColor: CodableColor("#00FF41"),
+        highlightColor: CodableColor("#00FF41"),
         backgroundColor: CodableColor("#000000"),
         backgroundOpacity: 0.0,
         cornerRadius: 0,
         position: .bottomCenter,
         animation: .typewriter,
         wordByWordHighlight: false,
-        shadowRadius: 2,
-        shadowColor: CodableColor("#000000")
+        shadowRadius: 3,
+        shadowColor: CodableColor("#00FF41")
     )
     
-    /// Subtitle — Yellow text at bottom, no background (classic movie subtitle)
-    static let subtitle = CaptionStyle(
-        name: "Subtitle",
-        fontName: "System",
-        fontSize: 22,
+    // MARK: 8. Cinema
+    
+    /// Cinema — Gold-yellow text in a light-weight font at the bottom with a
+    /// subtle shadow and no background. The timeless movie subtitle look.
+    static let cinema = CaptionStyle(
+        name: "Cinema",
+        fontName: "System-Light",
+        fontSize: 24,
         textColor: CodableColor("#FFD700"),
         highlightColor: CodableColor("#FFD700"),
         backgroundColor: CodableColor("#000000"),
         backgroundOpacity: 0.0,
         cornerRadius: 0,
         position: .bottomCenter,
-        animation: .none,
+        animation: .fadeIn,
         wordByWordHighlight: false,
         shadowRadius: 3,
         shadowColor: CodableColor("#000000")
     )
     
-    /// Pop — Bold, colorful, bounce animation (high energy content)
-    static let pop = CaptionStyle(
-        name: "Pop",
+    // MARK: 9. Fire
+    
+    /// Fire — Bold orange-red text with word-by-word yellow highlight on a dark
+    /// semi-transparent background. High-energy style for hype content.
+    static let fire = CaptionStyle(
+        name: "Fire",
+        fontName: "System-Bold",
+        fontSize: 32,
+        textColor: CodableColor("#FF4500"),
+        highlightColor: CodableColor("#FFD700"),
+        backgroundColor: CodableColor("#1A1A1A"),
+        backgroundOpacity: 0.75,
+        cornerRadius: 10,
+        position: .center,
+        animation: .highlight,
+        wordByWordHighlight: true,
+        shadowRadius: 6,
+        shadowColor: CodableColor("#FF4500")
+    )
+    
+    // MARK: 10. Outline
+    
+    /// Outline — Bold white text with a strong black shadow that creates an
+    /// outline / stroke effect. No background, center position. Readable on
+    /// any footage.
+    static let outline = CaptionStyle(
+        name: "Outline",
         fontName: "System-Bold",
         fontSize: 30,
-        textColor: CodableColor("#FF6B6B"),
-        highlightColor: CodableColor("#4ECDC4"),
-        backgroundColor: CodableColor("#FFFFFF"),
-        backgroundOpacity: 0.9,
-        cornerRadius: 16,
+        textColor: CodableColor("#FFFFFF"),
+        highlightColor: CodableColor("#FFFFFF"),
+        backgroundColor: CodableColor("#000000"),
+        backgroundOpacity: 0.0,
+        cornerRadius: 0,
         position: .center,
-        animation: .bounce,
-        wordByWordHighlight: true,
-        shadowRadius: 0,
+        animation: .none,
+        wordByWordHighlight: false,
+        shadowRadius: 6,
         shadowColor: CodableColor("#000000")
     )
 }

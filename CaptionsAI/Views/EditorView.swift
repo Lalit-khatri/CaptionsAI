@@ -3,35 +3,32 @@ import AVKit
 
 // MARK: - EditorView
 
-/// Main editing screen with video player, style picker, and caption list.
+/// Main editing screen with full-screen video player and bottom action bar.
 struct EditorView: View {
     let project: Project
     @State private var viewModel: EditorViewModel
-    @State private var showSegmentEditor = false
     @State private var editingSegment: CaptionSegment?
+    @State private var showStyleSheet = false
+    @State private var showTranscriptSheet = false
+    @State private var isPlaying = false
+    @State private var fontSize: CGFloat = 28
     
     init(project: Project) {
         self.project = project
         self._viewModel = State(initialValue: EditorViewModel(project: project))
+        self._fontSize = State(initialValue: project.selectedStyle.fontSize)
     }
     
     var body: some View {
         ZStack {
+            Color.black.ignoresSafeArea()
+            
             VStack(spacing: 0) {
-                // Video player with caption overlay
+                // Video player fills all available space
                 videoPlayerSection
                 
-                // Style picker
-                StylePickerView(
-                    selectedStyle: Binding(
-                        get: { viewModel.selectedStyle },
-                        set: { viewModel.selectStyle($0) }
-                    )
-                )
-                .padding(.vertical, 12)
-                
-                // Caption segments list
-                captionsList
+                // Bottom action bar
+                actionBar
             }
             
             // Processing overlay
@@ -43,15 +40,49 @@ struct EditorView: View {
                 )
             }
         }
-        .navigationTitle("Edit Captions")
+        .navigationTitle("Edit")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { toolbarContent }
+        .toolbarBackground(.black, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .onAppear { viewModel.setupTimeObserver() }
         .task {
             if viewModel.segments.isEmpty {
                 await viewModel.generateCaptions()
             }
         }
+        // Style bottom sheet
+        .sheet(isPresented: $showStyleSheet) {
+            StyleSheetView(
+                selectedStyle: Binding(
+                    get: { viewModel.selectedStyle },
+                    set: { viewModel.selectStyle($0) }
+                ),
+                fontSize: $fontSize,
+                previewText: previewTextForStyle
+            )
+            .onChange(of: fontSize) { _, newSize in
+                var updatedStyle = viewModel.selectedStyle
+                updatedStyle.fontSize = newSize
+                viewModel.selectStyle(updatedStyle)
+            }
+        }
+        // Transcript bottom sheet
+        .sheet(isPresented: $showTranscriptSheet) {
+            TranscriptSheetView(
+                segments: viewModel.segments,
+                currentPlaybackTime: viewModel.currentPlaybackTime,
+                onSeek: { time in
+                    viewModel.seekTo(time)
+                },
+                onEdit: { segment in
+                    editingSegment = segment
+                },
+                onDelete: { segment in
+                    viewModel.deleteSegment(segment)
+                }
+            )
+        }
+        // Segment editor sheet
         .sheet(item: $editingSegment) { segment in
             SegmentEditorSheet(
                 segment: segment,
@@ -71,126 +102,140 @@ struct EditorView: View {
         }
     }
     
-    // MARK: - Video Player
+    // MARK: - Preview Text for Style Cards
+    
+    /// Gets a short transcript snippet for style card preview
+    private var previewTextForStyle: String {
+        if let firstSegment = viewModel.segments.first {
+            let words = firstSegment.text.split(separator: " ")
+            let preview = words.prefix(4).joined(separator: " ")
+            return preview.isEmpty ? "Hello World" : preview
+        }
+        return "Hello World"
+    }
+    
+    // MARK: - Video Player (fills available space)
     
     private var videoPlayerSection: some View {
-        ZStack {
-            if let player = viewModel.player {
-                VideoPlayer(player: player)
-                    .frame(height: 220)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay {
-                        CaptionOverlay(
-                            currentTime: viewModel.currentPlaybackTime,
-                            segments: viewModel.segments,
-                            style: viewModel.selectedStyle
-                        )
-                    }
-            } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(height: 220)
-                    .overlay {
-                        Image(systemName: "film")
-                            .font(.largeTitle)
-                            .foregroundColor(.gray)
-                    }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-    }
-    
-    // MARK: - Captions List
-    
-    private var captionsList: some View {
-        List {
-            ForEach(viewModel.segments) { segment in
-                SegmentRow(
-                    segment: segment,
-                    isActive: segment.isActive(at: viewModel.currentPlaybackTime)
-                )
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    editingSegment = segment
-                    viewModel.seekTo(segment.startTime)
-                }
-                .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        viewModel.deleteSegment(segment)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
+        GeometryReader { geo in
+            ZStack {
+                if let player = viewModel.player {
+                    VideoPlayer(player: player)
+                        .clipShape(RoundedRectangle(cornerRadius: 0))
+                        .overlay {
+                            CaptionOverlay(
+                                currentTime: viewModel.currentPlaybackTime,
+                                segments: viewModel.segments,
+                                style: viewModel.selectedStyle
+                            )
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            togglePlayPause()
+                        }
+                } else {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .overlay {
+                            Image(systemName: "film")
+                                .font(.largeTitle)
+                                .foregroundColor(.gray)
+                        }
                 }
             }
         }
-        .listStyle(.plain)
     }
     
-    // MARK: - Toolbar
+    // MARK: - Bottom Action Bar
     
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItemGroup(placement: .bottomBar) {
+    private var actionBar: some View {
+        HStack(spacing: 0) {
+            // Style button
+            actionButton(icon: "paintbrush.fill", label: "Style") {
+                showStyleSheet = true
+            }
+            
+            // Transcript button
+            actionButton(icon: "text.alignleft", label: "Transcript") {
+                showTranscriptSheet = true
+            }
+            
+            // Play/Pause button (larger, centered)
             Button {
-                viewModel.addSegment(at: viewModel.currentPlaybackTime)
+                togglePlayPause()
             } label: {
-                Label("Add", systemImage: "plus")
+                VStack(spacing: 4) {
+                    ZStack {
+                        Circle()
+                            .fill(Color(hex: "#7C3AED"))
+                            .frame(width: 48, height: 48)
+                        
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                            .font(.title3)
+                            .foregroundColor(.white)
+                    }
+                    
+                    Text(isPlaying ? "Pause" : "Play")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
+            .frame(maxWidth: .infinity)
             
-            Spacer()
-            
-            Button {
-                Task { await viewModel.generateCaptions() }
-            } label: {
-                Label("Regenerate", systemImage: "arrow.clockwise")
-            }
-            
-            Spacer()
-            
-            NavigationLink(value: AppScreen.preview(project)) {
-                Label("Preview", systemImage: "play.fill")
-            }
-            
-            Spacer()
-            
+            // Export button
             NavigationLink(value: AppScreen.export(project)) {
-                Label("Export", systemImage: "square.and.arrow.up")
+                VStack(spacing: 4) {
+                    Image(systemName: "square.and.arrow.up.fill")
+                        .font(.title3)
+                        .frame(width: 44, height: 44)
+                    
+                    Text("Export")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
             }
         }
-    }
-}
-
-// MARK: - Segment Row
-
-private struct SegmentRow: View {
-    let segment: CaptionSegment
-    let isActive: Bool
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(segment.formattedTimeRange)
-                .font(.caption.monospaced())
-                .foregroundColor(.secondary)
-                .frame(width: 90, alignment: .leading)
-            
-            Text(segment.text)
-                .font(.body)
-                .foregroundColor(.white)
-                .lineLimit(2)
-            
-            Spacer()
-            
-            Image(systemName: "pencil")
-                .foregroundColor(.gray)
-                .font(.caption)
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(isActive ? Color(hex: "#7C3AED").opacity(0.15) : Color.clear)
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .ignoresSafeArea(edges: .bottom)
         )
+    }
+    
+    // MARK: - Action Button Helper
+    
+    private func actionButton(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                
+                Text(label)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+        }
+    }
+    
+    // MARK: - Playback
+    
+    private func togglePlayPause() {
+        guard let player = viewModel.player else { return }
+        
+        if isPlaying {
+            player.pause()
+        } else {
+            player.play()
+        }
+        isPlaying.toggle()
     }
 }
 
