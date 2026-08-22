@@ -60,7 +60,13 @@ final class ExportEngine {
         let outputSize: CGSize
         if preset == .original {
             if let videoTrack = try await asset.loadTracks(withMediaType: .video).first {
-                outputSize = try await videoTrack.load(.naturalSize)
+                let naturalSize = try await videoTrack.load(.naturalSize)
+                let transform = try await videoTrack.load(.preferredTransform)
+                // Handle rotation (portrait videos have swapped width/height)
+                let isPortrait = abs(transform.b) == 1 && abs(transform.c) == 1
+                outputSize = isPortrait
+                    ? CGSize(width: naturalSize.height, height: naturalSize.width)
+                    : naturalSize
             } else {
                 throw ExportError.noVideoTrack
             }
@@ -68,19 +74,54 @@ final class ExportEngine {
             outputSize = preset.resolution
         }
         
+        // Build an AVMutableComposition to get full control
+        let mutableComposition = AVMutableComposition()
+        
+        guard let sourceVideoTrack = try await asset.loadTracks(withMediaType: .video).first else {
+            throw ExportError.noVideoTrack
+        }
+        
+        let duration = try await asset.load(.duration)
+        let timeRange = CMTimeRange(start: .zero, duration: duration)
+        
+        // Add video track
+        guard let compositionVideoTrack = mutableComposition.addMutableTrack(
+            withMediaType: .video,
+            preferredTrackID: kCMPersistentTrackID_Invalid
+        ) else {
+            throw ExportError.exportFailed("Could not add video track to composition")
+        }
+        try compositionVideoTrack.insertTimeRange(timeRange, of: sourceVideoTrack, at: .zero)
+        
+        // Copy the transform so portrait videos stay upright
+        let transform = try await sourceVideoTrack.load(.preferredTransform)
+        compositionVideoTrack.preferredTransform = transform
+        
+        // Add audio track if present
+        if let sourceAudioTrack = try await asset.loadTracks(withMediaType: .audio).first {
+            if let compositionAudioTrack = mutableComposition.addMutableTrack(
+                withMediaType: .audio,
+                preferredTrackID: kCMPersistentTrackID_Invalid
+            ) {
+                try compositionAudioTrack.insertTimeRange(timeRange, of: sourceAudioTrack, at: .zero)
+            }
+        }
+        
         // Build video composition with captions
         let renderer = CaptionRenderer()
         let videoComposition = try await renderer.buildVideoComposition(
-            for: asset,
+            for: mutableComposition,
             segments: segments,
             style: style,
             outputSize: outputSize
         )
         
-        // Configure export session
+        // Find a compatible export preset
+        let exportPresetName = await bestExportPreset(for: mutableComposition)
+        
         guard let session = AVAssetExportSession(
-            asset: asset,
-            presetName: AVAssetExportPresetHighestQuality
+            asset: mutableComposition,
+            presetName: exportPresetName
         ) else {
             throw ExportError.exportFailed("Could not create export session")
         }
@@ -140,7 +181,29 @@ final class ExportEngine {
         isExporting = false
     }
     
-    // MARK: - Progress Polling
+    // MARK: - Helpers
+    
+    /// Picks the best compatible export preset for the asset.
+    private func bestExportPreset(for asset: AVAsset) async -> String {
+        // Try presets in order of preference
+        let presets = [
+            AVAssetExportPresetHighestQuality,
+            AVAssetExportPreset1920x1080,
+            AVAssetExportPreset1280x720,
+            AVAssetExportPresetMediumQuality
+        ]
+        
+        for preset in presets {
+            let compatible = await AVAssetExportSession.compatibility(
+                ofExportPreset: preset,
+                with: asset,
+                outputFileType: .mp4
+            )
+            if compatible { return preset }
+        }
+        
+        return AVAssetExportPresetMediumQuality
+    }
     
     private func startProgressPolling(session: AVAssetExportSession) -> Task<Void, Never> {
         Task { @MainActor in
