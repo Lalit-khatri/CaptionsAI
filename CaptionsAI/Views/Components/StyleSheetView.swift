@@ -85,11 +85,11 @@ private struct StylePreviewCard: View {
     let isSelected: Bool
     let previewText: String
     
-    /// Clamp preview text to fit the card
-    private var displayText: String {
-        let words = previewText.split(separator: " ")
-        let short = words.prefix(3).joined(separator: " ")
-        return short.isEmpty ? "Hello" : short
+    private var words: [String] {
+        let splitWords = previewText.split(separator: " ").map(String.init)
+        let slice = Array(splitWords.prefix(3))
+        let base = slice.isEmpty ? ["VIRAL", "CAPTIONS"] : slice
+        return style.isUppercase ? base.map { $0.uppercased() } : base
     }
     
     var body: some View {
@@ -97,40 +97,56 @@ private struct StylePreviewCard: View {
             // Preview box
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.black)
-                    .frame(width: 100, height: 60)
+                    .fill(Color(hex: "#111118"))
+                    .frame(width: 104, height: 64)
                 
-                Text(displayText)
-                    .font(.system(size: 12, weight: style.fontName.contains("Bold") ? .bold : (style.fontName.contains("Light") ? .light : .regular)))
-                    .foregroundColor(style.textColor.color)
-                    .shadow(
-                        color: style.shadowColor.color.opacity(style.shadowRadius > 0 ? 0.8 : 0),
-                        radius: min(style.shadowRadius, 4)
-                    )
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(
-                        Group {
-                            if style.backgroundOpacity > 0 {
-                                RoundedRectangle(cornerRadius: style.cornerRadius > 0 ? 4 : 0)
-                                    .fill(style.backgroundColor.color.opacity(style.backgroundOpacity))
-                            }
+                HStack(spacing: 3) {
+                    ForEach(Array(words.enumerated()), id: \.offset) { index, word in
+                        let isHighlighted = style.wordByWordHighlight && (index == words.count - 1 || words.count == 1)
+                        Text(word)
+                            .font(.system(
+                                size: 11,
+                                weight: (style.fontName.contains("Heavy") || style.fontName.contains("Black")) ? .heavy : (style.fontName.contains("Bold") ? .bold : (style.fontName.contains("Light") ? .light : .medium)),
+                                design: style.fontName.contains("Rounded") ? .rounded : .default
+                            ))
+                            .foregroundColor(isHighlighted ? style.highlightColor.color : style.textColor.color)
+                    }
+                }
+                .shadow(
+                    color: style.shadowColor.color.opacity(style.shadowRadius > 0 ? 0.9 : 0),
+                    radius: min(style.shadowRadius, 4)
+                )
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(
+                    Group {
+                        if style.backgroundOpacity > 0 {
+                            RoundedRectangle(cornerRadius: style.cornerRadius > 0 ? 5 : 0)
+                                .fill(style.backgroundColor.color.opacity(style.backgroundOpacity))
                         }
-                    )
+                    }
+                )
             }
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color(hex: "#7C3AED") : Color.white.opacity(0.1), lineWidth: isSelected ? 2 : 1)
+                    .stroke(isSelected ? Color(hex: "#7C3AED") : Color.white.opacity(0.12), lineWidth: isSelected ? 2.5 : 1)
             )
+            .overlay(alignment: .topTrailing) {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(hex: "#7C3AED"))
+                        .background(Circle().fill(Color.black))
+                        .offset(x: 4, y: -4)
+                }
+            }
             
             // Style name
             Text(style.name)
                 .font(.caption2)
-                .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundColor(isSelected ? Color(hex: "#7C3AED") : .secondary)
+                .fontWeight(isSelected ? .bold : .medium)
+                .foregroundColor(isSelected ? Color(hex: "#A78BFA") : .secondary)
         }
     }
 }
