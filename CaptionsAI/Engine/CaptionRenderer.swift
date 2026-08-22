@@ -85,7 +85,8 @@ final class CaptionRenderer {
                     ]
                     
                     let space = attributedString.length > 0 ? " " : ""
-                    attributedString.append(NSAttributedString(string: space + word.word, attributes: attrs))
+                    let displayWord = style.isUppercase ? word.word.uppercased() : word.word
+                    attributedString.append(NSAttributedString(string: space + displayWord, attributes: attrs))
                 }
                 
                 drawText(attributedString, in: context, style: style, renderSize: renderSize)
@@ -97,7 +98,8 @@ final class CaptionRenderer {
                     .paragraphStyle: paragraphStyle
                 ]
                 
-                let attributedString = NSAttributedString(string: fullText, attributes: attrs)
+                let displayText = style.isUppercase ? fullText.uppercased() : fullText
+                let attributedString = NSAttributedString(string: displayText, attributes: attrs)
                 drawText(attributedString, in: context, style: style, renderSize: renderSize)
             }
         }

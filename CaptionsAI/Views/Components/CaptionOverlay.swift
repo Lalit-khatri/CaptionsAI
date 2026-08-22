@@ -31,7 +31,8 @@ struct CaptionOverlay: View {
             wordByWordText(for: segment)
                 .captionBackground(style: style)
         } else {
-            Text(segment.text)
+            let displayText = style.isUppercase ? segment.text.uppercased() : segment.text
+            Text(displayText)
                 .font(style.font)
                 .foregroundColor(style.textColor.color)
                 .shadow(
@@ -49,7 +50,8 @@ struct CaptionOverlay: View {
         let words = segment.words
         
         if words.isEmpty {
-            return Text(segment.text)
+            let displayText = style.isUppercase ? segment.text.uppercased() : segment.text
+            return Text(displayText)
                 .font(style.font)
                 .foregroundColor(style.textColor.color)
                 .multilineTextAlignment(.center)
@@ -58,10 +60,11 @@ struct CaptionOverlay: View {
         var combined = Text("")
         for (index, word) in words.enumerated() {
             let isActive = currentTime >= word.startTime && currentTime < word.endTime
-            let wordText = Text(word.word + (index < words.count - 1 ? " " : ""))
+            let displayWord = style.isUppercase ? word.word.uppercased() : word.word
+            let wordText = Text(displayWord + (index < words.count - 1 ? " " : ""))
                 .font(style.font)
                 .foregroundColor(isActive ? style.highlightColor.color : style.textColor.color)
-                .fontWeight(isActive ? .heavy : (style.fontName.contains("Bold") ? .bold : .regular))
+                .fontWeight(isActive ? .heavy : (style.fontName.contains("Bold") || style.fontName.contains("Heavy") ? .bold : .regular))
             combined = combined + wordText
         }
         
