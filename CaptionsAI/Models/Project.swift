@@ -39,7 +39,7 @@ final class Project {
     }
     
     var selectedStyle: CaptionStyle {
-        CaptionStyle.presets.first { $0.name == selectedStyleName } ?? .clean
+        CaptionStyle.presets.first { $0.name == selectedStyleName } ?? CaptionStyle.presets.first ?? .hormozi
     }
     
     var sortedSegments: [CaptionSegment] {
@@ -60,7 +60,7 @@ final class Project {
         videoURL: URL,
         createdAt: Date = Date(),
         modifiedAt: Date = Date(),
-        selectedStyleName: String = "Clean",
+        selectedStyleName: String = "Hormozi",
         segments: [CaptionSegment] = [],
         lastExportPreset: String = ExportPreset.instagramReels.rawValue,
         videoDuration: Double = 0
