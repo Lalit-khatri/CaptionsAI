@@ -34,7 +34,11 @@ final class EditorViewModel {
         self.project = project
         self.segments = project.sortedSegments
         self.selectedStyle = project.selectedStyle
-        
+
+        // Configure audio session for the video playback
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode:.moviePlayback)
+        try? AVAudioSession.sharedInstance().setActive(true)
+
         if let url = project.videoURL {
             self.player = AVPlayer(url: url)
         }
