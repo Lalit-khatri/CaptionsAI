@@ -102,6 +102,25 @@ final class EditorViewModel {
 
   func updateSegmentText(_ segment: CaptionSegment, newText: String) {
     segment.text = newText
+    
+    // Rebuild word timings to match the new text.
+    // Distribute the segment's time range evenly across the new words
+    // so word-by-word highlighting stays in sync.
+    let newWords = newText.split(separator: " ").map(String.init)
+    if !newWords.isEmpty {
+      let segmentDuration = segment.endTime - segment.startTime
+      let wordDuration = segmentDuration / Double(newWords.count)
+      segment.words = newWords.enumerated().map { index, word in
+        WordTiming(
+          word: word,
+          startTime: segment.startTime + Double(index) * wordDuration,
+          endTime: segment.startTime + Double(index + 1) * wordDuration
+        )
+      }
+    } else {
+      segment.words = []
+    }
+    
     project.modifiedAt = Date()
     segments = project.sortedSegments
   }

@@ -56,8 +56,9 @@ struct CaptionOverlay: View {
                 }
             )
         }
+        // Force view recreation when segment content changes
+        .id(activeSegment.id.uuidString + activeSegment.text)
         .transition(.opacity)
-        .animation(.easeInOut(duration: 0.15), value: activeSegment.id.uuidString + activeSegment.text)
         .animation(.easeOut(duration: kGuideLineFadeDuration), value: isDragging)
       }
     }
