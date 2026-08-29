@@ -45,6 +45,7 @@ final class ExportEngine {
     preset: ExportPreset,
     segments: [CaptionSegment],
     style: CaptionStyle,
+    captionYPosition: Double,
     addWatermark: Bool
   ) async throws -> URL {
     isExporting = true
@@ -112,7 +113,8 @@ final class ExportEngine {
       for: mutableComposition,
       segments: segments,
       style: style,
-      outputSize: outputSize
+      outputSize: outputSize,
+      captionYPosition: captionYPosition
     )
 
     // Find a compatible export preset

@@ -194,6 +194,7 @@ struct ExportView: View {
                         videoURL: videoURL,
                         segments: project.sortedSegments,
                         style: project.selectedStyle,
+                        captionYPosition: project.captionYPosition ?? project.selectedStyle.position.yPosition,
                         isPro: storeKit.isPro
                     )
                 }

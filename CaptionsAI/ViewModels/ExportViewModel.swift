@@ -37,6 +37,7 @@ final class ExportViewModel {
         videoURL: URL,
         segments: [CaptionSegment],
         style: CaptionStyle,
+        captionYPosition: Double,
         isPro: Bool
     ) async {
         guard checkExportQuota(isPro: isPro) else {
@@ -57,6 +58,7 @@ final class ExportViewModel {
                 preset: selectedPreset,
                 segments: segments,
                 style: style,
+                captionYPosition: captionYPosition,
                 addWatermark: addWatermark
             )
             
