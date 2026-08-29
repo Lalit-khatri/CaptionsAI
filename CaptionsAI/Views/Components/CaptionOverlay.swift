@@ -62,7 +62,7 @@ struct CaptionOverlay: View {
                     x: 0, y: 1
                 )
         } else {
-            formattedWordText(for: words)
+            formattedWordText(for: segment)
                 .multilineTextAlignment(.center)
                 .shadow(
                     color: style.shadowColor.color,
@@ -72,8 +72,9 @@ struct CaptionOverlay: View {
         }
     }
     
-    private func formattedWordText(for words: [CaptionWord]) -> Text {
+    private func formattedWordText(for segment: CaptionSegment) -> Text {
         var combined = Text("")
+        let words = segment.words
         for (index, word) in words.enumerated() {
             let isActive = currentTime >= word.startTime && currentTime < word.endTime
             let displayWord = style.isUppercase ? word.word.uppercased() : word.word
