@@ -1,24 +1,64 @@
 import SwiftUI
 
+// MARK: - Position Constants
+
+/// Minimum drag distance (in points) before repositioning activates
+private let kDragMinimumDistance: CGFloat = 10
+/// Minimum Y position fraction to prevent captions going off-screen top
+private let kMinCaptionY: CGFloat = 0.08
+/// Maximum Y position fraction to prevent captions going off-screen bottom
+private let kMaxCaptionY: CGFloat = 0.92
+/// Duration (seconds) for the guide line fade-out after dragging ends
+private let kGuideLineFadeDuration: Double = 0.5
+
 // MARK: - CaptionOverlay
 
 /// Overlays styled captions on the video player.
-/// Finds the active segment based on current playback time.
+/// Supports vertical drag to reposition captions.
 struct CaptionOverlay: View {
     let currentTime: Double
     let segments: [CaptionSegment]
     let style: CaptionStyle
+    @Binding var yPosition: Double
+    let onPositionChanged: (Double) -> Void
+    
+    @State private var isDragging = false
     
     var body: some View {
         GeometryReader { geo in
             if let activeSegment = segments.first(where: { $0.isActive(at: currentTime) }) {
-                captionText(for: activeSegment, in: geo.size)
-                    .position(
-                        x: geo.size.width / 2,
-                        y: geo.size.height * style.position.yPosition
-                    )
-                    .transition(.opacity)
-                    .animation(.easeInOut(duration: 0.15), value: activeSegment.id)
+                ZStack {
+                    // Guide line visible during drag
+                    if isDragging {
+                        Rectangle()
+                            .fill(Color.white.opacity(0.3))
+                            .frame(height: 1)
+                            .position(x: geo.size.width / 2, y: geo.size.height * yPosition)
+                    }
+                    
+                    captionText(for: activeSegment, in: geo.size)
+                        .position(
+                            x: geo.size.width / 2,
+                            y: geo.size.height * yPosition
+                        )
+                        .gesture(
+                            DragGesture(minimumDistance: kDragMinimumDistance)
+                                .onChanged { value in
+                                    isDragging = true
+                                    let newY = value.location.y / geo.size.height
+                                    yPosition = Double(min(max(newY, kMinCaptionY), kMaxCaptionY))
+                                }
+                                .onEnded { value in
+                                    isDragging = false
+                                    let finalY = value.location.y / geo.size.height
+                                    let clamped = Double(min(max(finalY, kMinCaptionY), kMaxCaptionY))
+                                    onPositionChanged(clamped)
+                                }
+                        )
+                }
+                .transition(.opacity)
+                .animation(.easeInOut(duration: 0.15), value: activeSegment.id)
+                .animation(.easeOut(duration: kGuideLineFadeDuration), value: isDragging)
             }
         }
     }
