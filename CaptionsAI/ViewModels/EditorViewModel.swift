@@ -97,12 +97,14 @@ final class EditorViewModel {
     func updateSegmentText(_ segment: CaptionSegment, newText: String) {
         segment.text = newText
         project.modifiedAt = Date()
+        segments = project.sortedSegments
     }
     
     func updateSegmentTiming(_ segment: CaptionSegment, start: Double, end: Double) {
         segment.startTime = start
         segment.endTime = end
         project.modifiedAt = Date()
+        segments = project.sortedSegments
     }
     
     func addSegment(at time: Double, text: String = "New caption") {
