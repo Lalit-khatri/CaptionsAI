@@ -32,6 +32,10 @@ final class Project {
     /// Duration of the source video in seconds
     var videoDuration: Double
     
+    /// Custom caption Y position (0.0 = top, 1.0 = bottom)
+    /// nil means use the selected style's default position
+    var captionYPosition: Double?
+    
     // MARK: - Computed Properties
     
     var videoURL: URL? {
@@ -91,6 +95,11 @@ final class Project {
     
     func updateStyle(_ styleName: String) {
         selectedStyleName = styleName
+        modifiedAt = Date()
+    }
+    
+    func updateCaptionPosition(_ yPosition: Double) {
+        captionYPosition = yPosition
         modifiedAt = Date()
     }
 }
