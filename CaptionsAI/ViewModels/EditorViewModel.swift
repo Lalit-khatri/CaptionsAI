@@ -8,6 +8,13 @@ import AVKit
 @Observable
 final class EditorViewModel {
     
+    // MARK: - Position Constants
+    
+    /// Minimum Y position to prevent captions from going off-screen top
+    private static let minCaptionY: Double = 0.08
+    /// Maximum Y position to prevent captions from going off-screen bottom
+    private static let maxCaptionY: Double = 0.92
+    
     // MARK: - State
     
     var project: Project
@@ -131,6 +138,17 @@ final class EditorViewModel {
     func selectStyle(_ style: CaptionStyle) {
         selectedStyle = style
         project.updateStyle(style.name)
+    }
+    
+    // MARK: - Caption Position
+    
+    /// The effective Y position for captions (0.0–1.0), clamped to safe bounds
+    var captionYPosition: Double {
+        get { project.captionYPosition ?? selectedStyle.position.yPosition }
+        set {
+            let clamped = min(max(newValue, Self.minCaptionY), Self.maxCaptionY)
+            project.updateCaptionPosition(clamped)
+        }
     }
     
     // MARK: - Playback
