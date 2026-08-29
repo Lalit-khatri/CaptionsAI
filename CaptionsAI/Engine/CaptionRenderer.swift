@@ -3,6 +3,13 @@ import SwiftUI
 import CoreImage
 import UIKit
 
+// MARK: - Renderer Constants
+
+/// Maximum width fraction of the render area used for caption text
+private let kTextMaxWidthFraction: CGFloat = 0.85
+/// Padding around caption text background in points
+private let kTextBackgroundPadding: CGFloat = 12
+
 // MARK: - CaptionRenderer
 
 /// Renders styled captions onto video frames using Core Image and Core Graphics.
@@ -15,7 +22,8 @@ final class CaptionRenderer {
         for asset: AVAsset,
         segments: [CaptionSegment],
         style: CaptionStyle,
-        outputSize: CGSize
+        outputSize: CGSize,
+        captionYPosition: Double
     ) async throws -> AVMutableVideoComposition {
         let composition = AVMutableVideoComposition()
         composition.renderSize = outputSize
@@ -30,7 +38,8 @@ final class CaptionRenderer {
             timeRange: CMTimeRange(start: .zero, duration: duration),
             segments: segments,
             style: style,
-            renderSize: outputSize
+            renderSize: outputSize,
+            captionYPosition: captionYPosition
         )
         
         // Set up source track ID
@@ -50,7 +59,8 @@ final class CaptionRenderer {
         segment: CaptionSegment,
         style: CaptionStyle,
         currentTime: Double,
-        renderSize: CGSize
+        renderSize: CGSize,
+        captionYPosition: Double
     ) -> CIImage {
         let renderer = UIGraphicsImageRenderer(size: renderSize)
         
@@ -89,7 +99,7 @@ final class CaptionRenderer {
                     attributedString.append(NSAttributedString(string: space + displayWord, attributes: attrs))
                 }
                 
-                drawText(attributedString, in: context, style: style, renderSize: renderSize)
+                drawText(attributedString, in: context, style: style, renderSize: renderSize, captionYPosition: captionYPosition)
             } else {
                 // Standard text rendering
                 let attrs: [NSAttributedString.Key: Any] = [
@@ -100,7 +110,7 @@ final class CaptionRenderer {
                 
                 let displayText = style.isUppercase ? fullText.uppercased() : fullText
                 let attributedString = NSAttributedString(string: displayText, attributes: attrs)
-                drawText(attributedString, in: context, style: style, renderSize: renderSize)
+                drawText(attributedString, in: context, style: style, renderSize: renderSize, captionYPosition: captionYPosition)
             }
         }
         
@@ -116,21 +126,23 @@ final class CaptionRenderer {
         _ attributedString: NSAttributedString,
         in context: CGContext,
         style: CaptionStyle,
-        renderSize: CGSize
+        renderSize: CGSize,
+        captionYPosition: Double
     ) {
-        let maxWidth = renderSize.width * 0.85
+        let maxWidth = renderSize.width * kTextMaxWidthFraction
         let textRect = attributedString.boundingRect(
             with: CGSize(width: maxWidth, height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
         
-        let padding: CGFloat = 12
+        let yCenter = renderSize.height * captionYPosition
+        
         let bgRect = CGRect(
-            x: (renderSize.width - textRect.width) / 2 - padding,
-            y: renderSize.height * style.position.yPosition - textRect.height / 2 - padding,
-            width: textRect.width + padding * 2,
-            height: textRect.height + padding * 2
+            x: (renderSize.width - textRect.width) / 2 - kTextBackgroundPadding,
+            y: yCenter - textRect.height / 2 - kTextBackgroundPadding,
+            width: textRect.width + kTextBackgroundPadding * 2,
+            height: textRect.height + kTextBackgroundPadding * 2
         )
         
         // Draw background if needed
@@ -156,7 +168,7 @@ final class CaptionRenderer {
         // Draw text
         let textDrawRect = CGRect(
             x: (renderSize.width - textRect.width) / 2,
-            y: renderSize.height * style.position.yPosition - textRect.height / 2,
+            y: yCenter - textRect.height / 2,
             width: textRect.width,
             height: textRect.height
         )
@@ -177,17 +189,20 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
     let segments: [CaptionSegment]
     let style: CaptionStyle
     let renderSize: CGSize
+    let captionYPosition: Double
     
     init(
         timeRange: CMTimeRange,
         segments: [CaptionSegment],
         style: CaptionStyle,
-        renderSize: CGSize
+        renderSize: CGSize,
+        captionYPosition: Double
     ) {
         self.timeRange = timeRange
         self.segments = segments
         self.style = style
         self.renderSize = renderSize
+        self.captionYPosition = captionYPosition
         super.init()
     }
 }
@@ -240,7 +255,8 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
                 segment: activeSegment,
                 style: instruction.style,
                 currentTime: currentTime,
-                renderSize: instruction.renderSize
+                renderSize: instruction.renderSize,
+                captionYPosition: instruction.captionYPosition
             )
         }
         
