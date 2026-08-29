@@ -116,7 +116,14 @@ struct EditorView: View {
                             CaptionOverlay(
                                 currentTime: viewModel.currentPlaybackTime,
                                 segments: viewModel.segments,
-                                style: viewModel.selectedStyle
+                                style: viewModel.selectedStyle,
+                                yPosition: Binding(
+                                    get: { viewModel.captionYPosition },
+                                    set: { viewModel.captionYPosition = $0 }
+                                ),
+                                onPositionChanged: { newY in
+                                    viewModel.captionYPosition = newY
+                                }
                             )
                         }
                         .contentShape(Rectangle())
