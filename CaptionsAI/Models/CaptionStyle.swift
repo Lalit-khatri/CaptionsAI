@@ -114,27 +114,33 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
     }
     
     var uiFont: UIFont {
-        if let custom = UIFont(name: fontName, size: fontSize) {
+        uiFontScaled(to: fontSize)
+    }
+    
+    /// Returns a UIFont matching the style's font family/weight at a custom size.
+    /// Used by the export renderer to scale fonts to match the output resolution.
+    func uiFontScaled(to size: CGFloat) -> UIFont {
+        if let custom = UIFont(name: fontName, size: size) {
             return custom
         }
         if fontName.contains("Rounded") {
-            if let descriptor = UIFont.systemFont(ofSize: fontSize, weight: .heavy).fontDescriptor.withDesign(.rounded) {
-                return UIFont(descriptor: descriptor, size: fontSize)
+            if let descriptor = UIFont.systemFont(ofSize: size, weight: .heavy).fontDescriptor.withDesign(.rounded) {
+                return UIFont(descriptor: descriptor, size: size)
             }
         }
         if fontName.contains("Heavy") || fontName.contains("Black") {
-            return .systemFont(ofSize: fontSize, weight: .heavy)
+            return .systemFont(ofSize: size, weight: .heavy)
         }
         if fontName.contains("Bold") {
-            return .systemFont(ofSize: fontSize, weight: .bold)
+            return .systemFont(ofSize: size, weight: .bold)
         }
         if fontName.contains("Light") {
-            return .systemFont(ofSize: fontSize, weight: .light)
+            return .systemFont(ofSize: size, weight: .light)
         }
         if fontName.contains("Medium") {
-            return .systemFont(ofSize: fontSize, weight: .medium)
+            return .systemFont(ofSize: size, weight: .medium)
         }
-        return .systemFont(ofSize: fontSize, weight: .bold)
+        return .systemFont(ofSize: size, weight: .bold)
     }
 }
 

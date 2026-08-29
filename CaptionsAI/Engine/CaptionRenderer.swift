@@ -7,8 +7,10 @@ import UIKit
 
 /// Maximum width fraction of the render area used for caption text
 private let kTextMaxWidthFraction: CGFloat = 0.85
-/// Padding around caption text background in points
+/// Base padding around caption text background (in screen points, scaled during export)
 private let kTextBackgroundPadding: CGFloat = 12
+/// Reference screen width (iPhone logical points) used to compute the export scale factor
+private let kReferenceScreenWidth: CGFloat = 393
 
 // MARK: - CaptionRenderer
 
@@ -64,6 +66,11 @@ final class CaptionRenderer {
     ) -> CIImage {
         let renderer = UIGraphicsImageRenderer(size: renderSize)
         
+        // Scale font and padding to match export resolution vs screen preview
+        let scaleFactor = renderSize.width / kReferenceScreenWidth
+        let scaledFontSize = style.fontSize * scaleFactor
+        let font = style.uiFontScaled(to: scaledFontSize)
+        
         let textImage = renderer.image { ctx in
             let context = ctx.cgContext
             
@@ -75,8 +82,6 @@ final class CaptionRenderer {
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.alignment = .center
             paragraphStyle.lineBreakMode = .byWordWrapping
-            
-            let font = style.uiFont
             
             if style.wordByWordHighlight && !words.isEmpty {
                 // Word-by-word highlighting mode
@@ -99,7 +104,7 @@ final class CaptionRenderer {
                     attributedString.append(NSAttributedString(string: space + displayWord, attributes: attrs))
                 }
                 
-                drawText(attributedString, in: context, style: style, renderSize: renderSize, captionYPosition: captionYPosition)
+                drawText(attributedString, in: context, renderSize: renderSize, captionYPosition: captionYPosition, scaleFactor: scaleFactor, style: style)
             } else {
                 // Standard text rendering
                 let attrs: [NSAttributedString.Key: Any] = [
@@ -110,7 +115,7 @@ final class CaptionRenderer {
                 
                 let displayText = style.isUppercase ? fullText.uppercased() : fullText
                 let attributedString = NSAttributedString(string: displayText, attributes: attrs)
-                drawText(attributedString, in: context, style: style, renderSize: renderSize, captionYPosition: captionYPosition)
+                drawText(attributedString, in: context, renderSize: renderSize, captionYPosition: captionYPosition, scaleFactor: scaleFactor, style: style)
             }
         }
         
@@ -125,11 +130,14 @@ final class CaptionRenderer {
     private static func drawText(
         _ attributedString: NSAttributedString,
         in context: CGContext,
-        style: CaptionStyle,
         renderSize: CGSize,
-        captionYPosition: Double
+        captionYPosition: Double,
+        scaleFactor: CGFloat,
+        style: CaptionStyle
     ) {
         let maxWidth = renderSize.width * kTextMaxWidthFraction
+        let scaledPadding = kTextBackgroundPadding * scaleFactor
+        
         let textRect = attributedString.boundingRect(
             with: CGSize(width: maxWidth, height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
@@ -139,10 +147,10 @@ final class CaptionRenderer {
         let yCenter = renderSize.height * captionYPosition
         
         let bgRect = CGRect(
-            x: (renderSize.width - textRect.width) / 2 - kTextBackgroundPadding,
-            y: yCenter - textRect.height / 2 - kTextBackgroundPadding,
-            width: textRect.width + kTextBackgroundPadding * 2,
-            height: textRect.height + kTextBackgroundPadding * 2
+            x: (renderSize.width - textRect.width) / 2 - scaledPadding,
+            y: yCenter - textRect.height / 2 - scaledPadding,
+            width: textRect.width + scaledPadding * 2,
+            height: textRect.height + scaledPadding * 2
         )
         
         // Draw background if needed
@@ -151,7 +159,7 @@ final class CaptionRenderer {
                 .withAlphaComponent(style.backgroundOpacity)
             context.setFillColor(bgColor.cgColor)
             
-            let bgPath = UIBezierPath(roundedRect: bgRect, cornerRadius: style.cornerRadius)
+            let bgPath = UIBezierPath(roundedRect: bgRect, cornerRadius: style.cornerRadius * scaleFactor)
             context.addPath(bgPath.cgPath)
             context.fillPath()
         }
@@ -159,8 +167,8 @@ final class CaptionRenderer {
         // Draw shadow
         if style.shadowRadius > 0 {
             context.setShadow(
-                offset: CGSize(width: 0, height: 1),
-                blur: style.shadowRadius,
+                offset: CGSize(width: 0, height: 1 * scaleFactor),
+                blur: style.shadowRadius * scaleFactor,
                 color: UIColor(Color(hex: style.shadowColor.hex)).cgColor
             )
         }
