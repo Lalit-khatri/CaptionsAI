@@ -7,7 +7,6 @@ import AVKit
 struct EditorView: View {
     let project: Project
     @State private var viewModel: EditorViewModel
-    @State private var editingSegment: CaptionSegment?
     @State private var showStyleSheet = false
     @State private var showTranscriptSheet = false
     @State private var isPlaying = false
@@ -74,21 +73,12 @@ struct EditorView: View {
                 onSeek: { time in
                     viewModel.seekTo(time)
                 },
-                onEdit: { segment in
-                    editingSegment = segment
+                onSave: { segment, text, start, end in
+                    viewModel.updateSegmentText(segment, newText: text)
+                    viewModel.updateSegmentTiming(segment, start: start, end: end)
                 },
                 onDelete: { segment in
                     viewModel.deleteSegment(segment)
-                }
-            )
-        }
-        // Segment editor sheet
-        .sheet(item: $editingSegment) { segment in
-            SegmentEditorSheet(
-                segment: segment,
-                onSave: { text, start, end in
-                    viewModel.updateSegmentText(segment, newText: text)
-                    viewModel.updateSegmentTiming(segment, start: start, end: end)
                 }
             )
         }
@@ -239,66 +229,3 @@ struct EditorView: View {
     }
 }
 
-// MARK: - Segment Editor Sheet
-
-private struct SegmentEditorSheet: View {
-    let segment: CaptionSegment
-    let onSave: (String, Double, Double) -> Void
-    
-    @Environment(\.dismiss) private var dismiss
-    @State private var text: String
-    @State private var startTime: Double
-    @State private var endTime: Double
-    
-    init(segment: CaptionSegment, onSave: @escaping (String, Double, Double) -> Void) {
-        self.segment = segment
-        self.onSave = onSave
-        self._text = State(initialValue: segment.text)
-        self._startTime = State(initialValue: segment.startTime)
-        self._endTime = State(initialValue: segment.endTime)
-    }
-    
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Caption Text") {
-                    TextEditor(text: $text)
-                        .frame(minHeight: 80)
-                }
-                
-                Section("Timing") {
-                    HStack {
-                        Text("Start")
-                        Spacer()
-                        Text(String(format: "%.1fs", startTime))
-                        Stepper("", value: $startTime, in: 0...endTime, step: 0.1)
-                            .labelsHidden()
-                    }
-                    
-                    HStack {
-                        Text("End")
-                        Spacer()
-                        Text(String(format: "%.1fs", endTime))
-                        Stepper("", value: $endTime, in: startTime...3600, step: 0.1)
-                            .labelsHidden()
-                    }
-                }
-            }
-            .navigationTitle("Edit Caption")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        onSave(text, startTime, endTime)
-                        dismiss()
-                    }
-                    .bold()
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-}

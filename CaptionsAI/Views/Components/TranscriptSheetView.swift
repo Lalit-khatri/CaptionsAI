@@ -3,12 +3,15 @@ import SwiftUI
 // MARK: - TranscriptSheetView
 
 /// Bottom sheet showing the full transcript as a scrollable list.
+/// Presents the segment editor sheet internally so it appears on top.
 struct TranscriptSheetView: View {
     let segments: [CaptionSegment]
     let currentPlaybackTime: Double
     let onSeek: (Double) -> Void
-    let onEdit: (CaptionSegment) -> Void
+    let onSave: (CaptionSegment, String, Double, Double) -> Void
     let onDelete: (CaptionSegment) -> Void
+    
+    @State private var editingSegment: CaptionSegment?
     
     var body: some View {
         NavigationStack {
@@ -21,7 +24,7 @@ struct TranscriptSheetView: View {
                     .contentShape(Rectangle())
                     .onTapGesture {
                         onSeek(segment.startTime)
-                        onEdit(segment)
+                        editingSegment = segment
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
@@ -40,10 +43,84 @@ struct TranscriptSheetView: View {
             .listStyle(.plain)
             .navigationTitle("Transcript")
             .navigationBarTitleDisplayMode(.inline)
+            // Segment editor presented from within this sheet
+            .sheet(item: $editingSegment) { segment in
+                SegmentEditorSheet(
+                    segment: segment,
+                    onSave: { text, start, end in
+                        onSave(segment, text, start, end)
+                    }
+                )
+            }
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .presentationBackground(.ultraThinMaterial)
+    }
+}
+
+// MARK: - Segment Editor Sheet
+
+/// Editor for a single caption segment's text and timing.
+struct SegmentEditorSheet: View {
+    let segment: CaptionSegment
+    let onSave: (String, Double, Double) -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    @State private var text: String
+    @State private var startTime: Double
+    @State private var endTime: Double
+    
+    init(segment: CaptionSegment, onSave: @escaping (String, Double, Double) -> Void) {
+        self.segment = segment
+        self.onSave = onSave
+        self._text = State(initialValue: segment.text)
+        self._startTime = State(initialValue: segment.startTime)
+        self._endTime = State(initialValue: segment.endTime)
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Caption Text") {
+                    TextEditor(text: $text)
+                        .frame(minHeight: 80)
+                }
+                
+                Section("Timing") {
+                    HStack {
+                        Text("Start")
+                        Spacer()
+                        Text(String(format: "%.1fs", startTime))
+                        Stepper("", value: $startTime, in: 0...endTime, step: 0.1)
+                            .labelsHidden()
+                    }
+                    
+                    HStack {
+                        Text("End")
+                        Spacer()
+                        Text(String(format: "%.1fs", endTime))
+                        Stepper("", value: $endTime, in: startTime...3600, step: 0.1)
+                            .labelsHidden()
+                    }
+                }
+            }
+            .navigationTitle("Edit Caption")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(text, startTime, endTime)
+                        dismiss()
+                    }
+                    .bold()
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 
