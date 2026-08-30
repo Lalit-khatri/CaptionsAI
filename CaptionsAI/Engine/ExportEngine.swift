@@ -34,7 +34,7 @@ final class ExportEngine {
   // MARK: - Private
 
   private var exportSession: AVAssetExportSession?
-  private var progressTask: Task<Void, Never>?
+  private var progressTimer: Timer?
 
   // MARK: - Export
 
@@ -42,6 +42,7 @@ final class ExportEngine {
   @MainActor
   func export(
     videoURL: URL,
+    settings: ExportSettings,
     preset: ExportPreset,
     segments: [CaptionSegment],
     style: CaptionStyle,
@@ -56,23 +57,19 @@ final class ExportEngine {
 
     let asset = AVURLAsset(url: videoURL)
 
-    // Determine output size
+    // Determine output size from the preset (handles .original via actual track)
     let outputSize: CGSize
     if preset == .original {
-      if let videoTrack = try await asset.loadTracks(withMediaType: .video).first {
-        let naturalSize = try await videoTrack.load(.naturalSize)
-        let transform = try await videoTrack.load(.preferredTransform)
-        // Handle rotation (portrait videos have swapped width/height)
-        let isPortrait = abs(transform.b) == 1 && abs(transform.c) == 1
-        outputSize = isPortrait
-          ? CGSize(width: naturalSize.height, height: naturalSize.width)
-          : naturalSize
-      } else {
-        throw ExportError.noVideoTrack
-      }
+      outputSize = try await resolveOriginalSize(from: asset)
     } else {
       outputSize = preset.resolution
     }
+
+    // Apply resolution multiplier from settings
+    let scale = settings.resolution == .original ? 1.0 : settings.resolution.multiplier
+    let scaledWidth = round(outputSize.width * scale / 2) * 2
+    let scaledHeight = round(outputSize.height * scale / 2) * 2
+    let renderSize = CGSize(width: scaledWidth, height: scaledHeight)
 
     // Build an AVMutableComposition to get full control
     let mutableComposition = AVMutableComposition()
@@ -97,13 +94,15 @@ final class ExportEngine {
     let transform = try await sourceVideoTrack.load(.preferredTransform)
     compositionVideoTrack.preferredTransform = transform
 
-    // Add audio track if present
-    if let sourceAudioTrack = try await asset.loadTracks(withMediaType: .audio).first {
-      if let compositionAudioTrack = mutableComposition.addMutableTrack(
-        withMediaType: .audio,
-        preferredTrackID: kCMPersistentTrackID_Invalid
-      ) {
-        try compositionAudioTrack.insertTimeRange(timeRange, of: sourceAudioTrack, at: .zero)
+    // Add audio track if present and included
+    if settings.includeAudio {
+      if let sourceAudioTrack = try await asset.loadTracks(withMediaType: .audio).first {
+        if let compositionAudioTrack = mutableComposition.addMutableTrack(
+          withMediaType: .audio,
+          preferredTrackID: kCMPersistentTrackID_Invalid
+        ) {
+          try compositionAudioTrack.insertTimeRange(timeRange, of: sourceAudioTrack, at: .zero)
+        }
       }
     }
 
@@ -113,12 +112,15 @@ final class ExportEngine {
       for: mutableComposition,
       segments: segments,
       style: style,
-      outputSize: outputSize,
+      outputSize: renderSize,
       captionYPosition: captionYPosition
     )
 
-    // Find a compatible export preset
-    let exportPresetName = await bestExportPreset(for: mutableComposition)
+    // Select export preset based on codec and quality
+    let exportPresetName = await selectExportPreset(
+      settings: settings,
+      asset: mutableComposition
+    )
 
     guard let session = AVAssetExportSession(
       asset: mutableComposition,
@@ -129,26 +131,30 @@ final class ExportEngine {
 
     let outputURL = FileManager.default.temporaryDirectory
       .appendingPathComponent("CaptionsAI_\(UUID().uuidString)")
-      .appendingPathExtension("mp4")
+      .appendingPathExtension(settings.codec == .h265 ? "mov" : "mp4")
 
     session.outputURL = outputURL
-    session.outputFileType = .mp4
+    session.outputFileType = settings.codec == .h265 ? .mov : .mp4
     session.videoComposition = videoComposition
     session.shouldOptimizeForNetworkUse = true
 
     exportSession = session
 
-    // Start progress polling
-    progressTask = startProgressPolling(session: session)
+    // Start Timer-based progress polling (FrameForge pattern)
+    startProgressPolling(session: session)
 
     // Export
     await session.export()
 
-    progressTask?.cancel()
+    // Stop timer
+    progressTimer?.invalidate()
+    progressTimer = nil
 
     switch session.status {
     case .completed:
       progress = 1.0
+      // Auto-save to Photo Library
+      try await saveToPhotoLibrary(outputURL)
       return outputURL
     case .cancelled:
       throw ExportError.cancelled
@@ -177,28 +183,43 @@ final class ExportEngine {
   // MARK: - Cancel
 
   func cancelExport() {
+    progressTimer?.invalidate()
+    progressTimer = nil
     exportSession?.cancelExport()
-    progressTask?.cancel()
     isExporting = false
   }
 
   // MARK: - Helpers
 
-  /// Picks the best compatible export preset for the asset.
-  private func bestExportPreset(for asset: AVAsset) async -> String {
-    // Try presets in order of preference
-    let presets = [
-      AVAssetExportPresetHighestQuality,
-      AVAssetExportPreset1920x1080,
-      AVAssetExportPreset1280x720,
-      AVAssetExportPresetMediumQuality
-    ]
+  /// Reads the actual video dimensions from the source track, handling rotation.
+  private func resolveOriginalSize(from asset: AVURLAsset) async throws -> CGSize {
+    guard let videoTrack = try await asset.loadTracks(withMediaType: .video).first else {
+      throw ExportError.noVideoTrack
+    }
+    let naturalSize = try await videoTrack.load(.naturalSize)
+    let transform = try await videoTrack.load(.preferredTransform)
+    let isPortrait = abs(transform.b) == 1 && abs(transform.c) == 1
+    return isPortrait
+      ? CGSize(width: naturalSize.height, height: naturalSize.width)
+      : naturalSize
+  }
 
-    for preset in presets {
+  /// Selects the best compatible export preset based on settings.
+  private func selectExportPreset(
+    settings: ExportSettings,
+    asset: AVAsset
+  ) async -> String {
+    // Prefer codec-specific preset first
+    let codecPreset = settings.codec.exportPreset
+    let qualityPreset = settings.quality.exportPreset
+
+    // Try codec preset, then quality preset, then fallback
+    let candidates = [codecPreset, qualityPreset, AVAssetExportPresetHighestQuality]
+    for preset in candidates {
       let compatible = await AVAssetExportSession.compatibility(
         ofExportPreset: preset,
         with: asset,
-        outputFileType: .mp4
+        outputFileType: settings.codec == .h265 ? .mov : .mp4
       )
       if compatible {
         return preset
@@ -208,12 +229,15 @@ final class ExportEngine {
     return AVAssetExportPresetMediumQuality
   }
 
-  private func startProgressPolling(session: AVAssetExportSession) -> Task<Void, Never> {
-    Task { @MainActor in
-      while !Task.isCancelled && session.status == .exporting {
-        self.progress = Double(session.progress)
-        try? await Task.sleep(for: .milliseconds(100))
+  /// Polls `session.progress` every 100ms via a RunLoop timer (FrameForge pattern).
+  private func startProgressPolling(session: AVAssetExportSession) {
+    let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self, weak session] _ in
+      guard let s = session else { return }
+      DispatchQueue.main.async {
+        self?.progress = Double(s.progress)
       }
     }
+    RunLoop.main.add(timer, forMode: .common)
+    progressTimer = timer
   }
 }
