@@ -28,7 +28,9 @@ final class EditorViewModel {
   // MARK: - Player
 
   var player: AVPlayer?
+  var isPlaying = false
   private var timeObserver: Any?
+  private var endObserver: NSObjectProtocol?
 
   // MARK: - Engine
 
@@ -47,12 +49,31 @@ final class EditorViewModel {
 
     if let url = project.videoURL {
       self.player = AVPlayer(url: url)
+      observePlaybackEnd()
     }
   }
 
   deinit {
     if let timeObserver, let player {
       player.removeTimeObserver(timeObserver)
+    }
+    if let endObserver {
+      NotificationCenter.default.removeObserver(endObserver)
+    }
+  }
+
+  // MARK: - Playback End Observer
+
+  /// Seeks back to the beginning when the video finishes so the next
+  /// play tap restarts from the start.
+  private func observePlaybackEnd() {
+    endObserver = NotificationCenter.default.addObserver(
+      forName: .AVPlayerItemDidPlayToEndTime,
+      object: player?.currentItem,
+      queue: .main
+    ) { [weak self] _ in
+      self?.player?.seek(to: .zero)
+      self?.isPlaying = false
     }
   }
 

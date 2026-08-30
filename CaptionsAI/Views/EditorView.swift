@@ -9,7 +9,6 @@ struct EditorView: View {
   @State private var viewModel: EditorViewModel
   @State private var showStyleSheet = false
   @State private var showTranscriptSheet = false
-  @State private var isPlaying = false
   @State private var fontSize: CGFloat = 28
     
   init(project: Project) {
@@ -170,12 +169,12 @@ struct EditorView: View {
               .fill(Color(hex: "#7C3AED"))
               .frame(width: 48, height: 48)
                         
-            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+            Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
               .font(.title3)
               .foregroundColor(.white)
           }
                     
-          Text(isPlaying ? "Pause" : "Play")
+          Text(viewModel.isPlaying ? "Pause" : "Play")
             .font(.caption2)
             .foregroundColor(.secondary)
         }
@@ -230,11 +229,11 @@ struct EditorView: View {
   private func togglePlayPause() {
     guard let player = viewModel.player else { return }
         
-    if isPlaying {
+    if viewModel.isPlaying {
       player.pause()
     } else {
       player.play()
     }
-    isPlaying.toggle()
+    viewModel.isPlaying.toggle()
   }
 }
