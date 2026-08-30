@@ -93,7 +93,7 @@ struct ExportView: View {
                 qualitySection
 
                 // Codec
-                codecSection
+//                codecSection
 
                 // Include Audio
                 audioToggle

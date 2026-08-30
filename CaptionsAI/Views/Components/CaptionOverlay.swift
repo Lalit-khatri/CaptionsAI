@@ -42,7 +42,6 @@ struct CaptionOverlay: View {
   var body: some View {
     GeometryReader { geo in
       if let activeSegment = viewModel.segments.first(where: { $0.isActive(at: currentTime) }) {
-
         ZStack {
           // Guide line visible during drag
           if isDragging {
@@ -61,7 +60,9 @@ struct CaptionOverlay: View {
             .gesture(
               DragGesture(minimumDistance: kDragMinimumDistance)
                 .onChanged { value in
-                  if showDragHint { dismissHint() }
+                  if showDragHint {
+                    dismissHint()
+                  }
                   isDragging = true
                   let newY = value.location.y / geo.size.height
                   yPosition = Double(min(max(newY, kMinCaptionY), kMaxCaptionY))
@@ -80,8 +81,8 @@ struct CaptionOverlay: View {
               .position(
                 x: geo.size.width / 2,
                 y: geo.size.height * yPosition + (yPosition >= kHintFlipThreshold
-                    ? -kDragHintVerticalOffset
-                    : kDragHintVerticalOffset)
+                  ? -kDragHintVerticalOffset
+                  : kDragHintVerticalOffset)
               )
               .onTapGesture {
                 dismissHint()

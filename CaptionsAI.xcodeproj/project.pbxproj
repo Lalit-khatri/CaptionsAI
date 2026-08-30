@@ -27,6 +27,7 @@
 		85283D06777E425416E7E46C /* CaptionsAITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D7986E774433D922AE4529F /* CaptionsAITests.swift */; };
 		853220A53C869D2D28F3F8A4 /* CinemaStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62856CCCC63ECF85EA41F2C4 /* CinemaStyle.swift */; };
 		878A24A90C942697DFDFB88B /* VideoThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = D546312541718D08F88712F8 /* VideoThumbnail.swift */; };
+		8B8240920FAFAADBC89DE667 /* CaptionDragHintView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 999D7C4A492F7FD8B40BD9F4 /* CaptionDragHintView.swift */; };
 		9688B0114F73D05372F8CF11 /* CaptionStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C65F4898A54E11AA3F374675 /* CaptionStyle.swift */; };
 		A3551ED07C34FBC371AB6BB6 /* HormoziStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D4EE2760E87655C13FD993D /* HormoziStyle.swift */; };
 		A38A56BDC413EC27B6129814 /* KaraokeStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 597EABD394F035BDAEA96D04 /* KaraokeStyle.swift */; };
@@ -39,6 +40,7 @@
 		CE80E7E39A1D57CB4E867F3F /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC0E100ED30C21DEB653D710 /* Project.swift */; };
 		D97C60140DD94AD183325974 /* ExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AA6320597B191875A567F05 /* ExportView.swift */; };
 		D9ACA8C955804C24B22BC438 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B818688246AAB8BE72995CB7 /* PreviewView.swift */; };
+		D9D389B67362E4FBB729772F /* ExportSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DE1B1237EA3E1D17DEB8A09 /* ExportSettings.swift */; };
 		DB6047CA7E21FBAF9CB182B5 /* SubmagicStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95479C5844A2EF917877D335 /* SubmagicStyle.swift */; };
 		E0138C4B789F24614C431381 /* CaptionRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CA30DA3EF7A4598D8179622 /* CaptionRenderer.swift */; };
 		E4C11B45C29F78FDEF77571B /* StylePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16042D71017F60B36F63A9C /* StylePickerView.swift */; };
@@ -68,6 +70,7 @@
 		1CF79984A8C41683CEC5E2F5 /* SpeechRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognizer.swift; sourceTree = "<group>"; };
 		270E011C0E2517111ECE2EDA /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		2C0E62D6FB9B54A7D0FFDF10 /* FireStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FireStyle.swift; sourceTree = "<group>"; };
+		3DE1B1237EA3E1D17DEB8A09 /* ExportSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportSettings.swift; sourceTree = "<group>"; };
 		4425D6E91833FF1719401F07 /* EditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewModel.swift; sourceTree = "<group>"; };
 		44995F8F24B14003537F677E /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		4B200BED6BDFDB00A490DDEF /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
@@ -90,6 +93,7 @@
 		8858CF02420B48AA4BFF8525 /* StoreKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
 		8EE2E393DF96A0754B8B08C4 /* CaptionsAIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionsAIApp.swift; sourceTree = "<group>"; };
 		95479C5844A2EF917877D335 /* SubmagicStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmagicStyle.swift; sourceTree = "<group>"; };
+		999D7C4A492F7FD8B40BD9F4 /* CaptionDragHintView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionDragHintView.swift; sourceTree = "<group>"; };
 		9A59ABAC39D5FC94CC3DCD0F /* BoldBoxStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoldBoxStyle.swift; sourceTree = "<group>"; };
 		9B49B6881A8209954170CDEB /* CaptionsAI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CaptionsAI.entitlements; sourceTree = "<group>"; };
 		9CA30DA3EF7A4598D8179622 /* CaptionRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionRenderer.swift; sourceTree = "<group>"; };
@@ -209,6 +213,7 @@
 				E059F095E53C2C304FE5D3FB /* CaptionSegment.swift */,
 				C65F4898A54E11AA3F374675 /* CaptionStyle.swift */,
 				629B016620BAF01D07D399EF /* ExportPreset.swift */,
+				3DE1B1237EA3E1D17DEB8A09 /* ExportSettings.swift */,
 				EC0E100ED30C21DEB653D710 /* Project.swift */,
 			);
 			path = Models;
@@ -245,6 +250,7 @@
 		F307807E504308331EC070B6 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				999D7C4A492F7FD8B40BD9F4 /* CaptionDragHintView.swift */,
 				E546BC6CE545E2352AC51C63 /* CaptionOverlay.swift */,
 				C40EC74D72366198DF91583C /* ProcessingView.swift */,
 				A16042D71017F60B36F63A9C /* StylePickerView.swift */,
@@ -363,6 +369,7 @@
 				32801A118CEDD35278550F59 /* AppState.swift in Sources */,
 				4317A024E919122B0E2BDB92 /* BeastStyle.swift in Sources */,
 				FB0786203CD99EC3CFB1455E /* BoldBoxStyle.swift in Sources */,
+				8B8240920FAFAADBC89DE667 /* CaptionDragHintView.swift in Sources */,
 				AFEBCD9451D01A694B014679 /* CaptionOverlay.swift in Sources */,
 				E0138C4B789F24614C431381 /* CaptionRenderer.swift in Sources */,
 				8326856C610B50314DDF657D /* CaptionSegment.swift in Sources */,
@@ -374,6 +381,7 @@
 				AAEF9F7A81DFA089859AAA7C /* EditorViewModel.swift in Sources */,
 				0BA86D227F7D581A59437B19 /* ExportEngine.swift in Sources */,
 				46935D3BA7A2305F2BDD68DD /* ExportPreset.swift in Sources */,
+				D9D389B67362E4FBB729772F /* ExportSettings.swift in Sources */,
 				D97C60140DD94AD183325974 /* ExportView.swift in Sources */,
 				C2D7B0C3B6DE66F59A1FD6CA /* ExportViewModel.swift in Sources */,
 				311F20D775814183B97CB6F6 /* FireStyle.swift in Sources */,
