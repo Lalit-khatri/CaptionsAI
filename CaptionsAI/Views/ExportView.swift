@@ -17,12 +17,14 @@ private let kProgressStrokeWidth: CGFloat = 8
 /// Export screen with format/quality/codec selection, live progress, and auto-save.
 struct ExportView: View {
     let project: Project
+    @Environment(\.dismiss) private var dismiss
     @Environment(StoreKitManager.self) private var storeKit
     @State private var viewModel = ExportViewModel()
     @State private var showPaywall = false
     @State private var showShareSheet = false
     @State private var showCancelAlert = false
     @State private var videoDuration: Double = 0
+    @State private var thumbnailImage: UIImage?
 
     var body: some View {
         ZStack {
@@ -74,7 +76,7 @@ struct ExportView: View {
             Text(viewModel.error ?? "")
         }
         .onAppear {
-            loadVideoDuration()
+            loadVideoInfo()
         }
     }
 
@@ -272,9 +274,38 @@ struct ExportView: View {
     // MARK: - State 2: Exporting
 
     private var exportingView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             Spacer()
 
+            // Video Thumbnail preview with subtle glow
+            if let image = thumbnailImage {
+                ZStack(alignment: .bottomTrailing) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 120, height: 180)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                        )
+                        .shadow(color: Color(hex: "#7C3AED").opacity(0.35), radius: 16, y: 4)
+
+                    // Duration badge
+                    if videoDuration > 0 {
+                        Text(formatDuration(videoDuration))
+                            .font(.caption2.bold().monospacedDigit())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
+                            .padding(8)
+                    }
+                }
+            }
+
+            // Progress Section
             ZStack {
                 Circle()
                     .stroke(Color.gray.opacity(0.2), lineWidth: kProgressStrokeWidth)
@@ -292,68 +323,146 @@ struct ExportView: View {
                     .rotationEffect(.degrees(-90))
                     .animation(.linear(duration: 0.1), value: viewModel.exportEngine.progress)
 
-                VStack(spacing: 4) {
+                VStack(spacing: 2) {
                     Text("\(Int(viewModel.exportEngine.progress * 100))%")
                         .font(.title.bold())
                         .foregroundColor(.white)
 
                     Text("Exporting...")
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundColor(.secondary)
                 }
             }
             .frame(width: kProgressCircleSize, height: kProgressCircleSize)
+
+            // Export Info Chip
+            HStack(spacing: 8) {
+                Label(
+                    viewModel.selectedPreset.displayName.components(separatedBy: "/").first?.trimmingCharacters(in: .whitespaces) ?? "Video",
+                    systemImage: viewModel.selectedPreset.iconName
+                )
+                Text("•")
+                    .foregroundColor(.secondary)
+                Text(viewModel.settings.quality.rawValue)
+                Text("•")
+                    .foregroundColor(.secondary)
+                Text(project.selectedStyle.name)
+            }
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color(uiColor: .secondarySystemBackground))
+            .clipShape(Capsule())
 
             Spacer()
 
             Button("Cancel Export") {
                 showCancelAlert = true
             }
+            .font(.subheadline)
             .foregroundColor(.red)
             .padding(.bottom, 40)
         }
+        .padding(.horizontal, kSectionPadding)
     }
 
     // MARK: - State 3: Complete
 
     private var completedView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             Spacer()
 
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.green)
-
-            Text("Export Complete!")
-                .font(.title2.bold())
-                .foregroundColor(.white)
-
-            Text("Saved to Photo Library")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            Spacer()
-
-            Button {
-                showShareSheet = true
-            } label: {
-                Label("Share Video", systemImage: "square.and.arrow.up")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
-                            startPoint: .leading,
-                            endPoint: .trailing
+            // Thumbnail with green success badge
+            ZStack(alignment: .topTrailing) {
+                if let image = thumbnailImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 140, height: 210)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.green.opacity(0.3), lineWidth: 2)
                         )
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .shadow(color: Color.green.opacity(0.2), radius: 20, y: 6)
+                }
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 32))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .green)
+                    .background(Circle().fill(.black))
+                    .offset(x: 8, y: -8)
             }
-            .padding(.horizontal, kSectionPadding)
-            .padding(.bottom, 40)
+
+            VStack(spacing: 6) {
+                Text("Export Complete!")
+                    .font(.title2.bold())
+                    .foregroundColor(.white)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "photo.on.rectangle")
+                        .foregroundColor(.green)
+                    Text("Saved to Photo Library")
+                        .foregroundColor(.secondary)
+                }
+                .font(.subheadline)
+            }
+
+            // Summary Info Card
+            HStack(spacing: 16) {
+                summaryDetail(
+                    title: "Format",
+                    value: viewModel.selectedPreset.displayName.components(separatedBy: "/").first?.trimmingCharacters(in: .whitespaces) ?? "Video"
+                )
+                Divider().frame(height: 28)
+                summaryDetail(title: "Quality", value: viewModel.settings.quality.rawValue)
+                Divider().frame(height: 28)
+                summaryDetail(title: "Duration", value: formatDuration(videoDuration))
+                Divider().frame(height: 28)
+                summaryDetail(title: "Style", value: project.selectedStyle.name)
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, 16)
+            .background(Color(uiColor: .secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: kCardCornerRadius))
+
+            Spacer()
+
+            // Share & Done Buttons
+            VStack(spacing: 12) {
+                Button {
+                    showShareSheet = true
+                } label: {
+                    Label("Share Video", systemImage: "square.and.arrow.up")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Done")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                }
+            }
+            .padding(.bottom, 24)
         }
+        .padding(.horizontal, kSectionPadding)
     }
 
     // MARK: - Helpers
@@ -365,15 +474,48 @@ struct ExportView: View {
             .padding(.horizontal, kSectionPadding)
     }
 
-    private func loadVideoDuration() {
+    private func loadVideoInfo() {
         guard let url = project.videoURL else { return }
+
+        // Use cached thumbnail from project if available
+        if let data = project.thumbnailData, let image = UIImage(data: data) {
+            thumbnailImage = image
+        }
+
         let asset = AVURLAsset(url: url)
         Task {
             let duration = try? await asset.load(.duration)
             if let d = duration {
                 videoDuration = CMTimeGetSeconds(d)
             }
+
+            // If no cached thumbnail, generate from asset with proper orientation
+            if thumbnailImage == nil {
+                let generator = AVAssetImageGenerator(asset: asset)
+                generator.appliesPreferredTrackTransform = true
+                generator.maximumSize = CGSize(width: 400, height: 400)
+                if let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil) {
+                    thumbnailImage = UIImage(cgImage: cgImage)
+                }
+            }
         }
+    }
+
+    private func summaryDetail(title: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.caption.bold())
+                .foregroundColor(.white)
+        }
+    }
+
+    private func formatDuration(_ seconds: Double) -> String {
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%d:%02d", mins, secs)
     }
 }
 
