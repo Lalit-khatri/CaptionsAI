@@ -11,10 +11,24 @@ private let kMaxCaptionY: CGFloat = 0.92
 /// Duration (seconds) for the guide line fade-out after dragging ends
 private let kGuideLineFadeDuration: Double = 0.5
 
+// MARK: - Hint Constants
+
+/// Duration (seconds) before the drag hint auto-dismisses
+private let kDragHintAutoDismissDelay: Double = 4.0
+/// Vertical offset (points) of the hint tooltip from the caption
+private let kDragHintVerticalOffset: CGFloat = 40
+/// Bounce amplitude (points) for the caption nudge animation
+private let kBounceAmplitude: CGFloat = 8
+/// Y position threshold — show hint above caption when at or below this fraction
+private let kHintFlipThreshold: Double = 0.5
+/// UserDefaults key for tracking whether the drag hint has been shown
+private let kHasSeenDragHintKey = "hasSeenCaptionDragHint"
+
 // MARK: - CaptionOverlay
 
 /// Overlays styled captions on the video player.
 /// Supports vertical drag to reposition captions.
+/// Shows a one-time hint to teach users about the drag feature.
 struct CaptionOverlay: View {
   let viewModel: EditorViewModel
   let currentTime: Double
@@ -22,6 +36,8 @@ struct CaptionOverlay: View {
   let onPositionChanged: (Double) -> Void
 
   @State private var isDragging = false
+  @State private var showDragHint = false
+  @State private var bounceOffset: CGFloat = 0
 
   var body: some View {
     GeometryReader { geo in
@@ -37,6 +53,7 @@ struct CaptionOverlay: View {
           }
 
           captionText(for: activeSegment, in: geo.size)
+            .offset(y: bounceOffset)
             .position(
               x: geo.size.width / 2,
               y: geo.size.height * yPosition
@@ -44,6 +61,7 @@ struct CaptionOverlay: View {
             .gesture(
               DragGesture(minimumDistance: kDragMinimumDistance)
                 .onChanged { value in
+                  if showDragHint { dismissHint() }
                   isDragging = true
                   let newY = value.location.y / geo.size.height
                   yPosition = Double(min(max(newY, kMinCaptionY), kMaxCaptionY))
@@ -55,13 +73,64 @@ struct CaptionOverlay: View {
                   onPositionChanged(clamped)
                 }
             )
+
+          // One-time drag hint
+          if showDragHint {
+            CaptionDragHintView()
+              .position(
+                x: geo.size.width / 2,
+                y: geo.size.height * yPosition + (yPosition >= kHintFlipThreshold
+                    ? -kDragHintVerticalOffset
+                    : kDragHintVerticalOffset)
+              )
+              .onTapGesture {
+                dismissHint()
+              }
+          }
         }
         // Force view recreation when segment content changes
         .id(activeSegment.id.uuidString + activeSegment.text)
         .transition(.opacity)
         .animation(.easeOut(duration: kGuideLineFadeDuration), value: isDragging)
+        .onAppear {
+          showHintIfNeeded()
+        }
       }
     }
+  }
+
+  // MARK: - Hint Logic
+
+  private func showHintIfNeeded() {
+    guard !UserDefaults.standard.bool(forKey: kHasSeenDragHintKey) else { return }
+
+    // Show tooltip
+    withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+      showDragHint = true
+    }
+
+    // Bounce the caption
+    withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+      bounceOffset = -kBounceAmplitude
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+      withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+        bounceOffset = 0
+      }
+    }
+
+    // Auto-dismiss after delay
+    DispatchQueue.main.asyncAfter(deadline: .now() + kDragHintAutoDismissDelay) {
+      dismissHint()
+    }
+  }
+
+  private func dismissHint() {
+    guard showDragHint else { return }
+    withAnimation(.easeOut(duration: 0.3)) {
+      showDragHint = false
+    }
+    UserDefaults.standard.set(true, forKey: kHasSeenDragHintKey)
   }
 
   // MARK: - Caption Text
