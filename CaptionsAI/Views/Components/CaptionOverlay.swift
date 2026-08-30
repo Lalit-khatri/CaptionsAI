@@ -18,7 +18,7 @@ private let kDragHintAutoDismissDelay: Double = 4.0
 /// Vertical offset (points) of the hint tooltip from the caption
 private let kDragHintVerticalOffset: CGFloat = 40
 /// Bounce amplitude (points) for the caption nudge animation
-private let kBounceAmplitude: CGFloat = 8
+private let kBounceAmplitude: CGFloat = 16
 /// Y position threshold — show hint above caption when at or below this fraction
 private let kHintFlipThreshold: Double = 0.5
 /// UserDefaults key for tracking whether the drag hint has been shown
@@ -110,11 +110,11 @@ struct CaptionOverlay: View {
     }
 
     // Bounce the caption
-    withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+    withAnimation(.spring(response: 0.4, dampingFraction: 0.3)) {
       bounceOffset = -kBounceAmplitude
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-      withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+      withAnimation(.spring(response: 0.4, dampingFraction: 0.3)) {
         bounceOffset = 0
       }
     }
