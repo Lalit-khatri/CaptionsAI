@@ -25,7 +25,8 @@ final class CaptionRenderer {
         segments: [CaptionSegment],
         style: CaptionStyle,
         outputSize: CGSize,
-        captionYPosition: Double
+        captionYPosition: Double,
+        preferredTransform: CGAffineTransform = .identity
     ) async throws -> AVMutableVideoComposition {
         let composition = AVMutableVideoComposition()
         composition.renderSize = outputSize
@@ -41,7 +42,8 @@ final class CaptionRenderer {
             segments: segments,
             style: style,
             renderSize: outputSize,
-            captionYPosition: captionYPosition
+            captionYPosition: captionYPosition,
+            preferredTransform: preferredTransform
         )
         
         // Set up source track ID
@@ -64,7 +66,10 @@ final class CaptionRenderer {
         renderSize: CGSize,
         captionYPosition: Double
     ) -> CIImage {
-        let renderer = UIGraphicsImageRenderer(size: renderSize)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0 // 1 point = 1 pixel for exact export dimensions
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: renderSize, format: format)
         
         // Scale font and padding to match export resolution vs screen preview
         let scaleFactor = renderSize.width / kReferenceScreenWidth
@@ -120,7 +125,9 @@ final class CaptionRenderer {
         }
         
         guard let cgImage = textImage.cgImage else { return image }
+        // Invert Y so UIKit top-left matches CoreImage bottom-left origin
         let textCIImage = CIImage(cgImage: cgImage)
+            .transformed(by: CGAffineTransform(scaleX: 1, y: -1).translatedBy(x: 0, y: -renderSize.height))
         
         return textCIImage.composited(over: image)
     }
@@ -198,19 +205,22 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
     let style: CaptionStyle
     let renderSize: CGSize
     let captionYPosition: Double
+    let preferredTransform: CGAffineTransform
     
     init(
         timeRange: CMTimeRange,
         segments: [CaptionSegment],
         style: CaptionStyle,
         renderSize: CGSize,
-        captionYPosition: Double
+        captionYPosition: Double,
+        preferredTransform: CGAffineTransform = .identity
     ) {
         self.timeRange = timeRange
         self.segments = segments
         self.style = style
         self.renderSize = renderSize
         self.captionYPosition = captionYPosition
+        self.preferredTransform = preferredTransform
         super.init()
     }
 }
@@ -253,28 +263,63 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
             return
         }
         
-        var sourceImage = CIImage(cvPixelBuffer: sourceBuffer)
+        let sourceImage = CIImage(cvPixelBuffer: sourceBuffer)
         let currentTime = CMTimeGetSeconds(request.compositionTime)
-        
-        // Find the active caption segment
+        let renderSize = instruction.renderSize
+
+        // 1. Apply track transform (handles portrait/landscape camera orientation)
+        var videoImage = sourceImage.transformed(by: instruction.preferredTransform)
+
+        // Normalize origin so (0,0) is at bottom-left of the bounding box
+        let extent = videoImage.extent
+        videoImage = videoImage.transformed(
+            by: CGAffineTransform(translationX: -extent.origin.x, y: -extent.origin.y)
+        )
+
+        // 2. Aspect-fit video into renderSize and center it
+        let currentWidth = videoImage.extent.width
+        let currentHeight = videoImage.extent.height
+
+        if currentWidth > 0 && currentHeight > 0 {
+            let scaleX = renderSize.width / currentWidth
+            let scaleY = renderSize.height / currentHeight
+            let scale = min(scaleX, scaleY)
+
+            let scaledWidth = currentWidth * scale
+            let scaledHeight = currentHeight * scale
+
+            let offsetX = (renderSize.width - scaledWidth) / 2.0
+            let offsetY = (renderSize.height - scaledHeight) / 2.0
+
+            let fitTransform = CGAffineTransform(scaleX: scale, y: scale)
+                .concatenating(CGAffineTransform(translationX: offsetX, y: offsetY))
+
+            videoImage = videoImage.transformed(by: fitTransform)
+        }
+
+        // 3. Composite over a clean black background matching renderSize
+        let blackBackground = CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: renderSize))
+        videoImage = videoImage.composited(over: blackBackground)
+
+        // 4. Overlay active caption segment if present
         if let activeSegment = instruction.segments.first(where: { $0.isActive(at: currentTime) }) {
-            sourceImage = CaptionRenderer.renderCaption(
-                on: sourceImage,
+            videoImage = CaptionRenderer.renderCaption(
+                on: videoImage,
                 segment: activeSegment,
                 style: instruction.style,
                 currentTime: currentTime,
-                renderSize: instruction.renderSize,
+                renderSize: renderSize,
                 captionYPosition: instruction.captionYPosition
             )
         }
-        
-        // Render to output pixel buffer
+
+        // 5. Render to output pixel buffer
         guard let outputBuffer = request.renderContext.newPixelBuffer() else {
             request.finish(with: NSError(domain: "CaptionCompositor", code: -2))
             return
         }
-        
-        ciContext.render(sourceImage, to: outputBuffer)
+
+        ciContext.render(videoImage, to: outputBuffer)
         request.finish(withComposedVideoFrame: outputBuffer)
     }
 }

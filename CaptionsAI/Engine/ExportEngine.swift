@@ -113,7 +113,8 @@ final class ExportEngine {
       segments: segments,
       style: style,
       outputSize: renderSize,
-      captionYPosition: captionYPosition
+      captionYPosition: captionYPosition,
+      preferredTransform: transform
     )
 
     // Select export preset based on codec and quality
