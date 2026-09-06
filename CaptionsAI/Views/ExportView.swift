@@ -238,10 +238,11 @@ struct ExportView: View {
 
     private var exportButton: some View {
         Button {
-            if !viewModel.checkExportQuota(isPro: storeKit.isPro) {
-                showPaywall = true
-                AnalyticsService.paywallShown(trigger: "export_limit")
-            } else {
+            // Skip quota checkk for until we onboards free users, as of now we are only looking to onboard for premium users or paid users
+//            if !viewModel.checkExportQuota(isPro: storeKit.isPro) {
+//                showPaywall = true
+//                AnalyticsService.paywallShown(trigger: "export_limit")
+//            } else {
                 guard let videoURL = project.videoURL else { return }
                 Task {
                     await viewModel.startExport(
@@ -252,7 +253,7 @@ struct ExportView: View {
                         isPro: storeKit.isPro
                     )
                 }
-            }
+//            }
         } label: {
             Label("Export Video", systemImage: "square.and.arrow.up")
                 .font(.headline)
