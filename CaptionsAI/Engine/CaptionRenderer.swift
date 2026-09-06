@@ -238,14 +238,32 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
         [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
     }
     
-    private let ciContext = CIContext()
+    // Disable intermediate caching to prevent Core Image from hoarding GPU textures across frames
+    private let ciContext = CIContext(options: [
+        .cacheIntermediates: false,
+        .useSoftwareRenderer: false
+    ])
     private let renderQueue = DispatchQueue(label: "com.captionsai.compositor")
+    
+    // Pre-cached black background — created once, reused every frame
+    private var cachedBlackBackground: CIImage?
+    private var cachedBackgroundSize: CGSize = .zero
+    
+    // Caption overlay cache — only re-render when the active word or segment changes
+    private var cachedCaptionImage: CIImage?
+    private var cachedSegmentId: UUID?
+    private var cachedActiveWordIndex: Int?
     
     func renderContextChanged(_ newRenderContext: AVVideoCompositionRenderContext) {}
     
     func startRequest(_ request: AVAsynchronousVideoCompositionRequest) {
         renderQueue.async { [weak self] in
-            self?.processRequest(request)
+            // autoreleasepool ensures all temporary UIImage, CGImage, CIImage, and
+            // CVPixelBuffer allocations are freed immediately after each frame finishes,
+            // preventing memory from climbing to 3+ GB during long video exports.
+            autoreleasepool {
+                self?.processRequest(request)
+            }
         }
     }
     
@@ -297,20 +315,42 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
             videoImage = videoImage.transformed(by: fitTransform)
         }
 
-        // 3. Composite over a clean black background matching renderSize
-        let blackBackground = CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: renderSize))
+        // 3. Composite over cached black background (created once, reused every frame)
+        let blackBackground = getBlackBackground(for: renderSize)
         videoImage = videoImage.composited(over: blackBackground)
 
-        // 4. Overlay active caption segment if present
+        // 4. Overlay active caption segment if present (with caching)
         if let activeSegment = instruction.segments.first(where: { $0.isActive(at: currentTime) }) {
-            videoImage = CaptionRenderer.renderCaption(
-                on: videoImage,
-                segment: activeSegment,
-                style: instruction.style,
-                currentTime: currentTime,
-                renderSize: renderSize,
-                captionYPosition: instruction.captionYPosition
-            )
+            // Determine which word is currently highlighted (for word-by-word styles)
+            let activeWordIndex = activeSegment.words.firstIndex(where: {
+                currentTime >= $0.startTime && currentTime < $0.endTime
+            })
+            
+            // Only re-render the caption bitmap if the segment or active word changed
+            if activeSegment.id != cachedSegmentId || activeWordIndex != cachedActiveWordIndex {
+                // Caption visual changed — render a fresh overlay
+                let blankImage = CIImage(color: .clear).cropped(to: CGRect(origin: .zero, size: renderSize))
+                cachedCaptionImage = CaptionRenderer.renderCaption(
+                    on: blankImage,
+                    segment: activeSegment,
+                    style: instruction.style,
+                    currentTime: currentTime,
+                    renderSize: renderSize,
+                    captionYPosition: instruction.captionYPosition
+                )
+                cachedSegmentId = activeSegment.id
+                cachedActiveWordIndex = activeWordIndex
+            }
+            
+            // Composite the (possibly cached) caption over the video frame
+            if let captionOverlay = cachedCaptionImage {
+                videoImage = captionOverlay.composited(over: videoImage)
+            }
+        } else {
+            // No active segment — clear cache
+            cachedCaptionImage = nil
+            cachedSegmentId = nil
+            cachedActiveWordIndex = nil
         }
 
         // 5. Render to output pixel buffer
@@ -321,5 +361,18 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
 
         ciContext.render(videoImage, to: outputBuffer)
         request.finish(withComposedVideoFrame: outputBuffer)
+    }
+    
+    // MARK: - Helpers
+    
+    /// Returns a cached black CIImage matching the given size. Created once and reused.
+    private func getBlackBackground(for size: CGSize) -> CIImage {
+        if let cached = cachedBlackBackground, cachedBackgroundSize == size {
+            return cached
+        }
+        let bg = CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: size))
+        cachedBlackBackground = bg
+        cachedBackgroundSize = size
+        return bg
     }
 }
