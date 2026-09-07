@@ -66,6 +66,29 @@ final class CaptionRenderer {
         renderSize: CGSize,
         captionYPosition: Double
     ) -> CIImage {
+        guard let overlay = renderCaptionOverlay(
+            segment: segment,
+            style: style,
+            currentTime: currentTime,
+            renderSize: renderSize,
+            captionYPosition: captionYPosition
+        ) else {
+            return image
+        }
+        return overlay.composited(over: image)
+    }
+    
+    /// Renders ONLY the caption text as a standalone transparent CIImage.
+    /// Use this for caching — the returned image has no compositing baked in,
+    /// so it can be safely composited over any video frame without
+    /// leaking the Y-flip transform into the output coordinate space.
+    static func renderCaptionOverlay(
+        segment: CaptionSegment,
+        style: CaptionStyle,
+        currentTime: Double,
+        renderSize: CGSize,
+        captionYPosition: Double
+    ) -> CIImage? {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1.0 // 1 point = 1 pixel for exact export dimensions
         format.opaque = false
@@ -124,12 +147,10 @@ final class CaptionRenderer {
             }
         }
         
-        guard let cgImage = textImage.cgImage else { return image }
+        guard let cgImage = textImage.cgImage else { return nil }
         // Invert Y so UIKit top-left matches CoreImage bottom-left origin
-        let textCIImage = CIImage(cgImage: cgImage)
+        return CIImage(cgImage: cgImage)
             .transformed(by: CGAffineTransform(scaleX: 1, y: -1).translatedBy(x: 0, y: -renderSize.height))
-        
-        return textCIImage.composited(over: image)
     }
     
     // MARK: - Private Drawing
@@ -328,10 +349,7 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
             
             // Only re-render the caption bitmap if the segment or active word changed
             if activeSegment.id != cachedSegmentId || activeWordIndex != cachedActiveWordIndex {
-                // Caption visual changed — render a fresh overlay
-                let blankImage = CIImage(color: .clear).cropped(to: CGRect(origin: .zero, size: renderSize))
-                cachedCaptionImage = CaptionRenderer.renderCaption(
-                    on: blankImage,
+                cachedCaptionImage = CaptionRenderer.renderCaptionOverlay(
                     segment: activeSegment,
                     style: instruction.style,
                     currentTime: currentTime,
