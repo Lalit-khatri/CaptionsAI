@@ -92,6 +92,7 @@ final class ExportEngine {
 
     // Copy the transform so portrait videos stay upright
     let transform = try await sourceVideoTrack.load(.preferredTransform)
+    let orientation = getVideoOrientation(from: transform)
     compositionVideoTrack.preferredTransform = transform
 
     // Add audio track if present and included
@@ -114,7 +115,8 @@ final class ExportEngine {
       style: style,
       outputSize: renderSize,
       captionYPosition: captionYPosition,
-      preferredTransform: transform
+      preferredTransform: transform,
+      orientation: orientation
     )
 
     // Select export preset based on codec and quality
@@ -191,6 +193,25 @@ final class ExportEngine {
   }
 
   // MARK: - Helpers
+
+  private func getVideoOrientation(from transform: CGAffineTransform) -> CGImagePropertyOrientation {
+    // Portrait
+    if transform.a == 0 && transform.b == 1.0 && transform.c == -1.0 && transform.d == 0 {
+      return .right
+    }
+    // Portrait Upside Down
+    else if transform.a == 0 && transform.b == -1.0 && transform.c == 1.0 && transform.d == 0 {
+      return .left
+    }
+    // Landscape Right
+    else if transform.a == -1.0 && transform.b == 0 && transform.c == 0 && transform.d == -1.0 {
+      return .down
+    }
+    // Landscape Left (Default)
+    else {
+      return .up
+    }
+  }
 
   /// Reads the actual video dimensions from the source track, handling rotation.
   private func resolveOriginalSize(from asset: AVURLAsset) async throws -> CGSize {

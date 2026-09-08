@@ -26,7 +26,8 @@ final class CaptionRenderer {
         style: CaptionStyle,
         outputSize: CGSize,
         captionYPosition: Double,
-        preferredTransform: CGAffineTransform = .identity
+        preferredTransform: CGAffineTransform = .identity,
+        orientation: CGImagePropertyOrientation = .up
     ) async throws -> AVMutableVideoComposition {
         let composition = AVMutableVideoComposition()
         composition.renderSize = outputSize
@@ -43,7 +44,8 @@ final class CaptionRenderer {
             style: style,
             renderSize: outputSize,
             captionYPosition: captionYPosition,
-            preferredTransform: preferredTransform
+            preferredTransform: preferredTransform,
+            orientation: orientation
         )
         
         // Set up source track ID
@@ -227,14 +229,16 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
     let renderSize: CGSize
     let captionYPosition: Double
     let preferredTransform: CGAffineTransform
-    
+    let orientation: CGImagePropertyOrientation
+
     init(
         timeRange: CMTimeRange,
         segments: [CaptionSegment],
         style: CaptionStyle,
         renderSize: CGSize,
         captionYPosition: Double,
-        preferredTransform: CGAffineTransform = .identity
+        preferredTransform: CGAffineTransform = .identity,
+        orientation: CGImagePropertyOrientation = .up
     ) {
         self.timeRange = timeRange
         self.segments = segments
@@ -242,6 +246,7 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
         self.renderSize = renderSize
         self.captionYPosition = captionYPosition
         self.preferredTransform = preferredTransform
+        self.orientation = orientation
         super.init()
     }
 }
@@ -305,15 +310,9 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
         let sourceImage = CIImage(cvPixelBuffer: sourceBuffer)
         let currentTime = CMTimeGetSeconds(request.compositionTime)
         let renderSize = instruction.renderSize
-
+      
         // 1. Apply track transform (handles portrait/landscape camera orientation)
-        var videoImage = sourceImage.transformed(by: instruction.preferredTransform)
-
-        // Normalize origin so (0,0) is at bottom-left of the bounding box
-        let extent = videoImage.extent
-        videoImage = videoImage.transformed(
-            by: CGAffineTransform(translationX: -extent.origin.x, y: -extent.origin.y)
-        )
+        var videoImage = sourceImage.oriented(instruction.orientation)
 
         // 2. Aspect-fit video into renderSize and center it
         let currentWidth = videoImage.extent.width
