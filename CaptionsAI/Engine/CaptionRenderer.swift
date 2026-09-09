@@ -152,7 +152,6 @@ final class CaptionRenderer {
         guard let cgImage = textImage.cgImage else { return nil }
         // Invert Y so UIKit top-left matches CoreImage bottom-left origin
         return CIImage(cgImage: cgImage)
-            .transformed(by: CGAffineTransform(scaleX: 1, y: -1).translatedBy(x: 0, y: -renderSize.height))
     }
     
     // MARK: - Private Drawing
@@ -310,7 +309,7 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
         let sourceImage = CIImage(cvPixelBuffer: sourceBuffer)
         let currentTime = CMTimeGetSeconds(request.compositionTime)
         let renderSize = instruction.renderSize
-      
+
         // 1. Apply track transform (handles portrait/landscape camera orientation)
         var videoImage = sourceImage.oriented(instruction.orientation)
 
