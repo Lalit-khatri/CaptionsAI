@@ -1,5 +1,5 @@
-import SwiftUI
 import AVFoundation
+import SwiftUI
 
 // MARK: - ExportView Constants
 
@@ -69,7 +69,11 @@ struct ExportView: View {
         }
         .alert("Error", isPresented: .init(
             get: { viewModel.error != nil },
-            set: { if !$0 { viewModel.error = nil } }
+            set: {
+                if !$0 {
+                    viewModel.error = nil
+                }
+            }
         )) {
             Button("OK") { viewModel.error = nil }
         } message: {
@@ -243,16 +247,16 @@ struct ExportView: View {
 //                showPaywall = true
 //                AnalyticsService.paywallShown(trigger: "export_limit")
 //            } else {
-                guard let videoURL = project.videoURL else { return }
-                Task {
-                    await viewModel.startExport(
-                        videoURL: videoURL,
-                        segments: project.sortedSegments,
-                        style: project.selectedStyle,
-                        captionYPosition: project.captionYPosition ?? project.selectedStyle.position.yPosition,
-                        isPro: storeKit.isPro
-                    )
-                }
+            guard let videoURL = project.videoURL else { return }
+            Task {
+                await viewModel.startExport(
+                    videoURL: videoURL,
+                    segments: project.sortedSegments,
+                    style: project.selectedStyle,
+                    captionYPosition: project.captionYPosition ?? project.selectedStyle.position.yPosition,
+                    isPro: storeKit.isPro
+                )
+            }
 //            }
         } label: {
             Label("Export Video", systemImage: "square.and.arrow.up")
@@ -565,9 +569,9 @@ private struct FormatCard: View {
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
+    func makeUIViewController(context _: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
 
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_: UIActivityViewController, context _: Context) {}
 }

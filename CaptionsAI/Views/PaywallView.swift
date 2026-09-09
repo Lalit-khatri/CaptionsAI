@@ -7,23 +7,23 @@ struct PaywallView: View {
     @Environment(StoreKitManager.self) private var storeKit
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPlan: String = StoreKitManager.yearlyID
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 28) {
                     // Header
                     headerSection
-                    
+
                     // Comparison table
                     comparisonSection
-                    
+
                     // Pricing cards
                     pricingSection
-                    
+
                     // CTA
                     ctaButton
-                    
+
                     // Restore + Terms
                     footerLinks
                 }
@@ -50,23 +50,23 @@ struct PaywallView: View {
             AnalyticsService.paywallShown(trigger: "manual")
         }
     }
-    
+
     // MARK: - Header
-    
+
     private var headerSection: some View {
         VStack(spacing: 8) {
             Image(systemName: "crown.fill")
                 .font(.system(size: 40))
                 .foregroundColor(Color(hex: "#7C3AED"))
-            
+
             Text("CaptionsAI Pro")
                 .font(.system(size: 32, weight: .bold))
                 .foregroundColor(.white)
         }
     }
-    
+
     // MARK: - Comparison
-    
+
     private var comparisonSection: some View {
         VStack(spacing: 0) {
             // Header row
@@ -83,7 +83,7 @@ struct PaywallView: View {
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 12)
-            
+
             // Rows
             ComparisonRow(feature: "Exports per day", free: "2", pro: "Unlimited")
             ComparisonRow(feature: "Watermark", free: "Yes", pro: "No", proIsGood: true)
@@ -92,9 +92,9 @@ struct PaywallView: View {
             ComparisonRow(feature: "Priority Support", free: "No", pro: "Yes", proIsGood: true)
         }
     }
-    
+
     // MARK: - Pricing
-    
+
     private var pricingSection: some View {
         HStack(spacing: 12) {
             // Monthly
@@ -106,7 +106,7 @@ struct PaywallView: View {
                 isGradient: false
             )
             .onTapGesture { selectedPlan = StoreKitManager.monthlyID }
-            
+
             // Yearly
             PricingCard(
                 price: storeKit.yearlyProduct?.displayPrice ?? "$14.99",
@@ -119,19 +119,21 @@ struct PaywallView: View {
         }
         .padding(.horizontal, 24)
     }
-    
+
     // MARK: - CTA
-    
+
     private var ctaButton: some View {
         Button {
             Task {
                 let product = selectedPlan == StoreKitManager.yearlyID
                     ? storeKit.yearlyProduct
                     : storeKit.monthlyProduct
-                
+
                 if let product {
                     _ = try? await storeKit.purchase(product)
-                    if storeKit.isPro { dismiss() }
+                    if storeKit.isPro {
+                        dismiss()
+                    }
                 }
             }
         } label: {
@@ -151,9 +153,9 @@ struct PaywallView: View {
         }
         .padding(.horizontal, 24)
     }
-    
+
     // MARK: - Footer
-    
+
     private var footerLinks: some View {
         VStack(spacing: 12) {
             Button("Restore Purchases") {
@@ -161,7 +163,7 @@ struct PaywallView: View {
             }
             .font(.subheadline)
             .foregroundColor(.secondary)
-            
+
             Text("Terms & Privacy")
                 .font(.caption2)
                 .foregroundColor(.gray)
@@ -177,18 +179,18 @@ private struct ComparisonRow: View {
     let free: String
     let pro: String
     var proIsGood: Bool = false
-    
+
     var body: some View {
         HStack {
             Text(feature)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            
+
             Text(free)
                 .font(.subheadline)
                 .frame(width: 70)
-            
+
             HStack(spacing: 4) {
                 if proIsGood {
                     Image(systemName: "checkmark")
@@ -214,7 +216,7 @@ private struct PricingCard: View {
     let badge: String?
     let isSelected: Bool
     let isGradient: Bool
-    
+
     var body: some View {
         VStack(spacing: 8) {
             if let badge {
@@ -226,7 +228,7 @@ private struct PricingCard: View {
                     .background(Color(hex: "#3B82F6"))
                     .clipShape(RoundedRectangle(cornerRadius: 4))
             }
-            
+
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(price)
                     .font(.title2.bold())

@@ -1,22 +1,22 @@
-import SwiftUI
 import Foundation
+import SwiftUI
 
 // MARK: - CodableColor
 
 /// A Color wrapper that supports Codable via hex string storage.
 struct CodableColor: Codable, Hashable {
     let hex: String
-    
+
     var color: Color {
         Color(hex: hex)
     }
-    
+
     init(_ hex: String) {
         self.hex = hex
     }
-    
+
     init(_ color: Color) {
-        self.hex = color.toHex() ?? "#FFFFFF"
+        hex = color.toHex() ?? "#FFFFFF"
     }
 }
 
@@ -28,7 +28,7 @@ enum TextPosition: String, Codable, CaseIterable, Hashable {
     case center
     case bottomCenter
     case bottomThird
-    
+
     var displayName: String {
         switch self {
         case .topCenter: return "Top"
@@ -37,7 +37,7 @@ enum TextPosition: String, Codable, CaseIterable, Hashable {
         case .bottomThird: return "Lower Third"
         }
     }
-    
+
     /// Y position as a fraction of video height (0 = top, 1 = bottom)
     var yPosition: CGFloat {
         switch self {
@@ -58,7 +58,7 @@ enum AnimationType: String, Codable, CaseIterable, Hashable {
     case typewriter
     case bounce
     case highlight
-    
+
     var displayName: String {
         switch self {
         case .none: return "None"
@@ -74,8 +74,10 @@ enum AnimationType: String, Codable, CaseIterable, Hashable {
 
 /// Defines the visual appearance of captions on video.
 struct CaptionStyle: Codable, Identifiable, Hashable {
-    var id: String { name }
-    
+    var id: String {
+        name
+    }
+
     var name: String
     var fontName: String
     var fontSize: CGFloat
@@ -90,9 +92,9 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
     var shadowRadius: CGFloat
     var shadowColor: CodableColor
     var isUppercase: Bool = false
-    
+
     // MARK: - SwiftUI Helpers
-    
+
     var font: Font {
         if fontName.contains("Rounded") {
             return .system(size: fontSize, weight: .heavy, design: .rounded)
@@ -112,11 +114,11 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
             return .system(size: fontSize, weight: .bold)
         }
     }
-    
+
     var uiFont: UIFont {
         uiFontScaled(to: fontSize)
     }
-    
+
     /// Returns a UIFont matching the style's font family/weight at a custom size.
     /// Used by the export renderer to scale fonts to match the output resolution.
     func uiFontScaled(to size: CGFloat) -> UIFont {
@@ -158,7 +160,7 @@ extension CaptionStyle {
         cinema,
         fire,
         boldBox,
-        outline
+        outline,
     ]
 }
 
@@ -186,7 +188,7 @@ extension Color {
             opacity: Double(a) / 255
         )
     }
-    
+
     func toHex() -> String? {
         guard let components = UIColor(self).cgColor.components else { return nil }
         let r = Int(components[0] * 255)

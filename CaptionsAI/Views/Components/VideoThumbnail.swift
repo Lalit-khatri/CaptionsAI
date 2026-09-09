@@ -1,5 +1,5 @@
-import SwiftUI
 import AVFoundation
+import SwiftUI
 
 // MARK: - VideoThumbnail
 
@@ -7,10 +7,10 @@ import AVFoundation
 struct VideoThumbnail: View {
     let url: URL
     var cornerRadius: CGFloat = 12
-    
+
     @State private var thumbnail: UIImage?
     @State private var isLoading = true
-    
+
     var body: some View {
         ZStack {
             if let thumbnail {
@@ -33,20 +33,20 @@ struct VideoThumbnail: View {
             await loadThumbnail()
         }
     }
-    
+
     private func loadThumbnail() async {
         let asset = AVURLAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: 400, height: 400)
-        
+
         do {
             let (cgImage, _) = try await generator.image(at: .zero)
             thumbnail = UIImage(cgImage: cgImage)
         } catch {
             thumbnail = nil
         }
-        
+
         isLoading = false
     }
 }

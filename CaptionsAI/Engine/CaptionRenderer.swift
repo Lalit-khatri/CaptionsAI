@@ -1,6 +1,6 @@
 import AVFoundation
-import SwiftUI
 import CoreImage
+import SwiftUI
 import UIKit
 
 // MARK: - Renderer Constants
@@ -16,9 +16,8 @@ private let kReferenceScreenWidth: CGFloat = 393
 
 /// Renders styled captions onto video frames using Core Image and Core Graphics.
 final class CaptionRenderer {
-    
     // MARK: - Composition Builder
-    
+
     /// Builds an AVVideoComposition that overlays captions onto video frames.
     func buildVideoComposition(
         for asset: AVAsset,
@@ -33,10 +32,10 @@ final class CaptionRenderer {
         composition.renderSize = outputSize
         composition.frameDuration = CMTime(value: 1, timescale: 30)
         composition.customVideoCompositorClass = CaptionCompositor.self
-        
+
         // Get video duration
         let duration = try await asset.load(.duration)
-        
+
         // Create instruction covering the full duration
         let instruction = CaptionCompositionInstruction(
             timeRange: CMTimeRange(start: .zero, duration: duration),
@@ -47,18 +46,18 @@ final class CaptionRenderer {
             preferredTransform: preferredTransform,
             orientation: orientation
         )
-        
+
         // Set up source track ID
         if let videoTrack = try await asset.loadTracks(withMediaType: .video).first {
             instruction.requiredSourceTrackIDs = [NSNumber(value: videoTrack.trackID)]
         }
-        
+
         composition.instructions = [instruction]
         return composition
     }
-    
+
     // MARK: - Static Rendering
-    
+
     /// Renders a caption onto a source image at the given time.
     static func renderCaption(
         on image: CIImage,
@@ -79,7 +78,7 @@ final class CaptionRenderer {
         }
         return overlay.composited(over: image)
     }
-    
+
     /// Renders ONLY the caption text as a standalone transparent CIImage.
     /// Use this for caching — the returned image has no compositing baked in,
     /// so it can be safely composited over any video frame without
@@ -95,67 +94,67 @@ final class CaptionRenderer {
         format.scale = 1.0 // 1 point = 1 pixel for exact export dimensions
         format.opaque = false
         let renderer = UIGraphicsImageRenderer(size: renderSize, format: format)
-        
+
         // Scale font and padding to match export resolution vs screen preview
         let scaleFactor = renderSize.width / kReferenceScreenWidth
         let scaledFontSize = style.fontSize * scaleFactor
         let font = style.uiFontScaled(to: scaledFontSize)
-        
+
         let textImage = renderer.image { ctx in
             let context = ctx.cgContext
-            
+
             // Build attributed text
             let words = segment.words
             let fullText = segment.text
-            
+
             // Configure paragraph style
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.alignment = .center
             paragraphStyle.lineBreakMode = .byWordWrapping
-            
-            if style.wordByWordHighlight && !words.isEmpty {
+
+            if style.wordByWordHighlight, !words.isEmpty {
                 // Word-by-word highlighting mode
                 let attributedString = NSMutableAttributedString()
-                
+
                 for word in words {
                     let isActive = currentTime >= word.startTime && currentTime < word.endTime
                     let color = isActive
                         ? UIColor(Color(hex: style.highlightColor.hex))
                         : UIColor(Color(hex: style.textColor.hex))
-                    
+
                     let attrs: [NSAttributedString.Key: Any] = [
                         .font: font,
                         .foregroundColor: color,
-                        .paragraphStyle: paragraphStyle
+                        .paragraphStyle: paragraphStyle,
                     ]
-                    
+
                     let space = attributedString.length > 0 ? " " : ""
                     let displayWord = style.isUppercase ? word.word.uppercased() : word.word
                     attributedString.append(NSAttributedString(string: space + displayWord, attributes: attrs))
                 }
-                
+
                 drawText(attributedString, in: context, renderSize: renderSize, captionYPosition: captionYPosition, scaleFactor: scaleFactor, style: style)
             } else {
                 // Standard text rendering
                 let attrs: [NSAttributedString.Key: Any] = [
                     .font: font,
                     .foregroundColor: UIColor(Color(hex: style.textColor.hex)),
-                    .paragraphStyle: paragraphStyle
+                    .paragraphStyle: paragraphStyle,
                 ]
-                
+
                 let displayText = style.isUppercase ? fullText.uppercased() : fullText
                 let attributedString = NSAttributedString(string: displayText, attributes: attrs)
                 drawText(attributedString, in: context, renderSize: renderSize, captionYPosition: captionYPosition, scaleFactor: scaleFactor, style: style)
             }
         }
-        
+
         guard let cgImage = textImage.cgImage else { return nil }
         // Invert Y so UIKit top-left matches CoreImage bottom-left origin
         return CIImage(cgImage: cgImage)
     }
-    
+
     // MARK: - Private Drawing
-    
+
     private static func drawText(
         _ attributedString: NSAttributedString,
         in context: CGContext,
@@ -166,33 +165,33 @@ final class CaptionRenderer {
     ) {
         let maxWidth = renderSize.width * kTextMaxWidthFraction
         let scaledPadding = kTextBackgroundPadding * scaleFactor
-        
+
         let textRect = attributedString.boundingRect(
             with: CGSize(width: maxWidth, height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
-        
+
         let yCenter = renderSize.height * captionYPosition
-        
+
         let bgRect = CGRect(
             x: (renderSize.width - textRect.width) / 2 - scaledPadding,
             y: yCenter - textRect.height / 2 - scaledPadding,
             width: textRect.width + scaledPadding * 2,
             height: textRect.height + scaledPadding * 2
         )
-        
+
         // Draw background if needed
         if style.backgroundOpacity > 0 {
             let bgColor = UIColor(Color(hex: style.backgroundColor.hex))
                 .withAlphaComponent(style.backgroundOpacity)
             context.setFillColor(bgColor.cgColor)
-            
+
             let bgPath = UIBezierPath(roundedRect: bgRect, cornerRadius: style.cornerRadius * scaleFactor)
             context.addPath(bgPath.cgPath)
             context.fillPath()
         }
-        
+
         // Draw shadow
         if style.shadowRadius > 0 {
             context.setShadow(
@@ -201,7 +200,7 @@ final class CaptionRenderer {
                 color: UIColor(Color(hex: style.shadowColor.hex)).cgColor
             )
         }
-        
+
         // Draw text
         let textDrawRect = CGRect(
             x: (renderSize.width - textRect.width) / 2,
@@ -222,7 +221,7 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
     var containsTweening: Bool = true
     var requiredSourceTrackIDs: [NSValue]?
     var passthroughTrackID: CMPersistentTrackID = kCMPersistentTrackID_Invalid
-    
+
     let segments: [CaptionSegment]
     let style: CaptionStyle
     let renderSize: CGSize
@@ -254,33 +253,32 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
 
 /// Custom AVVideoCompositing that overlays captions on each video frame.
 final class CaptionCompositor: NSObject, AVVideoCompositing {
-    
     var sourcePixelBufferAttributes: [String: Any]? {
         [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
     }
-    
+
     var requiredPixelBufferAttributesForRenderContext: [String: Any] {
         [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
     }
-    
-    // Disable intermediate caching to prevent Core Image from hoarding GPU textures across frames
+
+    /// Disable intermediate caching to prevent Core Image from hoarding GPU textures across frames
     private let ciContext = CIContext(options: [
         .cacheIntermediates: false,
-        .useSoftwareRenderer: false
+        .useSoftwareRenderer: false,
     ])
     private let renderQueue = DispatchQueue(label: "com.captionsai.compositor")
-    
+
     // Pre-cached black background — created once, reused every frame
     private var cachedBlackBackground: CIImage?
     private var cachedBackgroundSize: CGSize = .zero
-    
+
     // Caption overlay cache — only re-render when the active word or segment changes
     private var cachedCaptionImage: CIImage?
     private var cachedSegmentId: UUID?
     private var cachedActiveWordIndex: Int?
-    
-    func renderContextChanged(_ newRenderContext: AVVideoCompositionRenderContext) {}
-    
+
+    func renderContextChanged(_: AVVideoCompositionRenderContext) {}
+
     func startRequest(_ request: AVAsynchronousVideoCompositionRequest) {
         renderQueue.async { [weak self] in
             // autoreleasepool ensures all temporary UIImage, CGImage, CIImage, and
@@ -291,21 +289,22 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
             }
         }
     }
-    
+
     private func processRequest(_ request: AVAsynchronousVideoCompositionRequest) {
         guard let instruction = request.videoCompositionInstruction as? CaptionCompositionInstruction,
-              let trackIDNumber = instruction.requiredSourceTrackIDs?.first as? NSNumber else {
+              let trackIDNumber = instruction.requiredSourceTrackIDs?.first as? NSNumber
+        else {
             request.finish(with: NSError(domain: "CaptionCompositor", code: -1))
             return
         }
-        
+
         let trackID = CMPersistentTrackID(trackIDNumber.int32Value)
-        
+
         guard let sourceBuffer = request.sourceFrame(byTrackID: trackID) else {
             request.finish(with: NSError(domain: "CaptionCompositor", code: -1))
             return
         }
-        
+
         let sourceImage = CIImage(cvPixelBuffer: sourceBuffer)
         let currentTime = CMTimeGetSeconds(request.compositionTime)
         let renderSize = instruction.renderSize
@@ -317,7 +316,7 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
         let currentWidth = videoImage.extent.width
         let currentHeight = videoImage.extent.height
 
-        if currentWidth > 0 && currentHeight > 0 {
+        if currentWidth > 0, currentHeight > 0 {
             let scaleX = renderSize.width / currentWidth
             let scaleY = renderSize.height / currentHeight
             let scale = min(scaleX, scaleY)
@@ -344,7 +343,7 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
             let activeWordIndex = activeSegment.words.firstIndex(where: {
                 currentTime >= $0.startTime && currentTime < $0.endTime
             })
-            
+
             // Only re-render the caption bitmap if the segment or active word changed
             if activeSegment.id != cachedSegmentId || activeWordIndex != cachedActiveWordIndex {
                 cachedCaptionImage = CaptionRenderer.renderCaptionOverlay(
@@ -357,7 +356,7 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
                 cachedSegmentId = activeSegment.id
                 cachedActiveWordIndex = activeWordIndex
             }
-            
+
             // Composite the (possibly cached) caption over the video frame
             if let captionOverlay = cachedCaptionImage {
                 videoImage = captionOverlay.composited(over: videoImage)
@@ -378,9 +377,9 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
         ciContext.render(videoImage, to: outputBuffer)
         request.finish(withComposedVideoFrame: outputBuffer)
     }
-    
+
     // MARK: - Helpers
-    
+
     /// Returns a cached black CIImage matching the given size. Created once and reused.
     private func getBlackBackground(for size: CGSize) -> CIImage {
         if let cached = cachedBlackBackground, cachedBackgroundSize == size {

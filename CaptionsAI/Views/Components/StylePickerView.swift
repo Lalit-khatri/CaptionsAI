@@ -5,7 +5,7 @@ import SwiftUI
 /// Horizontal scrollable strip of caption style presets.
 struct StylePickerView: View {
     @Binding var selectedStyle: CaptionStyle
-    
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
@@ -31,7 +31,7 @@ struct StylePickerView: View {
 private struct StyleCard: View {
     let style: CaptionStyle
     let isSelected: Bool
-    
+
     var body: some View {
         VStack(spacing: 6) {
             // Preview
@@ -39,7 +39,7 @@ private struct StyleCard: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.black)
                     .frame(width: 72, height: 44)
-                
+
                 Text("Abc")
                     .font(style.font.weight(.bold))
                     .foregroundColor(style.textColor.color)
@@ -70,7 +70,7 @@ private struct StyleCard: View {
                         .offset(x: 4, y: -4)
                 }
             }
-            
+
             // Label
             Text(style.name)
                 .font(.caption2)

@@ -8,7 +8,7 @@ struct StyleSheetView: View {
     @Binding var fontSize: CGFloat
     let previewText: String
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         VStack(spacing: 16) {
             // Drag indicator
@@ -16,12 +16,12 @@ struct StyleSheetView: View {
                 .fill(Color.gray.opacity(0.5))
                 .frame(width: 36, height: 5)
                 .padding(.top, 8)
-            
+
             // Title
             Text("Caption Style")
                 .font(.headline)
                 .foregroundColor(.white)
-            
+
             // Style cards - horizontal scroll
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
@@ -40,36 +40,36 @@ struct StyleSheetView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            
+
             // Text Size Slider
             VStack(spacing: 8) {
                 HStack {
                     Text("Text Size")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    
+
                     Spacer()
-                    
+
                     Text("\(Int(fontSize))pt")
                         .font(.subheadline.monospacedDigit())
                         .foregroundColor(.white)
                 }
-                
+
                 HStack(spacing: 12) {
                     Image(systemName: "textformat.size.smaller")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
-                    Slider(value: $fontSize, in: 16...48, step: 2)
+
+                    Slider(value: $fontSize, in: 16 ... 48, step: 2)
                         .tint(Color(hex: "#7C3AED"))
-                    
+
                     Image(systemName: "textformat.size.larger")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             .padding(.horizontal, 16)
-            
+
             Spacer()
         }
         .presentationDetents([.height(300)])
@@ -84,14 +84,14 @@ private struct StylePreviewCard: View {
     let style: CaptionStyle
     let isSelected: Bool
     let previewText: String
-    
+
     private var words: [String] {
         let splitWords = previewText.split(separator: " ").map(String.init)
         let slice = Array(splitWords.prefix(3))
         let base = slice.isEmpty ? ["VIRAL", "CAPTIONS"] : slice
         return style.isUppercase ? base.map { $0.uppercased() } : base
     }
-    
+
     var body: some View {
         VStack(spacing: 6) {
             // Preview box
@@ -99,7 +99,7 @@ private struct StylePreviewCard: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color(hex: "#111118"))
                     .frame(width: 104, height: 64)
-                
+
                 HStack(spacing: 3) {
                     ForEach(Array(words.enumerated()), id: \.offset) { index, word in
                         let isHighlighted = style.wordByWordHighlight && (index == words.count - 1 || words.count == 1)
@@ -141,7 +141,7 @@ private struct StylePreviewCard: View {
                         .offset(x: 4, y: -4)
                 }
             }
-            
+
             // Style name
             Text(style.name)
                 .font(.caption2)

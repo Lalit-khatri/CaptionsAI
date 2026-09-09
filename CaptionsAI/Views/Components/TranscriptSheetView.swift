@@ -10,9 +10,9 @@ struct TranscriptSheetView: View {
     let onSeek: (Double) -> Void
     let onSave: (CaptionSegment, String, Double, Double) -> Void
     let onDelete: (CaptionSegment) -> Void
-    
+
     @State private var editingSegment: CaptionSegment?
-    
+
     var body: some View {
         NavigationStack {
             List {
@@ -65,20 +65,20 @@ struct TranscriptSheetView: View {
 struct SegmentEditorSheet: View {
     let segment: CaptionSegment
     let onSave: (String, Double, Double) -> Void
-    
+
     @Environment(\.dismiss) private var dismiss
     @State private var text: String
     @State private var startTime: Double
     @State private var endTime: Double
-    
+
     init(segment: CaptionSegment, onSave: @escaping (String, Double, Double) -> Void) {
         self.segment = segment
         self.onSave = onSave
-        self._text = State(initialValue: segment.text)
-        self._startTime = State(initialValue: segment.startTime)
-        self._endTime = State(initialValue: segment.endTime)
+        _text = State(initialValue: segment.text)
+        _startTime = State(initialValue: segment.startTime)
+        _endTime = State(initialValue: segment.endTime)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -86,21 +86,21 @@ struct SegmentEditorSheet: View {
                     TextEditor(text: $text)
                         .frame(minHeight: 80)
                 }
-                
+
                 Section("Timing") {
                     HStack {
                         Text("Start")
                         Spacer()
                         Text(String(format: "%.1fs", startTime))
-                        Stepper("", value: $startTime, in: 0...endTime, step: 0.1)
+                        Stepper("", value: $startTime, in: 0 ... endTime, step: 0.1)
                             .labelsHidden()
                     }
-                    
+
                     HStack {
                         Text("End")
                         Spacer()
                         Text(String(format: "%.1fs", endTime))
-                        Stepper("", value: $endTime, in: startTime...3600, step: 0.1)
+                        Stepper("", value: $endTime, in: startTime ... 3600, step: 0.1)
                             .labelsHidden()
                     }
                 }
@@ -129,7 +129,7 @@ struct SegmentEditorSheet: View {
 private struct TranscriptRow: View {
     let segment: CaptionSegment
     let isActive: Bool
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Time range
@@ -137,15 +137,15 @@ private struct TranscriptRow: View {
                 .font(.caption.monospaced())
                 .foregroundColor(isActive ? Color(hex: "#7C3AED") : .secondary)
                 .frame(width: 90, alignment: .leading)
-            
+
             // Caption text
             Text(segment.text)
                 .font(.body)
                 .foregroundColor(.white)
                 .lineLimit(2)
-            
+
             Spacer()
-            
+
             // Edit indicator
             Image(systemName: "pencil")
                 .foregroundColor(.gray)

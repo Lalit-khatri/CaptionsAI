@@ -7,7 +7,7 @@ struct WordTimeline: View {
     let segment: CaptionSegment
     @Binding var selectedWord: WordTiming?
     let onTimingChange: (WordTiming, Double, Double) -> Void
-    
+
     var body: some View {
         VStack(spacing: 16) {
             // Word blocks
@@ -27,7 +27,7 @@ struct WordTimeline: View {
                 }
                 .padding(.horizontal, 16)
             }
-            
+
             // Timing controls for selected word
             if let word = selectedWord {
                 VStack(spacing: 12) {
@@ -40,9 +40,9 @@ struct WordTimeline: View {
                         Text(word.word)
                             .font(.subheadline.bold())
                     }
-                    
+
                     Divider()
-                    
+
                     // Start time
                     HStack {
                         Text("Start")
@@ -51,7 +51,7 @@ struct WordTimeline: View {
                         Spacer()
                         Text(String(format: "%.2fs", word.startTime))
                             .font(.subheadline.monospaced())
-                        
+
                         HStack(spacing: 0) {
                             Button {
                                 let newStart = max(0, word.startTime - 0.05)
@@ -60,9 +60,9 @@ struct WordTimeline: View {
                                 Image(systemName: "minus")
                                     .frame(width: 32, height: 28)
                             }
-                            
+
                             Divider().frame(height: 20)
-                            
+
                             Button {
                                 let newStart = min(word.endTime - 0.05, word.startTime + 0.05)
                                 onTimingChange(word, newStart, word.endTime)
@@ -74,7 +74,7 @@ struct WordTimeline: View {
                         .background(Color(uiColor: .tertiarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
-                    
+
                     // End time
                     HStack {
                         Text("End")
@@ -83,7 +83,7 @@ struct WordTimeline: View {
                         Spacer()
                         Text(String(format: "%.2fs", word.endTime))
                             .font(.subheadline.monospaced())
-                        
+
                         HStack(spacing: 0) {
                             Button {
                                 let newEnd = max(word.startTime + 0.05, word.endTime - 0.05)
@@ -92,9 +92,9 @@ struct WordTimeline: View {
                                 Image(systemName: "minus")
                                     .frame(width: 32, height: 28)
                             }
-                            
+
                             Divider().frame(height: 20)
-                            
+
                             Button {
                                 onTimingChange(word, word.startTime, word.endTime + 0.05)
                             } label: {
@@ -120,7 +120,7 @@ struct WordTimeline: View {
 private struct WordBlock: View {
     let word: WordTiming
     let isSelected: Bool
-    
+
     var body: some View {
         Text(word.word)
             .font(.caption.bold())
