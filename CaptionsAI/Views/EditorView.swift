@@ -34,7 +34,7 @@ struct EditorView: View {
                 ProcessingView(
                     progress: viewModel.speechRecognizer.progress,
                     words: viewModel.speechRecognizer.partialResults,
-                    onCancel: { viewModel.isProcessing = false }
+                    onCancel: { viewModel.cancelTranscription() }
                 )
             }
         }
@@ -45,9 +45,12 @@ struct EditorView: View {
         .onAppear { viewModel.setupTimeObserver() }
         .task {
             if viewModel.segments.isEmpty {
-                await viewModel.generateCaptions()
+                viewModel.startTranscription()
             }
         }
+        // `.task` used to own the transcription and cancel it on disappear.
+        // The view model owns it now, so the teardown has to be explicit.
+        .onDisappear { viewModel.cancelTranscription() }
         // Style bottom sheet
         .sheet(isPresented: $showStyleSheet) {
             StyleSheetView(

@@ -1,4 +1,6 @@
 @testable import CaptionsAI
+import SwiftUI
+import UIKit
 import XCTest
 
 final class CaptionSegmentTests: XCTestCase {
@@ -51,25 +53,34 @@ final class CaptionSegmentTests: XCTestCase {
 }
 
 final class CaptionStyleTests: XCTestCase {
+    /// The exact preset line-up. Asserted by name because the names are a
+    /// product surface: a silent rename changes what users see in the style
+    /// picker and orphans any project that persisted the old name.
+    private static let expectedNames = [
+        "Hormozi", "Beast", "Submagic", "Ali Abdaal", "Cyber Glow",
+        "Karaoke", "Cinema", "Fire", "Vox Box", "Outline",
+    ]
+
     func testPresetsCount() {
-        XCTAssertEqual(CaptionStyle.presets.count, 8)
+        XCTAssertEqual(CaptionStyle.presets.count, Self.expectedNames.count)
     }
 
     func testPresetNames() {
-        let names = CaptionStyle.presets.map(\.name)
-        XCTAssertTrue(names.contains("Clean"))
-        XCTAssertTrue(names.contains("Bold"))
-        XCTAssertTrue(names.contains("Neon"))
-        XCTAssertTrue(names.contains("Minimal"))
-        XCTAssertTrue(names.contains("Highlight"))
-        XCTAssertTrue(names.contains("Typewriter"))
-        XCTAssertTrue(names.contains("Subtitle"))
-        XCTAssertTrue(names.contains("Pop"))
+        XCTAssertEqual(CaptionStyle.presets.map(\.name), Self.expectedNames)
     }
 
-    func testHighlightStyleHasWordByWord() {
-        XCTAssertTrue(CaptionStyle.highlight.wordByWordHighlight)
-        XCTAssertFalse(CaptionStyle.clean.wordByWordHighlight)
+    /// `CaptionStyle.id` is derived from `name`, so duplicate names would give
+    /// two presets the same identity and break `ForEach` in the style picker.
+    func testPresetIdentifiersAreUnique() {
+        let ids = CaptionStyle.presets.map(\.id)
+        XCTAssertEqual(Set(ids).count, ids.count, "duplicate style ids: \(ids)")
+    }
+
+    func testWordByWordHighlightVariesByPreset() {
+        // Karaoke is the word-by-word style; Cinema is deliberately not.
+        XCTAssertTrue(CaptionStyle.karaoke.wordByWordHighlight)
+        XCTAssertFalse(CaptionStyle.cinema.wordByWordHighlight)
+        XCTAssertFalse(CaptionStyle.boldBox.wordByWordHighlight)
     }
 
     func testCodableColor() throws {
@@ -83,6 +94,24 @@ final class CaptionStyleTests: XCTestCase {
         let decoded = try decoder.decode(CodableColor.self, from: data)
 
         XCTAssertEqual(decoded.hex, "#FF0000")
+    }
+
+    /// `Color.white` and `Color.black` live in a grayscale color space and
+    /// expose two components, not four. `toHex()` used to index
+    /// `components[2]` unconditionally, so converting either one trapped —
+    /// a crash, not the `nil` its `-> String?` signature advertises.
+    ///
+    /// This was a characterization test asserting on component count, because
+    /// calling `toHex()` would have torn down the whole bundle and hidden
+    /// every other result. With the fix in it can assert the real thing.
+    func testToHexHandlesGrayscaleColors() {
+        XCTAssertEqual(CodableColor(Color.white).hex, "#FFFFFF")
+        XCTAssertEqual(CodableColor(Color.black).hex, "#000000")
+    }
+
+    func testToHexHandlesRGBColors() {
+        XCTAssertEqual(CodableColor(Color(red: 1, green: 0, blue: 0)).hex, "#FF0000")
+        XCTAssertEqual(CodableColor(Color(red: 0, green: 1, blue: 0)).hex, "#00FF00")
     }
 }
 
