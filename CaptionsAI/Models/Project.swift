@@ -95,8 +95,30 @@ final class Project {
         modifiedAt = Date()
     }
 
+    /// Removes a caption and deletes its row.
+    ///
+    /// Taking it out of `segments` is not a delete. The cascade rule on the
+    /// relationship fires when the *project* is deleted, not when a child is
+    /// detached, so a swipe-delete in the transcript sheet used to leave the
+    /// row in the store with `project == nil` — invisible to the app, counted
+    /// by nothing, and still there.
     func removeSegment(_ segment: CaptionSegment) {
         segments.removeAll { $0.id == segment.id }
+        modelContext?.delete(segment)
+        modifiedAt = Date()
+    }
+
+    /// Removes every caption and deletes their rows.
+    ///
+    /// The same trap as ``removeSegment(_:)``, reached by re-running
+    /// transcription: clearing the array orphaned the entire previous
+    /// transcript, once per run.
+    func removeAllSegments() {
+        let existing = segments
+        segments.removeAll()
+        for segment in existing {
+            modelContext?.delete(segment)
+        }
         modifiedAt = Date()
     }
 

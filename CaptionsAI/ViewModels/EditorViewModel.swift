@@ -144,8 +144,11 @@ final class EditorViewModel {
             // already cleared it, and a run started since owns it now.
             guard !Task.isCancelled else { return }
 
-            // Clear existing segments and add new ones
-            project.segments.removeAll()
+            // Replace the previous transcript. `removeAllSegments()` rather
+            // than `segments.removeAll()`: the cascade rule only fires when the
+            // project is deleted, so clearing the array left every previous
+            // caption in the store with no parent, once per run.
+            project.removeAllSegments()
             for segment in newSegments {
                 project.addSegment(segment)
             }
