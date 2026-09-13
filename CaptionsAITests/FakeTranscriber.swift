@@ -84,3 +84,16 @@ func waitUntil(
     }
     XCTFail("timed out waiting for: \(description)", file: file, line: line)
 }
+
+/// Gives already-scheduled work time to run before asserting that something
+/// did **not** happen.
+///
+/// `waitUntil` can only wait for a condition to become true. Asserting a
+/// negative — "the cancelled run did not clear the flag" — needs the opposite:
+/// let everything in flight finish, then look.
+func settle(turns: Int = 50) async {
+    try? await Task.sleep(nanoseconds: 50_000_000)
+    for _ in 0 ..< turns {
+        await Task.yield()
+    }
+}

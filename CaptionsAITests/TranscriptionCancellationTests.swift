@@ -76,9 +76,13 @@ final class TranscriptionCancellationTests: XCTestCase {
         )
     }
 
-    /// Cancellation should also leave the view model idle, otherwise the
-    /// spinner never stops and the screen looks wedged.
-    func testCancellationLeavesTheViewModelIdle() async throws {
+    /// A run cancelled out from under `generateCaptions()` must leave the
+    /// store alone and must not report the cancellation as a failure.
+    ///
+    /// It deliberately does *not* clear `isProcessing`. That belongs to
+    /// `cancelTranscription()`, because by the time a cancelled run unwinds a
+    /// newer one may already own the spinner — see `CancelButtonTests`.
+    func testCancellationIsNotReportedAsAnError() async throws {
         let container = try TestSupport.makeInMemoryContainer()
         let context = ModelContext(container)
         let project = try makeProject(in: context, editedText: "kept")
@@ -93,7 +97,7 @@ final class TranscriptionCancellationTests: XCTestCase {
         task.cancel()
         await task.value
 
-        XCTAssertFalse(viewModel.isProcessing, "still processing after cancellation")
+        XCTAssertNil(viewModel.error, "cancelling was reported to the user as a failure")
         XCTAssertTrue(transcriber.sawCancellation, "the transcriber never observed cancellation")
         XCTAssertEqual(try persistedCaptionTexts(context), ["kept"])
     }

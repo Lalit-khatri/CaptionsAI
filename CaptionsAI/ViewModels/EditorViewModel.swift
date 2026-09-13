@@ -38,6 +38,11 @@ final class EditorViewModel {
     /// Defaults to the real recognizer, so call sites are unchanged.
     let speechRecognizer: any Transcribing
 
+    /// The in-flight transcription, held so that `cancelTranscription()` has
+    /// something to cancel. Driving this from the view's `.task` instead left
+    /// the handle inside SwiftUI, out of reach of the Cancel button.
+    private var transcriptionTask: Task<Void, Never>?
+
     // MARK: - Init
 
     init(project: Project, speechRecognizer: any Transcribing = SpeechRecognizer()) {
@@ -57,6 +62,7 @@ final class EditorViewModel {
     }
 
     deinit {
+        transcriptionTask?.cancel()
         if let timeObserver, let player {
             player.removeTimeObserver(timeObserver)
         }
@@ -81,6 +87,32 @@ final class EditorViewModel {
     }
 
     // MARK: - Speech Recognition
+
+    /// Starts transcription and keeps hold of the task.
+    ///
+    /// The view used to run `generateCaptions()` straight out of `.task`,
+    /// which meant SwiftUI owned the only handle and the Cancel button could
+    /// do nothing but set `isProcessing = false` — the spinner went away and
+    /// the recogniser carried on.
+    @MainActor
+    func startTranscription() {
+        transcriptionTask?.cancel()
+        transcriptionTask = Task { [weak self] in
+            await self?.generateCaptions()
+        }
+    }
+
+    /// Stops the running transcription. Safe to call when nothing is running.
+    ///
+    /// `isProcessing` is cleared here rather than left to `generateCaptions()`
+    /// so the overlay goes as soon as the user taps, instead of waiting on a
+    /// recogniser that may take a while to notice it has been cancelled.
+    @MainActor
+    func cancelTranscription() {
+        transcriptionTask?.cancel()
+        transcriptionTask = nil
+        isProcessing = false
+    }
 
     @MainActor
     func generateCaptions() async {
@@ -107,10 +139,10 @@ final class EditorViewModel {
             // typed while it was running, with no undo. Cancellation is not an
             // error the user needs told about, so return quietly rather than
             // throwing CancellationError into the catch below.
-            guard !Task.isCancelled else {
-                isProcessing = false
-                return
-            }
+            //
+            // `isProcessing` is deliberately left alone: whoever cancelled has
+            // already cleared it, and a run started since owns it now.
+            guard !Task.isCancelled else { return }
 
             // Clear existing segments and add new ones
             project.segments.removeAll()
@@ -123,13 +155,20 @@ final class EditorViewModel {
                 wordCount: newSegments.reduce(0) { $0 + $1.words.count }
             )
 
+        } catch is CancellationError {
+            // The user asked for this. Reporting it as a failure would put an
+            // error banner on screen for doing what they were told they could.
         } catch let speechError as SpeechError {
             error = speechError.localizedDescription
         } catch {
             self.error = error.localizedDescription
         }
 
-        isProcessing = false
+        // Same reasoning as the guard above: a cancelled run must not switch
+        // off a spinner it no longer owns.
+        if !Task.isCancelled {
+            isProcessing = false
+        }
     }
 
     // MARK: - Caption Editing
