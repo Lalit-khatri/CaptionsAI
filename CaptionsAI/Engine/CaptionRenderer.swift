@@ -30,11 +30,17 @@ final class CaptionRenderer {
     ) async throws -> AVMutableVideoComposition {
         let composition = AVMutableVideoComposition()
         composition.renderSize = outputSize
-        composition.frameDuration = CMTime(value: 1, timescale: 30)
         composition.customVideoCompositorClass = CaptionCompositor.self
 
         // Get video duration
         let duration = try await asset.load(.duration)
+
+        let videoTrack = try await asset.loadTracks(withMediaType: .video).first
+
+        // The output used to be pinned to 30 fps whatever came in: a 60 fps
+        // clip lost every other frame, and 24 fps film was resampled into
+        // judder. Take the source's own rate instead.
+        composition.frameDuration = try await Self.frameDuration(of: videoTrack)
 
         // Create instruction covering the full duration
         let instruction = CaptionCompositionInstruction(
@@ -48,12 +54,47 @@ final class CaptionRenderer {
         )
 
         // Set up source track ID
-        if let videoTrack = try await asset.loadTracks(withMediaType: .video).first {
+        if let videoTrack {
             instruction.requiredSourceTrackIDs = [NSNumber(value: videoTrack.trackID)]
         }
 
         composition.instructions = [instruction]
         return composition
+    }
+
+    // MARK: - Frame rate
+
+    /// Fallback rate for a source that will not say what it is.
+    static let fallbackFrameRate: Int32 = 30
+
+    /// Upper bound on a derived rate. A nominal rate is a float the file
+    /// supplies; a corrupt one must not turn into a composition asking for
+    /// millions of frames a second.
+    static let maximumFrameRate: Float = 240
+
+    /// How long one output frame lasts, taken from `track`.
+    static func frameDuration(of track: AVAssetTrack?) async throws -> CMTime {
+        guard let track else { return CMTime(value: 1, timescale: fallbackFrameRate) }
+        let minimum = try await track.load(.minFrameDuration)
+        let nominal = try await track.load(.nominalFrameRate)
+        return frameDuration(minFrameDuration: minimum, nominalFrameRate: nominal)
+    }
+
+    /// How long one output frame lasts, given what a track reports.
+    ///
+    /// `minFrameDuration` is preferred because it is exact: an NTSC source
+    /// reports 1001/30000, which survives here and would be lost to rounding
+    /// if it went through the nominal rate as a float. Both are optional in
+    /// practice — plenty of files report neither — hence the fallback.
+    static func frameDuration(minFrameDuration: CMTime, nominalFrameRate: Float) -> CMTime {
+        if minFrameDuration.isValid, !minFrameDuration.isIndefinite, minFrameDuration.seconds > 0 {
+            return minFrameDuration
+        }
+        guard nominalFrameRate.isFinite, nominalFrameRate > 0 else {
+            return CMTime(value: 1, timescale: fallbackFrameRate)
+        }
+        let clamped = min(nominalFrameRate, maximumFrameRate)
+        return CMTime(value: 1, timescale: CMTimeScale(max(clamped.rounded(), 1)))
     }
 
     // MARK: - Static Rendering
