@@ -131,8 +131,13 @@ final class ExportEngine {
             throw ExportError.exportFailed("Could not create export session")
         }
 
+        // Earlier renders are gone from the user's reach the moment a new one
+        // starts, but they stayed on disk. Nothing ever deleted them, so a few
+        // dozen exports quietly held on to the user's storage.
+        Self.removeStaleExports()
+
         let outputURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("CaptionsAI_\(UUID().uuidString)")
+            .appendingPathComponent("\(Self.scratchPrefix)\(UUID().uuidString)")
             .appendingPathExtension(settings.codec == .h265 ? "mov" : "mp4")
 
         session.outputURL = outputURL
@@ -175,6 +180,41 @@ final class ExportEngine {
         default:
             throw ExportError.exportFailed("Unexpected export status")
         }
+    }
+
+    // MARK: - Scratch files
+
+    /// Prefix on every file an export writes, so the app can tell its own
+    /// leavings from anything else sharing the temporary directory.
+    static let scratchPrefix = "CaptionsAI_"
+
+    /// Exports this app left in `directory`, `keeping` one aside.
+    static func staleExports(in directory: URL, keeping: URL? = nil) -> [URL] {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        let spared = keeping?.standardizedFileURL
+        return names
+            .filter { $0.hasPrefix(scratchPrefix) }
+            .map { directory.appendingPathComponent($0) }
+            .filter { $0.standardizedFileURL != spared }
+    }
+
+    /// Deletes this app's earlier exports and returns how many went.
+    ///
+    /// Only files carrying ``scratchPrefix`` are touched: the temporary
+    /// directory belongs to the whole app, and deleting by wildcard there
+    /// would eventually take something that mattered.
+    @discardableResult
+    static func removeStaleExports(
+        in directory: URL = FileManager.default.temporaryDirectory,
+        keeping: URL? = nil
+    ) -> Int {
+        var removed = 0
+        for url in staleExports(in: directory, keeping: keeping) {
+            if (try? FileManager.default.removeItem(at: url)) != nil {
+                removed += 1
+            }
+        }
+        return removed
     }
 
     // MARK: - Save to Photos
