@@ -37,17 +37,33 @@ private let kHasSeenDragHintKey = "hasSeenCaptionDragHint"
 /// Supports vertical drag to reposition captions.
 /// Shows a one-time hint to teach users about the drag feature.
 struct CaptionOverlay: View {
+    // MARK: - Position Bounds
+
+    /// Minimum Y position fraction to prevent captions going off-screen top
+    static let minCaptionY: Double = 0.08
+    /// Maximum Y position fraction to prevent captions going off-screen bottom
+    static let maxCaptionY: Double = 0.92
+    /// UserDefaults key for tracking whether the drag hint has been shown
+    static let hasSeenDragHintKey = "hasSeenCaptionDragHint"
+
+    /// Clamps a Y coordinate fraction to safe on-screen bounds.
+    static func clampYPosition(_ y: Double) -> Double {
+        min(max(y, minCaptionY), maxCaptionY)
+    }
+
     let viewModel: EditorViewModel
     let currentTime: Double
     @Binding var yPosition: Double
     let onPositionChanged: (Double) -> Void
 
+    @State private var dragY: Double?
     @State private var isDragging = false
     @State private var showDragHint = false
     @State private var bounceOffset: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
+            let effectiveY = dragY ?? yPosition
             if let activeSegment = viewModel.segments.first(where: { $0.isActive(at: currentTime) }) {
                 ZStack {
                     // Guide line visible during drag
@@ -55,14 +71,14 @@ struct CaptionOverlay: View {
                         Rectangle()
                             .fill(Color.white.opacity(0.3))
                             .frame(height: 1)
-                            .position(x: geo.size.width / 2, y: geo.size.height * yPosition)
+                            .position(x: geo.size.width / 2, y: geo.size.height * effectiveY)
                     }
 
                     captionText(for: activeSegment, in: geo.size)
                         .offset(y: bounceOffset)
                         .position(
                             x: geo.size.width / 2,
-                            y: geo.size.height * yPosition
+                            y: geo.size.height * effectiveY
                         )
                         .gesture(
                             DragGesture(minimumDistance: kDragMinimumDistance)
@@ -71,13 +87,15 @@ struct CaptionOverlay: View {
                                         dismissHint()
                                     }
                                     isDragging = true
-                                    let newY = value.location.y / geo.size.height
-                                    yPosition = Double(min(max(newY, kMinCaptionY), kMaxCaptionY))
+                                    let newY = Double(value.location.y / geo.size.height)
+                                    dragY = Self.clampYPosition(newY)
                                 }
                                 .onEnded { value in
                                     isDragging = false
-                                    let finalY = value.location.y / geo.size.height
-                                    let clamped = Double(min(max(finalY, kMinCaptionY), kMaxCaptionY))
+                                    let finalY = Double(value.location.y / geo.size.height)
+                                    let clamped = Self.clampYPosition(finalY)
+                                    dragY = nil
+                                    yPosition = clamped
                                     onPositionChanged(clamped)
                                 }
                         )
@@ -87,7 +105,7 @@ struct CaptionOverlay: View {
                         CaptionDragHintView()
                             .position(
                                 x: geo.size.width / 2,
-                                y: geo.size.height * yPosition + (yPosition >= kHintFlipThreshold
+                                y: geo.size.height * effectiveY + (effectiveY >= kHintFlipThreshold
                                     ? -kDragHintVerticalOffset
                                     : kDragHintVerticalOffset)
                             )
@@ -96,21 +114,22 @@ struct CaptionOverlay: View {
                             }
                     }
                 }
-                // Force view recreation when segment content changes
-                .id(activeSegment.id.uuidString + activeSegment.text)
                 .transition(.opacity)
                 .animation(.easeOut(duration: kGuideLineFadeDuration), value: isDragging)
-                .onAppear {
-                    showHintIfNeeded()
-                }
             }
+        }
+        .onAppear {
+            showHintIfNeeded()
         }
     }
 
     // MARK: - Hint Logic
 
     private func showHintIfNeeded() {
-        guard !UserDefaults.standard.bool(forKey: kHasSeenDragHintKey) else { return }
+        guard !UserDefaults.standard.bool(forKey: Self.hasSeenDragHintKey) else { return }
+
+        // Mark as seen immediately so subsequent redraws never re-trigger
+        UserDefaults.standard.set(true, forKey: Self.hasSeenDragHintKey)
 
         // Show tooltip
         withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
@@ -138,7 +157,7 @@ struct CaptionOverlay: View {
         withAnimation(.easeOut(duration: 0.3)) {
             showDragHint = false
         }
-        UserDefaults.standard.set(true, forKey: kHasSeenDragHintKey)
+        UserDefaults.standard.set(true, forKey: Self.hasSeenDragHintKey)
     }
 
     // MARK: - Caption Text

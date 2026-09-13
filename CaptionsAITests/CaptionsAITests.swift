@@ -172,3 +172,28 @@ final class ProcessingViewTests: XCTestCase {
     }
 }
 
+final class CaptionDragTests: XCTestCase {
+    func testCaptionDragClampsToBounds() {
+        XCTAssertEqual(CaptionOverlay.clampYPosition(0.0), CaptionOverlay.minCaptionY)
+        XCTAssertEqual(CaptionOverlay.clampYPosition(1.0), CaptionOverlay.maxCaptionY)
+        XCTAssertEqual(CaptionOverlay.clampYPosition(-0.5), CaptionOverlay.minCaptionY)
+        XCTAssertEqual(CaptionOverlay.clampYPosition(1.5), CaptionOverlay.maxCaptionY)
+        XCTAssertEqual(CaptionOverlay.clampYPosition(0.5), 0.5)
+    }
+
+    func testCaptionOverlayInitializes() {
+        let project = Project(name: "Test", videoURL: TestSupport.placeholderVideoURL)
+        let vm = EditorViewModel(project: project)
+        var y = 0.8
+        let overlay = CaptionOverlay(
+            viewModel: vm,
+            currentTime: 0.0,
+            yPosition: Binding(get: { y }, set: { y = $0 }),
+            onPositionChanged: { y = $0 }
+        )
+        XCTAssertNotNil(overlay.body)
+    }
+}
+
+
+
