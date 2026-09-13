@@ -173,34 +173,80 @@ final class EditorViewModel {
 
     // MARK: - Caption Editing
 
+    /// Applies an edit from the transcript sheet.
+    ///
+    /// One call rather than two, because the halves are not independent. Word
+    /// timings are derived from the segment's range, so setting the text first
+    /// — which is what the sheet used to do — spreads the new words across the
+    /// range the caption is about to stop having. Retime a caption from 0–2s
+    /// to 10–12s while also correcting its wording and every word timing stayed
+    /// back at 0–2s, where nothing will ever highlight them: `activeWord(at:)`
+    /// looks inside the segment's own range and finds nothing there.
+    func updateSegment(_ segment: CaptionSegment, text: String, start: Double, end: Double) {
+        segment.startTime = start
+        segment.endTime = end
+        applyText(text, to: segment)
+        finishSegmentEdit()
+    }
+
     func updateSegmentText(_ segment: CaptionSegment, newText: String) {
-        segment.text = newText
-
-        // Rebuild word timings to match the new text.
-        // Distribute the segment's time range evenly across the new words
-        // so word-by-word highlighting stays in sync.
-        let newWords = newText.split(separator: " ").map(String.init)
-        if !newWords.isEmpty {
-            let segmentDuration = segment.endTime - segment.startTime
-            let wordDuration = segmentDuration / Double(newWords.count)
-            segment.words = newWords.enumerated().map { index, word in
-                WordTiming(
-                    word: word,
-                    startTime: segment.startTime + Double(index) * wordDuration,
-                    endTime: segment.startTime + Double(index + 1) * wordDuration
-                )
-            }
-        } else {
-            segment.words = []
-        }
-
-        project.modifiedAt = Date()
-        segments = project.sortedSegments
+        applyText(newText, to: segment)
+        finishSegmentEdit()
     }
 
     func updateSegmentTiming(_ segment: CaptionSegment, start: Double, end: Double) {
+        // Rescale rather than redistribute. The words are unchanged, so their
+        // existing timings are the recogniser's measurements of real speech;
+        // flattening them to an even spread to accommodate a 0.1s nudge would
+        // throw that away. Must run before the range is overwritten.
+        rescaleWordTimings(in: segment, toStart: start, end: end)
         segment.startTime = start
         segment.endTime = end
+        finishSegmentEdit()
+    }
+
+    private func applyText(_ text: String, to segment: CaptionSegment) {
+        segment.text = text
+        let words = text.split(separator: " ").map(String.init)
+        segment.words = Self.evenlySpaced(words, from: segment.startTime, to: segment.endTime)
+    }
+
+    private func rescaleWordTimings(in segment: CaptionSegment, toStart start: Double, end: Double) {
+        let existing = segment.words
+        guard !existing.isEmpty else { return }
+
+        let oldStart = segment.startTime
+        let oldDuration = segment.endTime - oldStart
+        guard oldDuration > 0 else {
+            // Nothing to scale from. An even spread is the only information
+            // left, and it is still better than leaving the words behind.
+            segment.words = Self.evenlySpaced(existing.map(\.word), from: start, to: end)
+            return
+        }
+
+        let factor = (end - start) / oldDuration
+        segment.words = existing.map { word in
+            WordTiming(
+                word: word.word,
+                startTime: start + (word.startTime - oldStart) * factor,
+                endTime: start + (word.endTime - oldStart) * factor
+            )
+        }
+    }
+
+    private static func evenlySpaced(_ words: [String], from start: Double, to end: Double) -> [WordTiming] {
+        guard !words.isEmpty else { return [] }
+        let each = (end - start) / Double(words.count)
+        return words.enumerated().map { index, word in
+            WordTiming(
+                word: word,
+                startTime: start + Double(index) * each,
+                endTime: start + Double(index + 1) * each
+            )
+        }
+    }
+
+    private func finishSegmentEdit() {
         project.modifiedAt = Date()
         segments = project.sortedSegments
     }

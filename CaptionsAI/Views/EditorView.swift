@@ -76,8 +76,7 @@ struct EditorView: View {
                     viewModel.seekTo(time)
                 },
                 onSave: { segment, text, start, end in
-                    viewModel.updateSegmentText(segment, newText: text)
-                    viewModel.updateSegmentTiming(segment, start: start, end: end)
+                    viewModel.updateSegment(segment, text: text, start: start, end: end)
                 },
                 onDelete: { segment in
                     viewModel.deleteSegment(segment)
