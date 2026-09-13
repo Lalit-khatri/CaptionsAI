@@ -11,6 +11,13 @@ private let kMaxCaptionY: CGFloat = 0.92
 /// Duration (seconds) for the guide line fade-out after dragging ends
 private let kGuideLineFadeDuration: Double = 0.5
 
+// MARK: - Caption Box Constants
+
+/// Horizontal padding between the caption text and the edge of its background.
+private let kCaptionHorizontalPadding: CGFloat = 14
+/// Vertical padding between the caption text and the edge of its background.
+private let kCaptionVerticalPadding: CGFloat = 8
+
 // MARK: - Hint Constants
 
 /// Duration (seconds) before the drag hint auto-dismisses
@@ -137,23 +144,41 @@ struct CaptionOverlay: View {
     // MARK: - Caption Text
 
     @ViewBuilder
-    private func captionText(for segment: CaptionSegment, in _: CGSize) -> some View {
+    private func captionText(for segment: CaptionSegment, in size: CGSize) -> some View {
         let style = viewModel.selectedStyle
         if style.wordByWordHighlight {
             wordByWordText(for: segment)
                 .captionBackground(style: style)
+                .frame(maxWidth: captionMaxWidth(in: size))
         } else {
             let displayText = style.isUppercase ? segment.text.uppercased() : segment.text
             Text(displayText)
                 .font(style.font)
                 .foregroundColor(style.textColor.color)
+                .multilineTextAlignment(.center)
                 .shadow(
                     color: style.shadowColor.color,
                     radius: style.shadowRadius,
                     x: 0, y: 1
                 )
                 .captionBackground(style: style)
+                .frame(maxWidth: captionMaxWidth(in: size))
         }
+    }
+
+    /// How wide the padded caption box may get before its text has to wrap.
+    ///
+    /// This size used to be discarded, so the preview laid its text out across
+    /// the whole player while the export wrapped at `kTextMaxWidthFraction` —
+    /// four lines on screen, five in the file.
+    ///
+    /// The frame bounds the *padded* box, but `kTextMaxWidthFraction` is the
+    /// width the export gives the *text*, so the padding is added back. The
+    /// frame goes outside `captionBackground` on purpose: constraining the
+    /// text first would stretch the background to the full width even behind a
+    /// two-word caption.
+    private func captionMaxWidth(in size: CGSize) -> CGFloat {
+        size.width * kTextMaxWidthFraction + kCaptionHorizontalPadding * 2
     }
 
     // MARK: - Word-by-Word
@@ -205,8 +230,8 @@ struct CaptionOverlay: View {
 
 extension View {
     func captionBackground(style: CaptionStyle) -> some View {
-        padding(.horizontal, 14)
-            .padding(.vertical, 8)
+        padding(.horizontal, kCaptionHorizontalPadding)
+            .padding(.vertical, kCaptionVerticalPadding)
             .background(
                 Group {
                     if style.backgroundOpacity > 0 {

@@ -5,8 +5,12 @@ import UIKit
 
 // MARK: - Renderer Constants
 
-/// Maximum width fraction of the render area used for caption text
-private let kTextMaxWidthFraction: CGFloat = 0.85
+/// Maximum width fraction of the render area used for caption text.
+///
+/// Read by both the export renderer below and `CaptionOverlay` — if the
+/// preview wraps at a different width from the file, the user lays out a
+/// caption they do not get.
+let kTextMaxWidthFraction: CGFloat = 0.85
 /// Base padding around caption text background (in screen points, scaled during export)
 private let kTextBackgroundPadding: CGFloat = 12
 /// Reference screen width (iPhone logical points) used to compute the export scale factor
