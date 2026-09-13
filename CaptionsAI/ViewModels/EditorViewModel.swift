@@ -43,11 +43,26 @@ final class EditorViewModel {
     /// the handle inside SwiftUI, out of reach of the Cancel button.
     private var transcriptionTask: Task<Void, Never>?
 
+    /// Supplied by tests only. `nil` means "use the player", which is what the
+    /// app always does.
+    private let injectedPlaybackClock: (any PeriodicTimeObserving)?
+
+    /// Whatever the periodic playback callback is registered with.
+    private var playbackClock: (any PeriodicTimeObserving)? {
+        if let injectedPlaybackClock { return injectedPlaybackClock }
+        return player
+    }
+
     // MARK: - Init
 
-    init(project: Project, speechRecognizer: any Transcribing = SpeechRecognizer()) {
+    init(
+        project: Project,
+        speechRecognizer: any Transcribing = SpeechRecognizer(),
+        playbackClock: (any PeriodicTimeObserving)? = nil
+    ) {
         self.project = project
         self.speechRecognizer = speechRecognizer
+        injectedPlaybackClock = playbackClock
         segments = project.sortedSegments
         selectedStyle = project.selectedStyle
 
@@ -63,8 +78,9 @@ final class EditorViewModel {
 
     deinit {
         transcriptionTask?.cancel()
-        if let timeObserver, let player {
-            player.removeTimeObserver(timeObserver)
+        if let timeObserver {
+            let clock: (any PeriodicTimeObserving)? = injectedPlaybackClock ?? player
+            clock?.removePeriodicObserver(timeObserver)
         }
         if let endObserver {
             NotificationCenter.default.removeObserver(endObserver)
@@ -299,13 +315,28 @@ final class EditorViewModel {
 
     // MARK: - Playback
 
+    /// Starts reporting playback time, replacing any previous registration.
+    ///
+    /// The view calls this from `.onAppear`, which fires again every time the
+    /// editor comes back — after the export screen is dismissed, for instance.
+    /// This used to overwrite `timeObserver` with a fresh token and drop the
+    /// old one on the floor, so the previous observer kept firing 20 times a
+    /// second with no way left to remove it, one more of them per visit.
     func setupTimeObserver() {
-        guard let player else { return }
+        guard let playbackClock else { return }
+        teardownTimeObserver()
 
         let interval = CMTime(seconds: 0.05, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-        timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+        timeObserver = playbackClock.addPeriodicObserver(every: interval) { [weak self] time in
             self?.currentPlaybackTime = CMTimeGetSeconds(time)
         }
+    }
+
+    /// Stops reporting playback time. Does nothing if it was not started.
+    func teardownTimeObserver() {
+        guard let timeObserver, let playbackClock else { return }
+        playbackClock.removePeriodicObserver(timeObserver)
+        self.timeObserver = nil
     }
 
     func seekTo(_ time: Double) {

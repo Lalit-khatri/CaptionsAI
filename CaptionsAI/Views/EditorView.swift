@@ -50,7 +50,10 @@ struct EditorView: View {
         }
         // `.task` used to own the transcription and cancel it on disappear.
         // The view model owns it now, so the teardown has to be explicit.
-        .onDisappear { viewModel.cancelTranscription() }
+        .onDisappear {
+            viewModel.cancelTranscription()
+            viewModel.teardownTimeObserver()
+        }
         // Style bottom sheet
         .sheet(isPresented: $showStyleSheet) {
             StyleSheetView(
