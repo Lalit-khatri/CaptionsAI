@@ -59,8 +59,19 @@ targets:
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "CaptionsAI needs permission to save exported videos to your photo library."
       configs:
         Debug:
-          PRODUCT_NAME: "CaptionsAI (Dev)"
+          # Dev builds are marked via the display name, NOT PRODUCT_NAME.
+          # Renaming the product renames the .app, which breaks the
+          # CaptionsAITests TEST_HOST path
+          # ($(BUILT_PRODUCTS_DIR)/CaptionsAI.app/...) and leaves the unit-test
+          # bundle with nothing to load into.
+          #
+          # It has to be a plain build setting read by Info.plist, not
+          # INFOPLIST_KEY_CFBundleDisplayName: INFOPLIST_KEY_* only applies
+          # when Xcode generates the plist, and this target ships a
+          # hand-written one via INFOPLIST_FILE.
+          APP_DISPLAY_NAME: "CaptionsAI (Dev)"
         Release:
+          APP_DISPLAY_NAME: "CaptionsAI"
           PRODUCT_NAME: "CaptionsAI"
     entitlements:
       path: CaptionsAI/CaptionsAI.entitlements
