@@ -32,8 +32,10 @@ final class CaptionWeightTests: XCTestCase {
         }
     }
 
+    /// Beast is absent deliberately: it names a real typeface, so it is drawn
+    /// in that face rather than at a system weight. See `CaptionTypefaceTests`.
     func testAHeavyPresetIsDrawnHeavy() throws {
-        for name in ["Hormozi", "Fire", "Cyber Glow", "Karaoke", "Outline", "Vox Box", "Beast"] {
+        for name in ["Hormozi", "Fire", "Cyber Glow", "Karaoke", "Outline", "Vox Box"] {
             let style = try preset(name)
             XCTAssertEqual(style.weight(highlighted: false), .heavy, "\(name)")
         }

@@ -105,14 +105,19 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
     /// disagreed with this — "System-Rounded" contains neither "Bold" nor
     /// "Heavy", so every unhighlighted word in the two rounded presets was
     /// drawn `.regular` against a heavy preview elsewhere and a heavy export.
+    ///
+    /// A name that names a real typeface is answered first, in the same order
+    /// ``uiFontScaled(to:)`` uses: the substring ladder is only a way to read
+    /// a weight out of the `System-*` pseudo-names, and letting it run first
+    /// meant "AvenirNext-Heavy" was read as a weight and the face discarded.
     var weight: Font.Weight? {
+        if fontName == "Menlo" { return nil }
+        if UIFont(name: fontName, size: fontSize) != nil { return nil }
         if fontName.contains("Rounded") { return .heavy }
         if fontName.contains("Heavy") || fontName.contains("Black") { return .heavy }
         if fontName.contains("Bold") { return .bold }
         if fontName.contains("Light") { return .light }
         if fontName.contains("Medium") { return .medium }
-        if fontName == "Menlo" { return nil }
-        if UIFont(name: fontName, size: fontSize) != nil { return nil }
         return .bold
     }
 
