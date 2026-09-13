@@ -79,4 +79,11 @@ final class ExportCancellationTests: XCTestCase {
         XCTAssertNil(viewModel.error)
         XCTAssertEqual(viewModel.exportedFileURL, output)
     }
+
+    func testExportSessionIsClearedOnCancel() {
+        let engine = ExportEngine()
+        engine.cancelExport()
+        XCTAssertFalse(engine.hasActiveExportSession)
+    }
 }
+

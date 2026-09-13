@@ -203,7 +203,6 @@ final class CaptionRenderer {
         }
 
         guard let cgImage = textImage.cgImage else { return nil }
-        // Invert Y so UIKit top-left matches CoreImage bottom-left origin
         return CIImage(cgImage: cgImage)
     }
 

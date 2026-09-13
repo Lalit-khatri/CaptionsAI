@@ -42,6 +42,11 @@ final class ExportEngine {
     private var exportSession: AVAssetExportSession?
     private var progressTimer: Timer?
 
+    /// Whether an AVAssetExportSession is currently active or retained.
+    var hasActiveExportSession: Bool {
+        exportSession != nil
+    }
+
     /// Supplied by tests only. A test bundle cannot hold a Photos
     /// authorization, so the refusal path is unreachable without this.
     var photoLibrarySaver: ((URL) async throws -> Void)?
@@ -64,7 +69,10 @@ final class ExportEngine {
         error = nil
         savedToPhotoLibrary = false
 
-        defer { isExporting = false }
+        defer {
+            isExporting = false
+            exportSession = nil
+        }
 
         let asset = AVURLAsset(url: videoURL)
 
@@ -249,6 +257,7 @@ final class ExportEngine {
         progressTimer?.invalidate()
         progressTimer = nil
         exportSession?.cancelExport()
+        exportSession = nil
         isExporting = false
     }
 
