@@ -21,6 +21,8 @@ final class FakeTranscriber: Transcribing {
         /// Blocks until cancelled and then **succeeds anyway**, modelling the
         /// recognizer callback that arrives after the user walked away.
         case deliverAfterCancellation([CaptionSegment])
+        /// Never returns, never throws, ignores cancellation — a complete hang.
+        case hangIndefinitely
     }
 
     var behaviour: Behaviour = .succeed([])
@@ -51,6 +53,10 @@ final class FakeTranscriber: Transcribing {
         case let .deliverAfterCancellation(segments):
             await waitForCancellation()
             return segments
+        case .hangIndefinitely:
+            while true {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
         }
     }
 

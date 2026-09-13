@@ -2,6 +2,20 @@ import AVFoundation
 import AVKit
 import SwiftUI
 
+// MARK: - Transcription Budget
+
+/// The shortest the editor will ever wait for a transcription, however brief
+/// the clip. Startup, authorization and audio extraction all happen inside
+/// this window.
+let kMinimumTranscriptionBudget: TimeInterval = 90
+
+/// How many times the clip's own length the editor is willing to wait.
+///
+/// Recognition normally runs at or faster than real time, so this is a
+/// deliberately slack bound: it exists to end a run that has stopped making
+/// progress at all, not to hurry a slow one along.
+let kTranscriptionBudgetFactor: Double = 6
+
 // MARK: - EditorViewModel
 
 /// Manages caption editing, style selection, and video playback.
@@ -57,18 +71,36 @@ final class EditorViewModel {
     /// tests can watch it being taken and handed back.
     private let audioSession: any AudioSessionControlling
 
+    /// Overrides the computed transcription budget. Supplied by tests only, so
+    /// that a test for "the editor stopped waiting" does not have to wait
+    /// ninety seconds to make its point.
+    private let injectedTranscriptionBudget: TimeInterval?
+
+    /// How long the editor will wait for this project's transcription.
+    var transcriptionBudget: TimeInterval {
+        injectedTranscriptionBudget
+            ?? Self.transcriptionBudget(forClipOf: project.videoDuration)
+    }
+
+    /// The time budget for a clip of `duration` seconds.
+    static func transcriptionBudget(forClipOf duration: Double) -> TimeInterval {
+        max(kMinimumTranscriptionBudget, duration * kTranscriptionBudgetFactor)
+    }
+
     // MARK: - Init
 
     init(
         project: Project,
         speechRecognizer: any Transcribing = SpeechRecognizer(),
         playbackClock: (any PeriodicTimeObserving)? = nil,
-        audioSession: any AudioSessionControlling = AVAudioSession.sharedInstance()
+        audioSession: any AudioSessionControlling = AVAudioSession.sharedInstance(),
+        transcriptionBudget: TimeInterval? = nil
     ) {
         self.project = project
         self.speechRecognizer = speechRecognizer
         self.audioSession = audioSession
         injectedPlaybackClock = playbackClock
+        injectedTranscriptionBudget = transcriptionBudget
         segments = project.sortedSegments
         selectedStyle = project.selectedStyle
 
@@ -168,7 +200,13 @@ final class EditorViewModel {
                 return
             }
 
-            let newSegments = try await speechRecognizer.recognizeSpeech(from: videoURL)
+            let budget = transcriptionBudget
+            let newSegments = try await withDeadline(
+                seconds: budget,
+                throwing: { SpeechError.timedOut }
+            ) { [speechRecognizer] in
+                try await speechRecognizer.recognizeSpeech(from: videoURL)
+            }
 
             // The recogniser can return after the user has cancelled and moved
             // on. Applying the result here would detach whatever captions they

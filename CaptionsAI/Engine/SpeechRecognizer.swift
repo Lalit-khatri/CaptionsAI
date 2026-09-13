@@ -11,6 +11,9 @@ enum SpeechError: Error, LocalizedError {
     case noSpeechDetected
     case audioExtractionFailed
     case recognitionFailed(Error)
+    /// The recogniser neither finished nor failed within the time the editor
+    /// was willing to give it.
+    case timedOut
 
     var errorDescription: String? {
         switch self {
@@ -24,6 +27,8 @@ enum SpeechError: Error, LocalizedError {
             return "Failed to extract audio from the video."
         case let .recognitionFailed(error):
             return "Speech recognition failed: \(error.localizedDescription)"
+        case .timedOut:
+            return "Transcription took too long and was stopped. Check your connection and try again."
         }
     }
 }
