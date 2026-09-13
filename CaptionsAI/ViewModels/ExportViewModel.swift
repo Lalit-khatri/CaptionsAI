@@ -18,7 +18,11 @@ final class ExportViewModel {
 
     // MARK: - Engine
 
-    let exportEngine = ExportEngine()
+    let exportEngine: any VideoExporting
+
+    init(exportEngine: any VideoExporting = ExportEngine()) {
+        self.exportEngine = exportEngine
+    }
 
     // MARK: - Export
 
@@ -64,6 +68,11 @@ final class ExportViewModel {
                 isPro: isPro
             )
 
+        } catch ExportError.cancelled {
+            // The user pressed Stop and confirmed it. Answering that with an
+            // alert titled "Error" reads as though something went wrong, when
+            // what happened is exactly what was asked for.
+            exportProgress = 0
         } catch {
             self.error = error.localizedDescription
         }
