@@ -209,6 +209,15 @@ final class SpeechRecognitionPrivacyTests: XCTestCase {
     }
 }
 
+final class ImportStreamingTests: XCTestCase {
+    func testMovieFileTransferRepresentation() {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test.mp4")
+        let movie = MovieFile(url: tempURL)
+        XCTAssertEqual(movie.url, tempURL)
+    }
+}
+
+
 
 
 

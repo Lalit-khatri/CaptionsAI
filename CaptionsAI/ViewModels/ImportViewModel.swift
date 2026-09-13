@@ -1,7 +1,29 @@
 import AVFoundation
+import CoreTransferable
 import PhotosUI
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
+
+// MARK: - MovieFile Transferable
+
+/// File-based transferable representation of a video asset.
+/// Avoids materializing entire video files into RAM as `Data`, preventing Jetsam kills.
+struct MovieFile: Transferable {
+    let url: URL
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(contentType: .movie) { movie in
+            SentTransferredFile(movie.url)
+        } importing: { received in
+            let ext = received.file.pathExtension.isEmpty ? "mp4" : received.file.pathExtension
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("import-\(UUID().uuidString).\(ext)")
+            try FileManager.default.copyItem(at: received.file, to: tempURL)
+            return MovieFile(url: tempURL)
+        }
+    }
+}
 
 // MARK: - ImportViewModel
 
@@ -28,8 +50,14 @@ final class ImportViewModel {
         defer { isLoading = false }
 
         do {
-            // Load video data
-            guard let videoData = try await item.loadTransferable(type: Data.self) else {
+            // Stream video via file transfer to avoid materializing large assets in RAM
+            let fileName: String
+            if let movie = try await item.loadTransferable(type: MovieFile.self) {
+                defer { try? FileManager.default.removeItem(at: movie.url) }
+                fileName = try VideoLibrary.store(movingFileAt: movie.url)
+            } else if let videoData = try await item.loadTransferable(type: Data.self) {
+                fileName = try VideoLibrary.store(data: videoData)
+            } else {
                 error = "Could not load video data"
                 return
             }
@@ -37,7 +65,6 @@ final class ImportViewModel {
             // Keep it somewhere the system will not reclaim. `tmp/` is emptied
             // whenever iOS wants the space back, which is how a project could
             // still show its thumbnail long after its video had gone.
-            let fileName = try VideoLibrary.store(data: videoData)
             guard let videoFileURL = VideoLibrary.resolve(fileName) else {
                 error = "Could not save the imported video"
                 return
