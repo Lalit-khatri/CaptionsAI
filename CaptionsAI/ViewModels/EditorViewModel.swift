@@ -34,12 +34,15 @@ final class EditorViewModel {
 
     // MARK: - Engine
 
-    let speechRecognizer = SpeechRecognizer()
+    /// Injected so tests can drive the transcription lifecycle with a fake.
+    /// Defaults to the real recognizer, so call sites are unchanged.
+    let speechRecognizer: any Transcribing
 
     // MARK: - Init
 
-    init(project: Project) {
+    init(project: Project, speechRecognizer: any Transcribing = SpeechRecognizer()) {
         self.project = project
+        self.speechRecognizer = speechRecognizer
         segments = project.sortedSegments
         selectedStyle = project.selectedStyle
 
@@ -90,7 +93,7 @@ final class EditorViewModel {
         error = nil
 
         do {
-            let authorized = await SpeechRecognizer.requestAuthorization()
+            let authorized = await speechRecognizer.requestAuthorization()
             guard authorized else {
                 error = "Speech recognition not authorized"
                 isProcessing = false
