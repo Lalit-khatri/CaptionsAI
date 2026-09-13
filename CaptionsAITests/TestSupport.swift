@@ -139,6 +139,36 @@ enum TestSupport {
         try? FileManager.default.removeItem(at: url)
     }
 
+    /// Creates a movie file containing a valid audio track but zero audio sample buffers.
+    static func makeTestMovieWithEmptyAudioTrack() async throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("empty-audio-\(UUID().uuidString).mov")
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: 16000,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false,
+        ]
+        let input = AVAssetWriterInput(mediaType: .audio, outputSettings: settings)
+        input.expectsMediaDataInRealTime = false
+        guard writer.canAdd(input) else { throw FixtureError.cannotAddInput }
+        writer.add(input)
+        guard writer.startWriting() else { throw FixtureError.writeFailed(writer.error) }
+        writer.startSession(atSourceTime: .zero)
+        input.markAsFinished()
+        await withCheckedContinuation { continuation in
+            writer.finishWriting { continuation.resume() }
+        }
+        guard writer.status == .completed else {
+            throw FixtureError.writeFailed(writer.error)
+        }
+        return url
+    }
+
     private static func makePixelBuffer(size: CGSize, shade: Double) throws -> CVPixelBuffer {
         var buffer: CVPixelBuffer?
         let status = CVPixelBufferCreate(

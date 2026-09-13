@@ -94,11 +94,14 @@ final class SpeechRecognizer {
         progress = 0.1
         let audioURL: URL
         do {
-            audioURL = try await extractAudioTrack(from: videoURL)
+            audioURL = try await Self.extractAudioTrack(from: videoURL)
         } catch {
             let err = SpeechError.audioExtractionFailed
             self.error = err
             throw err
+        }
+        defer {
+            try? FileManager.default.removeItem(at: audioURL)
         }
 
         // Step 2: Recognize speech
@@ -147,9 +150,6 @@ final class SpeechRecognizer {
         let captionSegments = groupIntoSegments(transcriptionSegments)
         progress = 1.0
 
-        // Cleanup temp audio file
-        try? FileManager.default.removeItem(at: audioURL)
-
         return captionSegments
     }
 
@@ -179,65 +179,138 @@ final class SpeechRecognizer {
     // MARK: - Audio Extraction
 
     /// Extracts the audio track from a video and saves as a WAV file.
-    private func extractAudioTrack(from videoURL: URL) async throws -> URL {
-        let asset = AVURLAsset(url: videoURL)
-
-        guard let audioTrack = try await asset.loadTracks(withMediaType: .audio).first else {
-            throw SpeechError.audioExtractionFailed
-        }
-
+    static func extractAudioTrack(from videoURL: URL) async throws -> URL {
         let outputURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("wav")
 
-        // Configure reader
-        let reader = try AVAssetReader(asset: asset)
-        let readerSettings: [String: Any] = [
-            AVFormatIDKey: kAudioFormatLinearPCM,
-            AVSampleRateKey: 16000,
-            AVNumberOfChannelsKey: 1,
-            AVLinearPCMBitDepthKey: 16,
-            AVLinearPCMIsFloatKey: false,
-            AVLinearPCMIsBigEndianKey: false,
-        ]
-        let readerOutput = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: readerSettings)
-        reader.add(readerOutput)
+        do {
+            let asset = AVURLAsset(url: videoURL)
 
-        // Configure writer
-        let writer = try AVAssetWriter(url: outputURL, fileType: .wav)
-        let writerSettings: [String: Any] = [
-            AVFormatIDKey: kAudioFormatLinearPCM,
-            AVSampleRateKey: 16000,
-            AVNumberOfChannelsKey: 1,
-            AVLinearPCMBitDepthKey: 16,
-            AVLinearPCMIsFloatKey: false,
-            AVLinearPCMIsBigEndianKey: false,
-            AVLinearPCMIsNonInterleaved: false,
-        ]
-        let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: writerSettings)
-        writer.add(writerInput)
+            guard let audioTrack = try await asset.loadTracks(withMediaType: .audio).first else {
+                throw SpeechError.audioExtractionFailed
+            }
 
-        // Process
-        reader.startReading()
-        writer.startWriting()
-        writer.startSession(atSourceTime: .zero)
+            // Configure reader
+            let reader = try AVAssetReader(asset: asset)
+            let readerSettings: [String: Any] = [
+                AVFormatIDKey: kAudioFormatLinearPCM,
+                AVSampleRateKey: 16000,
+                AVNumberOfChannelsKey: 1,
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsFloatKey: false,
+                AVLinearPCMIsBigEndianKey: false,
+            ]
+            let readerOutput = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: readerSettings)
+            guard reader.canAdd(readerOutput) else {
+                throw SpeechError.audioExtractionFailed
+            }
+            reader.add(readerOutput)
 
-        await withCheckedContinuation { continuation in
-            writerInput.requestMediaDataWhenReady(on: DispatchQueue(label: "audio.extraction")) {
-                while writerInput.isReadyForMoreMediaData {
-                    if let buffer = readerOutput.copyNextSampleBuffer() {
-                        writerInput.append(buffer)
-                    } else {
-                        writerInput.markAsFinished()
-                        continuation.resume()
+            // Configure writer
+            let writer = try AVAssetWriter(url: outputURL, fileType: .wav)
+            let writerSettings: [String: Any] = [
+                AVFormatIDKey: kAudioFormatLinearPCM,
+                AVSampleRateKey: 16000,
+                AVNumberOfChannelsKey: 1,
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsFloatKey: false,
+                AVLinearPCMIsBigEndianKey: false,
+                AVLinearPCMIsNonInterleaved: false,
+            ]
+            let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: writerSettings)
+            guard writer.canAdd(writerInput) else {
+                throw SpeechError.audioExtractionFailed
+            }
+            writer.add(writerInput)
+
+            // Process
+            guard reader.startReading() else {
+                throw reader.error ?? SpeechError.audioExtractionFailed
+            }
+            guard writer.startWriting() else {
+                reader.cancelReading()
+                throw writer.error ?? SpeechError.audioExtractionFailed
+            }
+            writer.startSession(atSourceTime: .zero)
+
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                let queue = DispatchQueue(label: "audio.extraction")
+                let lock = NSLock()
+                var hasResumed = false
+
+                func finish(throwing error: Error?) {
+                    lock.lock()
+                    guard !hasResumed else {
+                        lock.unlock()
                         return
+                    }
+                    hasResumed = true
+                    lock.unlock()
+
+                    writerInput.markAsFinished()
+                    if let error {
+                        writer.cancelWriting()
+                        reader.cancelReading()
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+
+                writerInput.requestMediaDataWhenReady(on: queue) {
+                    while writerInput.isReadyForMoreMediaData {
+                        var bufferToAppend: CMSampleBuffer?
+                        var isFinished = false
+
+                        autoreleasepool {
+                            if reader.status == .reading {
+                                if let buffer = readerOutput.copyNextSampleBuffer() {
+                                    bufferToAppend = buffer
+                                } else {
+                                    isFinished = true
+                                }
+                            } else {
+                                isFinished = true
+                            }
+                        }
+
+                        if let buffer = bufferToAppend {
+                            if !writerInput.append(buffer) {
+                                finish(throwing: writer.error ?? SpeechError.audioExtractionFailed)
+                                return
+                            }
+                        } else if isFinished {
+                            if reader.status == .completed {
+                                finish(throwing: nil)
+                            } else {
+                                finish(throwing: reader.error ?? SpeechError.audioExtractionFailed)
+                            }
+                            return
+                        }
                     }
                 }
             }
-        }
 
-        await writer.finishWriting()
-        return outputURL
+            await writer.finishWriting()
+            guard writer.status == .completed else {
+                throw writer.error ?? SpeechError.audioExtractionFailed
+            }
+
+            let attributes = try FileManager.default.attributesOfItem(atPath: outputURL.path)
+            let fileSize = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+            guard fileSize > 44 else {
+                throw SpeechError.audioExtractionFailed
+            }
+
+            return outputURL
+        } catch {
+            try? FileManager.default.removeItem(at: outputURL)
+            if let speechError = error as? SpeechError {
+                throw speechError
+            }
+            throw SpeechError.audioExtractionFailed
+        }
     }
 
     // MARK: - Segment Grouping
