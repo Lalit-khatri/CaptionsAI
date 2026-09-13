@@ -107,9 +107,10 @@ final class SpeechRecognizer {
         // Step 2: Recognize speech
         progress = kProgressAudioExtracted
         let clipDuration = (try? await AVURLAsset(url: videoURL).load(.duration).seconds) ?? 0
-        let request = SFSpeechURLRecognitionRequest(url: audioURL)
-        request.shouldReportPartialResults = true
-        request.taskHint = .dictation
+        let request = Self.configureRecognitionRequest(
+            for: audioURL,
+            supportsOnDevice: recognizer.supportsOnDeviceRecognition
+        )
 
         let result: SFSpeechRecognitionResult = try await withCheckedThrowingContinuation { continuation in
             var hasResumed = false
@@ -311,6 +312,23 @@ final class SpeechRecognizer {
             }
             throw SpeechError.audioExtractionFailed
         }
+    }
+
+    // MARK: - Recognition Request Configuration
+
+    /// Configures an `SFSpeechURLRecognitionRequest` with the appropriate settings,
+    /// requesting on-device recognition when supported to fulfill the app's privacy guarantee.
+    static func configureRecognitionRequest(
+        for audioURL: URL,
+        supportsOnDevice: Bool
+    ) -> SFSpeechURLRecognitionRequest {
+        let request = SFSpeechURLRecognitionRequest(url: audioURL)
+        request.shouldReportPartialResults = true
+        request.taskHint = .dictation
+        if supportsOnDevice {
+            request.requiresOnDeviceRecognition = true
+        }
+        return request
     }
 
     // MARK: - Segment Grouping

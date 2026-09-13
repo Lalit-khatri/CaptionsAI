@@ -1,4 +1,5 @@
 @testable import CaptionsAI
+import Speech
 import SwiftUI
 import UIKit
 import XCTest
@@ -194,6 +195,20 @@ final class CaptionDragTests: XCTestCase {
         XCTAssertNotNil(overlay.body)
     }
 }
+
+final class SpeechRecognitionPrivacyTests: XCTestCase {
+    func testRecognitionRequestRequiresOnDeviceWhenSupported() {
+        let url = URL(fileURLWithPath: "/tmp/dummy.wav")
+        let requestOnDevice = SpeechRecognizer.configureRecognitionRequest(for: url, supportsOnDevice: true)
+        XCTAssertTrue(requestOnDevice.requiresOnDeviceRecognition)
+        XCTAssertTrue(requestOnDevice.shouldReportPartialResults)
+        XCTAssertEqual(requestOnDevice.taskHint, .dictation)
+
+        let requestFallback = SpeechRecognizer.configureRecognitionRequest(for: url, supportsOnDevice: false)
+        XCTAssertFalse(requestFallback.requiresOnDeviceRecognition)
+    }
+}
+
 
 
 
