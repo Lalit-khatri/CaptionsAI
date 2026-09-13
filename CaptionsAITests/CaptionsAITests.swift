@@ -147,3 +147,28 @@ final class ExportPresetTests: XCTestCase {
         XCTAssertEqual(preset.aspectRatioString, "Original")
     }
 }
+
+final class ProcessingViewTests: XCTestCase {
+    func testWaveformBarHeightsAndDurationsAreDeterministic() {
+        XCTAssertEqual(ProcessingView.barHeights.count, 20)
+        XCTAssertEqual(ProcessingView.barDurations.count, 20)
+        for height in ProcessingView.barHeights {
+            XCTAssertGreaterThanOrEqual(height, 10)
+            XCTAssertLessThanOrEqual(height, 60)
+        }
+        for duration in ProcessingView.barDurations {
+            XCTAssertGreaterThanOrEqual(duration, 0.2)
+            XCTAssertLessThanOrEqual(duration, 1.0)
+        }
+    }
+
+    func testProcessingViewInitializesWithDuplicateWords() {
+        let view = ProcessingView(
+            progress: 0.5,
+            words: ["the", "the", "cat", "sat", "the", "cat"],
+            onCancel: {}
+        )
+        XCTAssertNotNil(view.body)
+    }
+}
+

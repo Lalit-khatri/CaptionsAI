@@ -50,7 +50,7 @@ struct ProcessingView: View {
                 if !words.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 4) {
-                            ForEach(words.suffix(8), id: \.self) { word in
+                            ForEach(Array(words.suffix(8).enumerated()), id: \.offset) { _, word in
                                 Text(word)
                                     .font(.caption)
                                     .foregroundColor(.gray)
@@ -76,6 +76,20 @@ struct ProcessingView: View {
 
     // MARK: - Waveform
 
+    /// Precomputed bar heights for the 20 waveform bars so that SwiftUI's
+    /// `body` evaluation on every progress update does not re-roll random heights
+    /// and reset the running animations.
+    static let barHeights: [CGFloat] = [
+        18, 32, 45, 28, 48, 22, 38, 50, 30, 42,
+        20, 35, 48, 26, 44, 18, 36, 50, 24, 40
+    ]
+
+    /// Precomputed animation durations for the 20 waveform bars.
+    static let barDurations: [Double] = [
+        0.45, 0.35, 0.55, 0.40, 0.50, 0.38, 0.48, 0.52, 0.42, 0.36,
+        0.46, 0.34, 0.54, 0.41, 0.49, 0.39, 0.47, 0.53, 0.43, 0.37
+    ]
+
     private var waveformView: some View {
         HStack(spacing: 3) {
             ForEach(0 ..< 20, id: \.self) { index in
@@ -88,9 +102,9 @@ struct ProcessingView: View {
                         )
                     )
                     .frame(width: 4)
-                    .frame(height: animatingBars ? CGFloat.random(in: 10 ... 50) : 10)
+                    .frame(height: animatingBars ? Self.barHeights[index % Self.barHeights.count] : 10)
                     .animation(
-                        .easeInOut(duration: Double.random(in: 0.3 ... 0.6))
+                        .easeInOut(duration: Self.barDurations[index % Self.barDurations.count])
                             .repeatForever(autoreverses: true)
                             .delay(Double(index) * 0.05),
                         value: animatingBars
