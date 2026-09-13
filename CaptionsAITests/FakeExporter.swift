@@ -11,6 +11,7 @@ final class FakeExporter: VideoExporting {
 
     var outcome: Outcome = .succeed(URL(fileURLWithPath: "/tmp/fake-export.mp4"))
     var progress: Double = 0
+    var savedToPhotoLibrary = true
     private(set) var cancelCount = 0
 
     @MainActor

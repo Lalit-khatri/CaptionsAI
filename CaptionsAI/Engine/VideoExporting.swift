@@ -13,6 +13,9 @@ protocol VideoExporting: AnyObject {
     /// Fraction of the render that is done, 0...1.
     var progress: Double { get }
 
+    /// Whether the last finished render reached the Photo Library.
+    var savedToPhotoLibrary: Bool { get }
+
     @MainActor
     func export(
         videoURL: URL,

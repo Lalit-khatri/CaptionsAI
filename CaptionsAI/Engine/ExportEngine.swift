@@ -31,10 +31,20 @@ final class ExportEngine {
     var progress: Double = 0
     var error: ExportError?
 
+    /// Whether the last finished render reached the Photo Library.
+    ///
+    /// `false` after a refused permission — the file is still on disk and is
+    /// still returned, so the caller can offer it for sharing.
+    var savedToPhotoLibrary = false
+
     // MARK: - Private
 
     private var exportSession: AVAssetExportSession?
     private var progressTimer: Timer?
+
+    /// Supplied by tests only. A test bundle cannot hold a Photos
+    /// authorization, so the refusal path is unreachable without this.
+    var photoLibrarySaver: ((URL) async throws -> Void)?
 
     // MARK: - Export
 
@@ -52,6 +62,7 @@ final class ExportEngine {
         isExporting = true
         progress = 0
         error = nil
+        savedToPhotoLibrary = false
 
         defer { isExporting = false }
 
@@ -144,8 +155,17 @@ final class ExportEngine {
         switch session.status {
         case .completed:
             progress = 1.0
-            // Auto-save to Photo Library
-            try await saveToPhotoLibrary(outputURL)
+            // The render is finished and the file is on disk. A refused Photos
+            // permission used to throw out of here, which discarded minutes of
+            // encoding over something the user can fix — or work around, by
+            // sharing the file straight from the export screen. The outcome is
+            // recorded instead, and the file is handed back either way.
+            do {
+                try await save(outputURL)
+                savedToPhotoLibrary = true
+            } catch {
+                savedToPhotoLibrary = false
+            }
             return outputURL
         case .cancelled:
             throw ExportError.cancelled
@@ -158,6 +178,15 @@ final class ExportEngine {
     }
 
     // MARK: - Save to Photos
+
+    /// Saves through the injected hook if there is one, otherwise for real.
+    private func save(_ url: URL) async throws {
+        if let photoLibrarySaver {
+            try await photoLibrarySaver(url)
+        } else {
+            try await saveToPhotoLibrary(url)
+        }
+    }
 
     /// Saves the exported video to the user's Photo Library.
     func saveToPhotoLibrary(_ url: URL) async throws {

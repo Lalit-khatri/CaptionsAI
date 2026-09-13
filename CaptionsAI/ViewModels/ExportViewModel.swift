@@ -60,6 +60,13 @@ final class ExportViewModel {
             exportedFileURL = outputURL
             exportProgress = 1.0
 
+            // The render survived a refused Photos permission, so say what
+            // happened and leave the file on offer — the Share button on the
+            // success screen still works.
+            if !exportEngine.savedToPhotoLibrary {
+                error = ExportError.saveFailed.localizedDescription
+            }
+
             // Increment daily count
             incrementExportCount()
 
