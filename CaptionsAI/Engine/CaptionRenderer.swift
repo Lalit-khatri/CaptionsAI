@@ -25,8 +25,7 @@ final class CaptionRenderer {
         style: CaptionStyle,
         outputSize: CGSize,
         captionYPosition: Double,
-        preferredTransform: CGAffineTransform = .identity,
-        orientation: CGImagePropertyOrientation = .up
+        preferredOrientation: CGImagePropertyOrientation = .up
     ) async throws -> AVMutableVideoComposition {
         let composition = AVMutableVideoComposition()
         composition.renderSize = outputSize
@@ -49,8 +48,7 @@ final class CaptionRenderer {
             style: style,
             renderSize: outputSize,
             captionYPosition: captionYPosition,
-            preferredTransform: preferredTransform,
-            orientation: orientation
+            preferredOrientation: preferredOrientation
         )
 
         // Set up source track ID
@@ -267,8 +265,11 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
     let style: CaptionStyle
     let renderSize: CGSize
     let captionYPosition: Double
-    let preferredTransform: CGAffineTransform
-    let orientation: CGImagePropertyOrientation
+
+    /// How the source frame has to be turned before it is drawn. This is the
+    /// only rotation in the pixel path; a `preferredTransform` used to sit
+    /// beside it, stored and never read.
+    let preferredOrientation: CGImagePropertyOrientation
 
     init(
         timeRange: CMTimeRange,
@@ -276,16 +277,14 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
         style: CaptionStyle,
         renderSize: CGSize,
         captionYPosition: Double,
-        preferredTransform: CGAffineTransform = .identity,
-        orientation: CGImagePropertyOrientation = .up
+        preferredOrientation: CGImagePropertyOrientation = .up
     ) {
         self.timeRange = timeRange
         self.segments = segments
         self.style = style
         self.renderSize = renderSize
         self.captionYPosition = captionYPosition
-        self.preferredTransform = preferredTransform
-        self.orientation = orientation
+        self.preferredOrientation = preferredOrientation
         super.init()
     }
 }
@@ -350,8 +349,9 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
         let currentTime = CMTimeGetSeconds(request.compositionTime)
         let renderSize = instruction.renderSize
 
-        // 1. Apply track transform (handles portrait/landscape camera orientation)
-        var videoImage = sourceImage.oriented(instruction.orientation)
+        // 1. Turn the frame the way the source file asks. This is the only
+        // rotation applied to the pixels.
+        var videoImage = sourceImage.oriented(instruction.preferredOrientation)
 
         // 2. Aspect-fit video into renderSize and center it
         let currentWidth = videoImage.extent.width

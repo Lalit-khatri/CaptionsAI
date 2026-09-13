@@ -89,10 +89,14 @@ final class ExportEngine {
         }
         try compositionVideoTrack.insertTimeRange(timeRange, of: sourceVideoTrack, at: .zero)
 
-        // Copy the transform so portrait videos stay upright
+        // How the frame has to be turned before it is shown. Copying the
+        // transform onto the composition track was a no-op and its comment
+        // claimed the credit for this: with a custom compositor,
+        // `sourceFrame(byTrackID:)` hands back the raw buffer with the
+        // transform *not* applied, so `.oriented()` in the compositor is the
+        // only rotation in the pixel path.
         let transform = try await sourceVideoTrack.load(.preferredTransform)
-        let orientation = getVideoOrientation(from: transform)
-        compositionVideoTrack.preferredTransform = transform
+        let preferredOrientation = Self.preferredOrientation(for: transform)
 
         // Add audio track if present and included
         if settings.includeAudio {
@@ -114,8 +118,7 @@ final class ExportEngine {
             style: style,
             outputSize: renderSize,
             captionYPosition: captionYPosition,
-            preferredTransform: transform,
-            orientation: orientation
+            preferredOrientation: preferredOrientation
         )
 
         // Select export preset based on codec and quality
@@ -251,23 +254,34 @@ final class ExportEngine {
 
     // MARK: - Helpers
 
-    private func getVideoOrientation(from transform: CGAffineTransform) -> CGImagePropertyOrientation {
-        // Portrait
-        if transform.a == 0 && transform.b == 1.0 && transform.c == -1.0 && transform.d == 0 {
-            return .right
+    /// The orientation the decoded frame has to be drawn in for it to appear
+    /// the way the file asks.
+    ///
+    /// This used to match four exact transforms and silently answer `.up` to
+    /// anything else, while ``swapsDimensions(_:)``'s job was done separately
+    /// by a looser test. They disagreed on a front-camera transform such as
+    /// `a=0, b=1, c=1, d=0`: the canvas was turned portrait but the frame was
+    /// not, so a landscape frame was letterboxed into a portrait video. There
+    /// is now one decision and both callers read it.
+    ///
+    /// Mirroring is deliberately not modelled. A reflected transform is
+    /// classified as the rotation it is nearest to, so the frame fills the
+    /// canvas the right way up but is not un-flipped. That is a gap, not a
+    /// regression — the old code declined to turn such a frame at all.
+    static func preferredOrientation(for transform: CGAffineTransform) -> CGImagePropertyOrientation {
+        if swapsDimensions(transform) {
+            return transform.b > 0 ? .right : .left
         }
-        // Portrait Upside Down
-        else if transform.a == 0 && transform.b == -1.0 && transform.c == 1.0 && transform.d == 0 {
-            return .left
-        }
-        // Landscape Right
-        else if transform.a == -1.0 && transform.b == 0 && transform.c == 0 && transform.d == -1.0 {
-            return .down
-        }
-        // Landscape Left (Default)
-        else {
-            return .up
-        }
+        return transform.a < 0 ? .down : .up
+    }
+
+    /// Whether `transform` maps the frame's width onto the display's height,
+    /// in which case what the viewer sees is the natural size swapped.
+    ///
+    /// Tested on the axes rather than on `± 1` so that a transform carrying a
+    /// scale is still recognised as a quarter turn.
+    static func swapsDimensions(_ transform: CGAffineTransform) -> Bool {
+        transform.a == 0 && transform.d == 0 && transform.b != 0 && transform.c != 0
     }
 
     /// The size the composition will render at.
@@ -302,8 +316,7 @@ final class ExportEngine {
         }
         let naturalSize = try await videoTrack.load(.naturalSize)
         let transform = try await videoTrack.load(.preferredTransform)
-        let isPortrait = abs(transform.b) == 1 && abs(transform.c) == 1
-        return isPortrait
+        return Self.swapsDimensions(transform)
             ? CGSize(width: naturalSize.height, height: naturalSize.width)
             : naturalSize
     }

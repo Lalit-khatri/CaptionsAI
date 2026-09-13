@@ -65,10 +65,14 @@ enum TestSupport {
     /// The caller owns the file; pair it with ``remove(_:)`` in a teardown
     /// block. Frames are a ramp from black to white so that a test can tell
     /// frames apart if it needs to.
+    ///
+    /// `transform` becomes the track's `preferredTransform`, which is how a
+    /// camera records that the frame needs turning before it is shown.
     static func makeTestVideo(
         seconds: Double = 2.0,
         size: CGSize = CGSize(width: 640, height: 360),
-        fps: Int32 = 30
+        fps: Int32 = 30,
+        transform: CGAffineTransform = .identity
     ) async throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("fixture-\(UUID().uuidString).mp4")
@@ -83,6 +87,7 @@ enum TestSupport {
             ]
         )
         input.expectsMediaDataInRealTime = false
+        input.transform = transform
 
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(
             assetWriterInput: input,
