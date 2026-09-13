@@ -57,19 +57,7 @@ final class ExportEngine {
 
         let asset = AVURLAsset(url: videoURL)
 
-        // Determine output size from the preset (handles .original via actual track)
-        let outputSize: CGSize
-        if preset == .original {
-            outputSize = try await resolveOriginalSize(from: asset)
-        } else {
-            outputSize = preset.resolution
-        }
-
-        // Apply resolution multiplier from settings
-        let scale = settings.resolution == .original ? 1.0 : settings.resolution.multiplier
-        let scaledWidth = round(outputSize.width * scale / 2) * 2
-        let scaledHeight = round(outputSize.height * scale / 2) * 2
-        let renderSize = CGSize(width: scaledWidth, height: scaledHeight)
+        let renderSize = try await self.renderSize(for: asset, settings: settings, preset: preset)
 
         // Build an AVMutableComposition to get full control
         let mutableComposition = AVMutableComposition()
@@ -211,6 +199,31 @@ final class ExportEngine {
         else {
             return .up
         }
+    }
+
+    /// The size the composition will render at.
+    ///
+    /// Two independent choices meet here and used to be conflated. The *format*
+    /// preset decides the canvas — its own fixed frame, or the source's own
+    /// dimensions for `.original`. The *resolution* setting then decides how
+    /// many lines that canvas gets. Keeping them separate is what stops "4K"
+    /// meaning "double whatever you had".
+    ///
+    /// Not private: this is the seam the resolution tests assert against, since
+    /// ``export(videoURL:settings:preset:segments:style:captionYPosition:addWatermark:)``
+    /// cannot run in a test bundle — it ends in a Photo Library write.
+    func renderSize(
+        for asset: AVURLAsset,
+        settings: ExportSettings,
+        preset: ExportPreset
+    ) async throws -> CGSize {
+        let canvas: CGSize
+        if preset == .original {
+            canvas = try await resolveOriginalSize(from: asset)
+        } else {
+            canvas = preset.resolution
+        }
+        return settings.resolution.outputSize(for: canvas)
     }
 
     /// Reads the actual video dimensions from the source track, handling rotation.
