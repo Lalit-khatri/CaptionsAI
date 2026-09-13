@@ -96,24 +96,22 @@ final class CaptionStyleTests: XCTestCase {
         XCTAssertEqual(decoded.hex, "#FF0000")
     }
 
-    /// Characterization test for the `Color.toHex()` grayscale crash.
+    /// `Color.white` and `Color.black` live in a grayscale color space and
+    /// expose two components, not four. `toHex()` used to index
+    /// `components[2]` unconditionally, so converting either one trapped —
+    /// a crash, not the `nil` its `-> String?` signature advertises.
     ///
-    /// `toHex()` reads `components[2]` unconditionally, but colors in a
-    /// grayscale color space expose only two components, so converting e.g.
-    /// `.white` traps at runtime. Asserting on the component count rather than
-    /// calling `toHex()` keeps this a *failure* instead of a trap that would
-    /// tear down the whole test bundle and hide every other result.
-    ///
-    /// Once `toHex()` handles short component arrays, this can become the
-    /// direct assertion `CodableColor(Color.white).hex == "#FFFFFF"`.
-    func testToHexIsSafeForGrayscaleColors() {
-        for (label, color) in [("white", Color.white), ("black", Color.black)] {
-            let components = UIColor(color).cgColor.components ?? []
-            XCTAssertGreaterThanOrEqual(
-                components.count, 3,
-                "Color.toHex() indexes components[2] and will trap on \(label)"
-            )
-        }
+    /// This was a characterization test asserting on component count, because
+    /// calling `toHex()` would have torn down the whole bundle and hidden
+    /// every other result. With the fix in it can assert the real thing.
+    func testToHexHandlesGrayscaleColors() {
+        XCTAssertEqual(CodableColor(Color.white).hex, "#FFFFFF")
+        XCTAssertEqual(CodableColor(Color.black).hex, "#000000")
+    }
+
+    func testToHexHandlesRGBColors() {
+        XCTAssertEqual(CodableColor(Color(red: 1, green: 0, blue: 0)).hex, "#FF0000")
+        XCTAssertEqual(CodableColor(Color(red: 0, green: 1, blue: 0)).hex, "#00FF00")
     }
 }
 
