@@ -135,16 +135,25 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
     /// The weight itself is decided in one place, by ``weight``; repeating the
     /// ladder here is what let the two copies disagree.
     var font: Font {
+        font(size: fontSize)
+    }
+
+    /// The style's font at a size other than its own.
+    ///
+    /// The chip in the style picker draws every preset at the same small size
+    /// so they line up, but it is still previewing *this* style and must ask
+    /// for its typeface and weight rather than guessing them again.
+    func font(size: CGFloat) -> Font {
         if fontName == "Menlo" {
-            return .custom("Menlo-Bold", size: fontSize)
+            return .custom("Menlo-Bold", size: size)
         }
         guard let weight else {
-            return .custom(fontName, size: fontSize)
+            return .custom(fontName, size: size)
         }
         if fontName.contains("Rounded") {
-            return .system(size: fontSize, weight: weight, design: .rounded)
+            return .system(size: size, weight: weight, design: .rounded)
         }
-        return .system(size: fontSize, weight: weight)
+        return .system(size: size, weight: weight)
     }
 
     var uiFont: UIFont {

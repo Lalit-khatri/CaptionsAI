@@ -80,7 +80,10 @@ struct StyleSheetView: View {
 
 // MARK: - Style Preview Card
 
-private struct StylePreviewCard: View {
+/// Internal rather than private so `StylePreviewCardTests` can render it: the
+/// point of the chip is that it looks like the style, which is only checkable
+/// by drawing it.
+struct StylePreviewCard: View {
     let style: CaptionStyle
     let isSelected: Bool
     let previewText: String
@@ -104,11 +107,8 @@ private struct StylePreviewCard: View {
                     ForEach(Array(words.enumerated()), id: \.offset) { index, word in
                         let isHighlighted = style.wordByWordHighlight && (index == words.count - 1 || words.count == 1)
                         Text(word)
-                            .font(.system(
-                                size: 11,
-                                weight: (style.fontName.contains("Heavy") || style.fontName.contains("Black")) ? .heavy : (style.fontName.contains("Bold") ? .bold : (style.fontName.contains("Light") ? .light : .medium)),
-                                design: style.fontName.contains("Rounded") ? .rounded : .default
-                            ))
+                            .font(style.font(size: 11))
+                            .fontWeight(style.weight(highlighted: isHighlighted))
                             .foregroundColor(isHighlighted ? style.highlightColor.color : style.textColor.color)
                     }
                 }
