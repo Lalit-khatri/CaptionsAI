@@ -53,22 +53,28 @@ final class EditorViewModel {
         return player
     }
 
+    /// The audio route the editor claims while it is on screen. Injected so
+    /// tests can watch it being taken and handed back.
+    private let audioSession: any AudioSessionControlling
+
     // MARK: - Init
 
     init(
         project: Project,
         speechRecognizer: any Transcribing = SpeechRecognizer(),
-        playbackClock: (any PeriodicTimeObserving)? = nil
+        playbackClock: (any PeriodicTimeObserving)? = nil,
+        audioSession: any AudioSessionControlling = AVAudioSession.sharedInstance()
     ) {
         self.project = project
         self.speechRecognizer = speechRecognizer
+        self.audioSession = audioSession
         injectedPlaybackClock = playbackClock
         segments = project.sortedSegments
         selectedStyle = project.selectedStyle
 
         // Configure audio session for the video playback
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
-        try? AVAudioSession.sharedInstance().setActive(true)
+        try? audioSession.setCategory(.playback, mode: .moviePlayback, options: [])
+        try? audioSession.setActive(true, options: [])
 
         if let url = project.videoURL {
             player = AVPlayer(url: url)
@@ -85,6 +91,20 @@ final class EditorViewModel {
         if let endObserver {
             NotificationCenter.default.removeObserver(endObserver)
         }
+    }
+
+    // MARK: - Audio Session
+
+    /// Hands the audio route back when the editor closes.
+    ///
+    /// Claiming a `.playback` session interrupts whatever else the phone was
+    /// playing. Nothing used to release it, so the interruption outlived the
+    /// screen: leave the editor and the user's music stayed stopped until the
+    /// app was killed. `.notifyOthersOnDeactivation` is the part that tells
+    /// the other app it may resume — releasing without it leaves the music
+    /// paused just the same.
+    func endPlaybackSession() {
+        try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     // MARK: - Playback End Observer

@@ -51,6 +51,7 @@ struct EditorView: View {
         .onDisappear {
             viewModel.cancelTranscription()
             viewModel.teardownTimeObserver()
+            viewModel.endPlaybackSession()
         }
         // Style bottom sheet
         .sheet(isPresented: $showStyleSheet) {
