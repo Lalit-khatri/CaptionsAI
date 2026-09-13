@@ -28,6 +28,13 @@ enum SpeechError: Error, LocalizedError {
     }
 }
 
+// MARK: - Progress Checkpoints
+
+/// Fraction reported once the audio track has been extracted.
+let kProgressAudioExtracted: Double = 0.3
+/// Fraction reported once recognition is done and grouping begins.
+let kProgressTranscribed: Double = 0.9
+
 // MARK: - SpeechRecognizer
 
 /// Wraps Apple's Speech framework to extract word-level captions from video audio.
@@ -90,7 +97,8 @@ final class SpeechRecognizer {
         }
 
         // Step 2: Recognize speech
-        progress = 0.3
+        progress = kProgressAudioExtracted
+        let clipDuration = (try? await AVURLAsset(url: videoURL).load(.duration).seconds) ?? 0
         let request = SFSpeechURLRecognitionRequest(url: audioURL)
         request.shouldReportPartialResults = true
         request.taskHint = .dictation
@@ -102,10 +110,12 @@ final class SpeechRecognizer {
 
                 if let result {
                     // Update partial results on main thread
-                    let words = result.bestTranscription.segments.map(\.substring)
+                    let transcription = result.bestTranscription
+                    let words = transcription.segments.map(\.substring)
+                    let heard = transcription.segments.last.map { $0.timestamp + $0.duration } ?? 0
                     Task { @MainActor in
                         self.partialResults = words
-                        self.progress = 0.3 + (0.6 * Double(words.count) / max(Double(words.count), 1))
+                        self.progress = Self.recognitionProgress(heard: heard, of: clipDuration)
                     }
 
                     if result.isFinal, !hasResumed {
@@ -120,7 +130,7 @@ final class SpeechRecognizer {
         }
 
         // Step 3: Group into segments
-        progress = 0.9
+        progress = kProgressTranscribed
         let transcriptionSegments = result.bestTranscription.segments
 
         guard !transcriptionSegments.isEmpty else {
@@ -136,6 +146,29 @@ final class SpeechRecognizer {
         try? FileManager.default.removeItem(at: audioURL)
 
         return captionSegments
+    }
+
+    // MARK: - Progress
+
+    /// How far along the recognition stage is, given that the recogniser has
+    /// reported words up to `heard` seconds of a clip `duration` seconds long.
+    ///
+    /// This used to be `0.6 * words.count / max(words.count, 1)`, whose
+    /// denominator is its own numerator: the answer was 0.9 for any non-empty
+    /// result. The ring jumped to 90% on the first recognised word and stayed
+    /// there for the whole of the longest stage, which reads as a hang.
+    ///
+    /// A clip of unknown length reports the stage's starting value rather than
+    /// dividing by zero — a NaN here would reach a `ProgressView`.
+    ///
+    /// The result is clamped rather than just the fraction: in binary floating
+    /// point `0.3 + 0.6 * 1.0` is a hair over `0.9`, and the next stage setting
+    /// the ring to exactly `0.9` would be a step backwards.
+    static func recognitionProgress(heard: Double, of duration: Double) -> Double {
+        guard duration > 0 else { return kProgressAudioExtracted }
+        let fraction = min(max(heard / duration, 0), 1)
+        let reached = kProgressAudioExtracted + (kProgressTranscribed - kProgressAudioExtracted) * fraction
+        return min(reached, kProgressTranscribed)
     }
 
     // MARK: - Audio Extraction
