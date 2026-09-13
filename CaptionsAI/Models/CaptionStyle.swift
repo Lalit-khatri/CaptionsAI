@@ -95,24 +95,51 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
 
     // MARK: - SwiftUI Helpers
 
+    /// The weight this style is drawn at, or `nil` when the typeface carries
+    /// its own and a weight must not be imposed on top of it.
+    ///
+    /// ``font`` builds the weight in, but the word-by-word overlay needs it
+    /// separately: every run of a concatenated `Text` has to carry the same
+    /// modifiers, and the highlighted run overrides the weight. That override
+    /// used to be paired with a guess re-derived from the font *name*, which
+    /// disagreed with this — "System-Rounded" contains neither "Bold" nor
+    /// "Heavy", so every unhighlighted word in the two rounded presets was
+    /// drawn `.regular` against a heavy preview elsewhere and a heavy export.
+    var weight: Font.Weight? {
+        if fontName.contains("Rounded") { return .heavy }
+        if fontName.contains("Heavy") || fontName.contains("Black") { return .heavy }
+        if fontName.contains("Bold") { return .bold }
+        if fontName.contains("Light") { return .light }
+        if fontName.contains("Medium") { return .medium }
+        if fontName == "Menlo" { return nil }
+        if UIFont(name: fontName, size: fontSize) != nil { return nil }
+        return .bold
+    }
+
+    /// The weight a word is drawn at, highlighted or not.
+    ///
+    /// The highlight is deliberately heavier than the style; everything else
+    /// is the style's own weight.
+    func weight(highlighted: Bool) -> Font.Weight? {
+        highlighted ? .heavy : weight
+    }
+
+    /// A system font at ``weight``, or the named typeface when it carries its
+    /// own weight.
+    ///
+    /// The weight itself is decided in one place, by ``weight``; repeating the
+    /// ladder here is what let the two copies disagree.
     var font: Font {
-        if fontName.contains("Rounded") {
-            return .system(size: fontSize, weight: .heavy, design: .rounded)
-        } else if fontName.contains("Heavy") || fontName.contains("Black") {
-            return .system(size: fontSize, weight: .heavy)
-        } else if fontName.contains("Bold") {
-            return .system(size: fontSize, weight: .bold)
-        } else if fontName.contains("Light") {
-            return .system(size: fontSize, weight: .light)
-        } else if fontName.contains("Medium") {
-            return .system(size: fontSize, weight: .medium)
-        } else if fontName == "Menlo" {
+        if fontName == "Menlo" {
             return .custom("Menlo-Bold", size: fontSize)
-        } else if UIFont(name: fontName, size: fontSize) != nil {
-            return .custom(fontName, size: fontSize)
-        } else {
-            return .system(size: fontSize, weight: .bold)
         }
+        guard let weight else {
+            return .custom(fontName, size: fontSize)
+        }
+        if fontName.contains("Rounded") {
+            return .system(size: fontSize, weight: weight, design: .rounded)
+        }
+        return .system(size: fontSize, weight: weight)
     }
 
     var uiFont: UIFont {

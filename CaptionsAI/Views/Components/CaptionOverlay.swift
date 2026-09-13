@@ -194,7 +194,7 @@ struct CaptionOverlay: View {
             let wordText = Text(displayWord + (index < words.count - 1 ? " " : ""))
                 .font(style.font)
                 .foregroundColor(isActive ? style.highlightColor.color : style.textColor.color)
-                .fontWeight(isActive ? .heavy : (style.fontName.contains("Bold") || style.fontName.contains("Heavy") ? .bold : .regular))
+                .fontWeight(style.weight(highlighted: isActive))
             combined = combined + wordText
         }
         return combined
