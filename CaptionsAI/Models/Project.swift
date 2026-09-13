@@ -36,6 +36,10 @@ final class Project {
     /// nil means use the selected style's default position
     var captionYPosition: Double?
 
+    /// Caption size chosen with the Text Size slider.
+    /// nil means use the selected style's own size.
+    var captionFontSize: Double?
+
     // MARK: - Computed Properties
 
     /// The video file, or `nil` if it is no longer on disk.
@@ -49,8 +53,17 @@ final class Project {
         VideoLibrary.resolve(videoURLString)
     }
 
+    /// The style captions are drawn with, size override included.
+    ///
+    /// The preset is looked up by name, so anything the user changed about it
+    /// has to be re-applied here or it is lost. Text Size was: the preview read
+    /// the view model's edited copy, export read this, and the two disagreed.
     var selectedStyle: CaptionStyle {
-        CaptionStyle.presets.first { $0.name == selectedStyleName } ?? CaptionStyle.presets.first ?? .hormozi
+        var style = CaptionStyle.presets.first { $0.name == selectedStyleName } ?? CaptionStyle.presets.first ?? .hormozi
+        if let captionFontSize {
+            style.fontSize = CGFloat(captionFontSize)
+        }
+        return style
     }
 
     var sortedSegments: [CaptionSegment] {
@@ -122,8 +135,14 @@ final class Project {
         modifiedAt = Date()
     }
 
-    func updateStyle(_ styleName: String) {
+    /// Records the chosen style and the size it is drawn at.
+    ///
+    /// The size is stored, not just the name, because ``selectedStyle``
+    /// rebuilds the preset from the name and export reads that. A size held
+    /// only in the view model reached the preview and never the file.
+    func updateStyle(_ styleName: String, fontSize: Double) {
         selectedStyleName = styleName
+        captionFontSize = fontSize
         modifiedAt = Date()
     }
 

@@ -275,9 +275,15 @@ final class EditorViewModel {
 
     // MARK: - Style Selection
 
+    /// Adopts `style` for the preview and records it on the project.
+    ///
+    /// Both the style picker and the Text Size slider come through here — the
+    /// slider hands over a copy of the current style with a new `fontSize`. So
+    /// the size has to be persisted alongside the name, or the slider only ever
+    /// moves the preview.
     func selectStyle(_ style: CaptionStyle) {
         selectedStyle = style
-        project.updateStyle(style.name)
+        project.updateStyle(style.name, fontSize: Double(style.fontSize))
     }
 
     // MARK: - Caption Position
