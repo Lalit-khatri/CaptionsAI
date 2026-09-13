@@ -260,9 +260,11 @@ final class EditorViewModel {
     /// back at 0–2s, where nothing will ever highlight them: `activeWord(at:)`
     /// looks inside the segment's own range and finds nothing there.
     func updateSegment(_ segment: CaptionSegment, text: String, start: Double, end: Double) {
-        segment.startTime = start
-        segment.endTime = end
+        let (validStart, validEnd) = validatedTiming(start: start, end: end)
+        segment.startTime = validStart
+        segment.endTime = validEnd
         applyText(text, to: segment)
+        reorderSegments()
         finishSegmentEdit()
     }
 
@@ -276,10 +278,36 @@ final class EditorViewModel {
         // existing timings are the recogniser's measurements of real speech;
         // flattening them to an even spread to accommodate a 0.1s nudge would
         // throw that away. Must run before the range is overwritten.
-        rescaleWordTimings(in: segment, toStart: start, end: end)
-        segment.startTime = start
-        segment.endTime = end
+        let (validStart, validEnd) = validatedTiming(start: start, end: end)
+        rescaleWordTimings(in: segment, toStart: validStart, end: validEnd)
+        segment.startTime = validStart
+        segment.endTime = validEnd
+        reorderSegments()
         finishSegmentEdit()
+    }
+
+    private func validatedTiming(start: Double, end: Double) -> (start: Double, end: Double) {
+        let validStart = max(0, start)
+        var validEnd = max(validStart, end)
+        if project.videoDuration > 0 {
+            if validStart > project.videoDuration {
+                return (project.videoDuration, project.videoDuration)
+            }
+            validEnd = min(validEnd, project.videoDuration)
+        }
+        return (validStart, validEnd)
+    }
+
+    private func reorderSegments() {
+        let sorted = project.segments.sorted {
+            if $0.startTime != $1.startTime {
+                return $0.startTime < $1.startTime
+            }
+            return $0.sortOrder < $1.sortOrder
+        }
+        for (index, segment) in sorted.enumerated() {
+            segment.sortOrder = index
+        }
     }
 
     private func applyText(_ text: String, to segment: CaptionSegment) {
@@ -329,18 +357,21 @@ final class EditorViewModel {
     }
 
     func addSegment(at time: Double, text: String = "New caption") {
+        let (validStart, validEnd) = validatedTiming(start: time, end: time + 2.0)
         let segment = CaptionSegment(
-            startTime: time,
-            endTime: time + 2.0,
+            startTime: validStart,
+            endTime: validEnd,
             text: text,
             sortOrder: segments.count
         )
         project.addSegment(segment)
+        reorderSegments()
         segments = project.sortedSegments
     }
 
     func deleteSegment(_ segment: CaptionSegment) {
         project.removeSegment(segment)
+        reorderSegments()
         segments = project.sortedSegments
         if selectedSegment?.id == segment.id {
             selectedSegment = nil
