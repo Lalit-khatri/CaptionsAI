@@ -146,23 +146,29 @@ struct CaptionOverlay: View {
     @ViewBuilder
     private func captionText(for segment: CaptionSegment, in size: CGSize) -> some View {
         let style = viewModel.selectedStyle
+        // The export draws captions at `style.fontSize` scaled by how wide the
+        // frame is against the reference width. The preview used to draw the
+        // point size verbatim, so the two matched only on a 393pt-wide player:
+        // at twice that, the editor showed a 25pt caption and the file got a
+        // 47pt one.
+        let scale = captionScale(forWidth: size.width)
         if style.wordByWordHighlight {
-            wordByWordText(for: segment)
-                .captionBackground(style: style)
-                .frame(maxWidth: captionMaxWidth(in: size))
+            wordByWordText(for: segment, scale: scale)
+                .captionBackground(style: style, scale: scale)
+                .frame(maxWidth: captionMaxWidth(in: size, scale: scale))
         } else {
             let displayText = style.isUppercase ? segment.text.uppercased() : segment.text
             Text(displayText)
-                .font(style.font)
+                .font(style.font(size: style.fontSize * scale))
                 .foregroundColor(style.textColor.color)
                 .multilineTextAlignment(.center)
                 .shadow(
                     color: style.shadowColor.color,
-                    radius: style.shadowRadius,
-                    x: 0, y: 1
+                    radius: style.shadowRadius * scale,
+                    x: 0, y: 1 * scale
                 )
-                .captionBackground(style: style)
-                .frame(maxWidth: captionMaxWidth(in: size))
+                .captionBackground(style: style, scale: scale)
+                .frame(maxWidth: captionMaxWidth(in: size, scale: scale))
         }
     }
 
@@ -177,39 +183,39 @@ struct CaptionOverlay: View {
     /// frame goes outside `captionBackground` on purpose: constraining the
     /// text first would stretch the background to the full width even behind a
     /// two-word caption.
-    private func captionMaxWidth(in size: CGSize) -> CGFloat {
-        size.width * kTextMaxWidthFraction + kCaptionHorizontalPadding * 2
+    private func captionMaxWidth(in size: CGSize, scale: CGFloat) -> CGFloat {
+        size.width * kTextMaxWidthFraction + kCaptionHorizontalPadding * scale * 2
     }
 
     // MARK: - Word-by-Word
 
     @ViewBuilder
-    private func wordByWordText(for segment: CaptionSegment) -> some View {
+    private func wordByWordText(for segment: CaptionSegment, scale: CGFloat) -> some View {
         let words = segment.words
         let style = viewModel.selectedStyle
         if words.isEmpty {
             let displayText = style.isUppercase ? segment.text.uppercased() : segment.text
             Text(displayText)
-                .font(style.font)
+                .font(style.font(size: style.fontSize * scale))
                 .foregroundColor(style.textColor.color)
                 .multilineTextAlignment(.center)
                 .shadow(
                     color: style.shadowColor.color,
-                    radius: style.shadowRadius,
-                    x: 0, y: 1
+                    radius: style.shadowRadius * scale,
+                    x: 0, y: 1 * scale
                 )
         } else {
-            formattedWordText(for: segment)
+            formattedWordText(for: segment, scale: scale)
                 .multilineTextAlignment(.center)
                 .shadow(
                     color: style.shadowColor.color,
-                    radius: style.shadowRadius,
-                    x: 0, y: 1
+                    radius: style.shadowRadius * scale,
+                    x: 0, y: 1 * scale
                 )
         }
     }
 
-    private func formattedWordText(for segment: CaptionSegment) -> Text {
+    private func formattedWordText(for segment: CaptionSegment, scale: CGFloat) -> Text {
         let style = viewModel.selectedStyle
         var combined = Text("")
         let words = segment.words
@@ -217,7 +223,7 @@ struct CaptionOverlay: View {
             let isActive = currentTime >= word.startTime && currentTime < word.endTime
             let displayWord = style.isUppercase ? word.word.uppercased() : word.word
             let wordText = Text(displayWord + (index < words.count - 1 ? " " : ""))
-                .font(style.font)
+                .font(style.font(size: style.fontSize * scale))
                 .foregroundColor(isActive ? style.highlightColor.color : style.textColor.color)
                 .fontWeight(style.weight(highlighted: isActive))
             combined = combined + wordText
@@ -229,13 +235,16 @@ struct CaptionOverlay: View {
 // MARK: - Caption Background Modifier
 
 extension View {
-    func captionBackground(style: CaptionStyle) -> some View {
-        padding(.horizontal, kCaptionHorizontalPadding)
-            .padding(.vertical, kCaptionVerticalPadding)
+    /// - Parameter scale: how much larger the player is than the reference
+    ///   width, so the box grows with the text inside it rather than staying a
+    ///   fixed number of points on every device.
+    func captionBackground(style: CaptionStyle, scale: CGFloat) -> some View {
+        padding(.horizontal, kCaptionHorizontalPadding * scale)
+            .padding(.vertical, kCaptionVerticalPadding * scale)
             .background(
                 Group {
                     if style.backgroundOpacity > 0 {
-                        RoundedRectangle(cornerRadius: style.cornerRadius)
+                        RoundedRectangle(cornerRadius: style.cornerRadius * scale)
                             .fill(style.backgroundColor.color.opacity(style.backgroundOpacity))
                     }
                 }

@@ -14,7 +14,18 @@ let kTextMaxWidthFraction: CGFloat = 0.85
 /// Base padding around caption text background (in screen points, scaled during export)
 private let kTextBackgroundPadding: CGFloat = 12
 /// Reference screen width (iPhone logical points) used to compute the export scale factor
-private let kReferenceScreenWidth: CGFloat = 393
+let kReferenceScreenWidth: CGFloat = 393
+
+/// How much to scale caption text and its padding for a render area `width`
+/// points across.
+///
+/// Read by both the export renderer and `CaptionOverlay`. The export has
+/// always scaled; the preview used to draw the style's point size verbatim, so
+/// the two agreed only on a 393pt-wide video area and the file's captions came
+/// out proportionally larger on anything wider.
+func captionScale(forWidth width: CGFloat) -> CGFloat {
+    max(width, 1) / kReferenceScreenWidth
+}
 
 // MARK: - CaptionRenderer
 
@@ -139,7 +150,7 @@ final class CaptionRenderer {
         let renderer = UIGraphicsImageRenderer(size: renderSize, format: format)
 
         // Scale font and padding to match export resolution vs screen preview
-        let scaleFactor = renderSize.width / kReferenceScreenWidth
+        let scaleFactor = captionScale(forWidth: renderSize.width)
         let scaledFontSize = style.fontSize * scaleFactor
         let font = style.uiFontScaled(to: scaledFontSize)
 
