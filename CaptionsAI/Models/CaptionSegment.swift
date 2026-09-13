@@ -46,13 +46,40 @@ final class CaptionSegment {
         "\(formatTime(startTime)) - \(formatTime(endTime))"
     }
 
+    /// The last decode, and the bytes it came from.
+    ///
+    /// `@Transient` because this is derived from ``wordsData``, which is the
+    /// stored form. Keying on the data rather than a dirty flag means the
+    /// cache is still correct if ``wordsData`` is replaced by SwiftData
+    /// loading the row, not just by the setter below.
+    @Transient private var decoded: [WordTiming]?
+    @Transient private var decodedFrom: Data?
+
+    /// How many times the JSON has actually been parsed, process-wide.
+    ///
+    /// This exists to be asserted on. The defect this cache fixes was not a
+    /// wrong answer — `words` always returned the right timings — it was that
+    /// it re-parsed them on every read, once per frame for the whole of an
+    /// export. Nothing about the returned value can show that; only a count
+    /// can. See `WordTimingCacheTests`.
+    static var parseCount = 0
+
     var words: [WordTiming] {
         get {
             guard let data = wordsData else { return [] }
-            return (try? JSONDecoder().decode([WordTiming].self, from: data)) ?? []
+            if let decoded, decodedFrom == data { return decoded }
+
+            let words = (try? JSONDecoder().decode([WordTiming].self, from: data)) ?? []
+            Self.parseCount += 1
+            decoded = words
+            decodedFrom = data
+            return words
         }
         set {
-            wordsData = try? JSONEncoder().encode(newValue)
+            let data = try? JSONEncoder().encode(newValue)
+            wordsData = data
+            decoded = newValue
+            decodedFrom = data
         }
     }
 
