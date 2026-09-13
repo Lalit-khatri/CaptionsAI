@@ -102,6 +102,16 @@ final class EditorViewModel {
 
             let newSegments = try await speechRecognizer.recognizeSpeech(from: videoURL)
 
+            // The recogniser can return after the user has cancelled and moved
+            // on. Applying the result here would detach whatever captions they
+            // typed while it was running, with no undo. Cancellation is not an
+            // error the user needs told about, so return quietly rather than
+            // throwing CancellationError into the catch below.
+            guard !Task.isCancelled else {
+                isProcessing = false
+                return
+            }
+
             // Clear existing segments and add new ones
             project.segments.removeAll()
             for segment in newSegments {
