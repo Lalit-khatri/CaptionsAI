@@ -17,7 +17,7 @@ enum ExportPreset: String, CaseIterable, Identifiable, Codable {
 
     var displayName: String {
         switch self {
-        case .instagramReels: return "Instagram Reels / TikTok / Shorts "
+        case .instagramReels: return "Instagram Reels / TikTok / Shorts"
         case .youtube: return "YouTube"
         case .original: return "Original"
         }

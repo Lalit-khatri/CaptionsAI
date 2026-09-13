@@ -123,6 +123,12 @@ final class ExportPresetTests: XCTestCase {
         }
     }
 
+    func testInstagramReelsDisplayNameHasNoTrailingWhitespace() {
+        let preset = ExportPreset.instagramReels
+        XCTAssertEqual(preset.displayName, "Instagram Reels / TikTok / Shorts")
+        XCTAssertFalse(preset.displayName.hasSuffix(" "))
+    }
+
     func testInstagramReelsResolution() {
         let preset = ExportPreset.instagramReels
         XCTAssertEqual(preset.resolution, CGSize(width: 1080, height: 1920))
