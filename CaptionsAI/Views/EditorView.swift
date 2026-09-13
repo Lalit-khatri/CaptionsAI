@@ -72,6 +72,7 @@ struct EditorView: View {
             TranscriptSheetView(
                 segments: viewModel.segments,
                 currentPlaybackTime: viewModel.currentPlaybackTime,
+                videoDuration: project.videoDuration,
                 onSeek: { time in
                     viewModel.seekTo(time)
                 },

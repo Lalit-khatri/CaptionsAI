@@ -7,6 +7,8 @@ import SwiftUI
 struct TranscriptSheetView: View {
     let segments: [CaptionSegment]
     let currentPlaybackTime: Double
+    /// Length of the video, in seconds. Bounds the timing steppers.
+    let videoDuration: Double
     let onSeek: (Double) -> Void
     let onSave: (CaptionSegment, String, Double, Double) -> Void
     let onDelete: (CaptionSegment) -> Void
@@ -47,6 +49,7 @@ struct TranscriptSheetView: View {
             .sheet(item: $editingSegment) { segment in
                 SegmentEditorSheet(
                     segment: segment,
+                    videoDuration: videoDuration,
                     onSave: { text, start, end in
                         onSave(segment, text, start, end)
                     }
@@ -64,6 +67,8 @@ struct TranscriptSheetView: View {
 /// Editor for a single caption segment's text and timing.
 struct SegmentEditorSheet: View {
     let segment: CaptionSegment
+    /// Length of the video, in seconds.
+    let videoDuration: Double
     let onSave: (String, Double, Double) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -71,12 +76,28 @@ struct SegmentEditorSheet: View {
     @State private var startTime: Double
     @State private var endTime: Double
 
-    init(segment: CaptionSegment, onSave: @escaping (String, Double, Double) -> Void) {
+    init(segment: CaptionSegment, videoDuration: Double, onSave: @escaping (String, Double, Double) -> Void) {
         self.segment = segment
+        self.videoDuration = videoDuration
         self.onSave = onSave
         _text = State(initialValue: segment.text)
         _startTime = State(initialValue: segment.startTime)
         _endTime = State(initialValue: segment.endTime)
+    }
+
+    /// The largest end time the stepper offers.
+    ///
+    /// This used to be the literal `3600`. Past the one-hour mark a caption's
+    /// start time is greater than that, and `startTime ... 3600` is not a
+    /// range — forming it traps, so opening any caption after 60:00 in a
+    /// longer video killed the app. The literal was wrong in the other
+    /// direction too: in a 90-second video it let a caption be stretched to an
+    /// hour, far past the last frame.
+    ///
+    /// `end` is included so the value already on screen is always inside the
+    /// range, even for a segment that somehow sits past the end of its video.
+    static func latestEnd(start: Double, end: Double, videoDuration: Double) -> Double {
+        max(videoDuration, max(start, end))
     }
 
     var body: some View {
@@ -100,8 +121,13 @@ struct SegmentEditorSheet: View {
                         Text("End")
                         Spacer()
                         Text(String(format: "%.1fs", endTime))
-                        Stepper("", value: $endTime, in: startTime ... 3600, step: 0.1)
-                            .labelsHidden()
+                        Stepper(
+                            "",
+                            value: $endTime,
+                            in: startTime ... Self.latestEnd(start: startTime, end: endTime, videoDuration: videoDuration),
+                            step: 0.1
+                        )
+                        .labelsHidden()
                     }
                 }
             }
