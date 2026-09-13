@@ -499,7 +499,7 @@ struct ExportView: View {
                 let generator = AVAssetImageGenerator(asset: asset)
                 generator.appliesPreferredTrackTransform = true
                 generator.maximumSize = CGSize(width: 400, height: 400)
-                if let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil) {
+                if let (cgImage, _) = try? await generator.image(at: .zero) {
                     thumbnailImage = UIImage(cgImage: cgImage)
                 }
             }
