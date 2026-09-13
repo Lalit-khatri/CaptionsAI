@@ -302,6 +302,22 @@ final class EditorViewModel {
         project.updateStyle(style.name, fontSize: Double(style.fontSize))
     }
 
+    /// The size the Text Size slider shows and sets.
+    ///
+    /// Derived rather than stored. The editor used to hold the slider's value
+    /// in its own `@State`, seeded once from the project — so picking a preset
+    /// changed the caption but not the readout, which then disagreed with what
+    /// was on screen, and the next nudge of the slider snapped the caption back
+    /// to the stale number.
+    var captionFontSize: CGFloat {
+        get { selectedStyle.fontSize }
+        set {
+            var resized = selectedStyle
+            resized.fontSize = newValue
+            selectStyle(resized)
+        }
+    }
+
     // MARK: - Caption Position
 
     /// The effective Y position for captions (0.0–1.0), clamped to safe bounds

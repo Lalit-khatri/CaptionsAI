@@ -32,12 +32,10 @@ final class StyleSizeTests: XCTestCase {
         try XCTUnwrap(CaptionStyle.presets.first { $0.name == name })
     }
 
-    /// What the Text Size slider does: hand `selectStyle` the current style
-    /// with a new `fontSize`. See `EditorView`'s `.onChange(of: fontSize)`.
+    /// What the Text Size slider does: write through
+    /// `EditorViewModel.captionFontSize`, which the sheet is bound to.
     private func dragTextSize(to size: CGFloat, on viewModel: EditorViewModel) {
-        var style = viewModel.selectedStyle
-        style.fontSize = size
-        viewModel.selectStyle(style)
+        viewModel.captionFontSize = size
     }
 
     // MARK: - The preview and the export agree

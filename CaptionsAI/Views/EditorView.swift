@@ -9,12 +9,10 @@ struct EditorView: View {
     @State private var viewModel: EditorViewModel
     @State private var showStyleSheet = false
     @State private var showTranscriptSheet = false
-    @State private var fontSize: CGFloat = 28
 
     init(project: Project) {
         self.project = project
         _viewModel = State(initialValue: EditorViewModel(project: project))
-        _fontSize = State(initialValue: project.selectedStyle.fontSize)
     }
 
     var body: some View {
@@ -61,14 +59,12 @@ struct EditorView: View {
                     get: { viewModel.selectedStyle },
                     set: { viewModel.selectStyle($0) }
                 ),
-                fontSize: $fontSize,
+                fontSize: Binding(
+                    get: { viewModel.captionFontSize },
+                    set: { viewModel.captionFontSize = $0 }
+                ),
                 previewText: previewTextForStyle
             )
-            .onChange(of: fontSize) { _, newSize in
-                var updatedStyle = viewModel.selectedStyle
-                updatedStyle.fontSize = newSize
-                viewModel.selectStyle(updatedStyle)
-            }
         }
         // Transcript bottom sheet
         .sheet(isPresented: $showTranscriptSheet) {
