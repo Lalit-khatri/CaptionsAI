@@ -34,25 +34,27 @@ final class ImportViewModel {
                 return
             }
 
-            // Save to temp location
-            let tempURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent("CaptionsAI_\(UUID().uuidString)")
-                .appendingPathExtension("mp4")
-
-            try videoData.write(to: tempURL)
-            selectedVideoURL = tempURL
+            // Keep it somewhere the system will not reclaim. `tmp/` is emptied
+            // whenever iOS wants the space back, which is how a project could
+            // still show its thumbnail long after its video had gone.
+            let fileName = try VideoLibrary.store(data: videoData)
+            guard let videoFileURL = VideoLibrary.resolve(fileName) else {
+                error = "Could not save the imported video"
+                return
+            }
+            selectedVideoURL = videoFileURL
 
             // Generate thumbnail
-            thumbnailImage = await generateThumbnail(for: tempURL)
+            thumbnailImage = await generateThumbnail(for: videoFileURL)
 
             // Get video duration
-            let asset = AVURLAsset(url: tempURL)
+            let asset = AVURLAsset(url: videoFileURL)
             let duration = try await CMTimeGetSeconds(asset.load(.duration))
 
             // Create project
             let project = Project(
                 name: "Video \(DateFormatter.shortDate.string(from: Date()))",
-                videoURL: tempURL,
+                videoURL: videoFileURL,
                 videoDuration: duration
             )
 
@@ -86,8 +88,14 @@ final class ImportViewModel {
     // MARK: - Delete
 
     func deleteProject(_ project: Project, context: ModelContext) {
+        // Now that videos are kept deliberately rather than parked in `tmp/`,
+        // nothing else will ever clean them up. Read the reference before the
+        // delete, while the object is still valid.
+        let videoReference = project.videoURLString
+
         context.delete(project)
         try? context.save()
+        VideoLibrary.remove(videoReference)
         loadRecentProjects(context: context)
     }
 

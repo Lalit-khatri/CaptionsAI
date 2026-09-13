@@ -10,7 +10,7 @@ final class EditorViewModelSeamTests: XCTestCase {
     private func makeProject(in container: ModelContainer) -> Project {
         let project = Project(
             name: "Seam",
-            videoURL: URL(fileURLWithPath: "/tmp/does-not-need-to-exist.mp4")
+            videoURL: TestSupport.placeholderVideoURL
         )
         container.mainContext.insert(project)
         return project

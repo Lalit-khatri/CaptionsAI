@@ -38,8 +38,15 @@ final class Project {
 
     // MARK: - Computed Properties
 
+    /// The video file, or `nil` if it is no longer on disk.
+    ///
+    /// Resolution goes through ``VideoLibrary`` rather than being a straight
+    /// `URL(string:)`, because ``videoURLString`` holds a file *name* for
+    /// anything the app imported. Re-deriving the directory on every read is
+    /// what makes the container's UUID changing — on reinstall, and sometimes
+    /// on OS update — stop mattering.
     var videoURL: URL? {
-        URL(string: videoURLString)
+        VideoLibrary.resolve(videoURLString)
     }
 
     var selectedStyle: CaptionStyle {
@@ -71,7 +78,7 @@ final class Project {
     ) {
         self.id = id
         self.name = name
-        videoURLString = videoURL.absoluteString
+        videoURLString = VideoLibrary.reference(for: videoURL)
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
         self.selectedStyleName = selectedStyleName

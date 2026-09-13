@@ -31,7 +31,7 @@ final class TranscriptionCancellationTests: XCTestCase {
     ) throws -> Project {
         let project = Project(
             name: "Test",
-            videoURL: URL(string: "file:///tmp/fixture.mp4")!
+            videoURL: TestSupport.placeholderVideoURL
         )
         context.insert(project)
         project.addSegment(

@@ -39,6 +39,27 @@ enum TestSupport {
 
     // MARK: - Video fixtures
 
+    /// A file that exists, for projects whose video is never actually decoded.
+    ///
+    /// ``Project/videoURL`` resolves through ``VideoLibrary`` and returns `nil`
+    /// when the file is not on disk — that is the point of it, since a project
+    /// whose video has gone must read as gone rather than as a URL pointing at
+    /// nothing. Tests that fake the transcriber still need the file to be
+    /// *there*, or the view model refuses with "Video file not found" before it
+    /// ever reaches the seam under test.
+    ///
+    /// Not a decodable movie, deliberately: use ``makeTestVideo(seconds:size:fps:)``
+    /// when AVFoundation has to open it. This is a few bytes and shared across
+    /// the run.
+    static let placeholderVideoURL: URL = {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("captionsai-placeholder.mp4")
+        if !FileManager.default.fileExists(atPath: url.path) {
+            FileManager.default.createFile(atPath: url.path, contents: Data("placeholder".utf8))
+        }
+        return url
+    }()
+
     /// Encodes a small, real H.264 movie and returns its URL.
     ///
     /// The caller owns the file; pair it with ``remove(_:)`` in a teardown

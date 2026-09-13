@@ -15,7 +15,7 @@ final class CancelButtonTests: XCTestCase {
     private func makeProject(in context: ModelContext, editedText: String) throws -> Project {
         let project = Project(
             name: "Test",
-            videoURL: URL(string: "file:///tmp/fixture.mp4")!
+            videoURL: TestSupport.placeholderVideoURL
         )
         context.insert(project)
         project.addSegment(CaptionSegment(startTime: 0, endTime: 1, text: editedText))
