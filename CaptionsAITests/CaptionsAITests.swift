@@ -1,4 +1,5 @@
 @testable import CaptionsAI
+import AVFoundation
 import Speech
 import SwiftUI
 import UIKit
@@ -216,6 +217,61 @@ final class ImportStreamingTests: XCTestCase {
         XCTAssertEqual(movie.url, tempURL)
     }
 }
+
+/// What the Quality picker actually changes.
+///
+/// The defect: the codec preset was tried first, and `.h264` maps to
+/// `AVAssetExportPresetHighestQuality`, which is always compatible. It
+/// therefore always won the candidate race, so Medium / High / Maximum
+/// produced byte-identical encoder settings while the UI reported a
+/// difference and the estimate quoted three different file sizes.
+final class ExportQualityTests: XCTestCase {
+    func testEveryOfferedTierProducesADifferentEncoderPreset() {
+        for codec in ExportCodec.allCases {
+            let presets = ExportQuality.allCases.map { $0.exportPreset(for: codec) }
+            XCTAssertEqual(
+                Set(presets).count, presets.count,
+                "\(codec.rawValue) offers tiers that encode identically: \(presets)"
+            )
+        }
+    }
+
+    /// `.high` used to map to `AVAssetExportPreset1920x1080`, a *resolution*
+    /// preset that silently clamps a 4K render down to 1080p. A quality tier
+    /// must not overrule the resolution the user picked.
+    func testAQualityTierNeverCarriesAResolutionCeilingForH264() {
+        let clamping = [
+            AVAssetExportPreset1920x1080,
+            AVAssetExportPreset1280x720,
+            AVAssetExportPreset3840x2160,
+        ]
+        for quality in ExportQuality.allCases {
+            XCTAssertFalse(
+                clamping.contains(quality.exportPreset(for: .h264)),
+                "\(quality.rawValue) clamps the output resolution"
+            )
+        }
+    }
+
+    func testTheCodecDecidesThePresetFamily() {
+        XCTAssertEqual(ExportQuality.high.exportPreset(for: .h264), AVAssetExportPresetHighestQuality)
+        XCTAssertEqual(ExportQuality.high.exportPreset(for: .h265), AVAssetExportPresetHEVCHighestQuality)
+    }
+
+    /// The estimate is only honest if it moves with the thing it is estimating.
+    func testTheEstimateStillSeparatesTheTiers() {
+        var settings = ExportSettings()
+        settings.resolution = .full1080
+        settings.codec = .h264
+
+        let sizes = ExportQuality.allCases.map { quality -> String in
+            settings.quality = quality
+            return settings.estimatedFileSize(durationSeconds: 60)
+        }
+        XCTAssertEqual(Set(sizes).count, sizes.count, "two tiers quote the same size: \(sizes)")
+    }
+}
+
 
 
 

@@ -72,21 +72,45 @@ enum ExportResolution: String, CaseIterable, Identifiable, Codable {
 // MARK: - ExportQuality
 
 /// Quality tier that maps to an AVAssetExportSession preset.
+///
+/// Only tiers that AVFoundation can actually deliver differently are offered.
+/// There used to be a third, `Maximum`, and it encoded byte-identically to
+/// `High`: the candidate race in ``ExportEngine`` tried the *codec* preset
+/// first, `.h264` maps to `AVAssetExportPresetHighestQuality`, and that is
+/// always compatible — so it always won and the picker moved nothing but the
+/// estimate. Apple ships no H.264 tier between "medium" and "highest", so the
+/// honest fix is two tiers that differ rather than three that do not.
 enum ExportQuality: String, CaseIterable, Identifiable, Codable {
     case medium = "Medium"
     case high = "High"
-    case maximum = "Maximum"
 
     var id: String {
         rawValue
     }
 
-    /// Maps to an AVAssetExportSession preset name.
-    var exportPreset: String {
-        switch self {
-        case .medium: return AVAssetExportPresetMediumQuality
-        case .high: return AVAssetExportPreset1920x1080
-        case .maximum: return AVAssetExportPresetHighestQuality
+    /// The encoder preset for this tier within `codec`'s family.
+    ///
+    /// The codec decides the *family*, the quality decides the *tier*. Taking
+    /// both from one flat candidate list is what let the codec silently
+    /// overrule the quality.
+    ///
+    /// Deliberately never a resolution preset for H.264. `.high` used to map
+    /// to `AVAssetExportPreset1920x1080`, which is a *size* ceiling wearing a
+    /// quality label: picking 4K and High produced a 1080p file. Resolution is
+    /// ``ExportResolution``'s decision and nothing here may overrule it.
+    ///
+    /// HEVC is the exception, and knowingly so: Apple ships no open-ended
+    /// medium HEVC preset, so the medium HEVC tier is `HEVC1920x1080` and does
+    /// carry a 1080p ceiling. That path is unreachable today — the codec
+    /// picker is commented out and the codec is pinned to H.264 — and this
+    /// note is here so that re-enabling it is a decision rather than a
+    /// surprise.
+    func exportPreset(for codec: ExportCodec) -> String {
+        switch (codec, self) {
+        case (.h264, .medium): return AVAssetExportPresetMediumQuality
+        case (.h264, .high): return AVAssetExportPresetHighestQuality
+        case (.h265, .medium): return AVAssetExportPresetHEVC1920x1080
+        case (.h265, .high): return AVAssetExportPresetHEVCHighestQuality
         }
     }
 
@@ -95,7 +119,6 @@ enum ExportQuality: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .medium: return 0.5
         case .high: return 1.0
-        case .maximum: return 1.8
         }
     }
 }

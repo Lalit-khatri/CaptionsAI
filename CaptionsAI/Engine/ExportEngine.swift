@@ -331,16 +331,22 @@ final class ExportEngine {
     }
 
     /// Selects the best compatible export preset based on settings.
+    ///
+    /// Order matters and used to be wrong. The *codec* preset was tried first,
+    /// and `.h264` maps to `AVAssetExportPresetHighestQuality`, which is
+    /// compatible with everything — so it always won, and the Quality picker
+    /// changed nothing but the estimate. The tier the user chose now leads,
+    /// and the codec's catch-all is only a fallback for an asset that refuses
+    /// it.
     private func selectExportPreset(
         settings: ExportSettings,
         asset: AVAsset
     ) async -> String {
-        // Prefer codec-specific preset first
-        let codecPreset = settings.codec.exportPreset
-        let qualityPreset = settings.quality.exportPreset
-
-        // Try codec preset, then quality preset, then fallback
-        let candidates = [codecPreset, qualityPreset, AVAssetExportPresetHighestQuality]
+        let candidates = [
+            settings.quality.exportPreset(for: settings.codec),
+            settings.codec.exportPreset,
+            AVAssetExportPresetHighestQuality,
+        ]
         for preset in candidates {
             let compatible = await AVAssetExportSession.compatibility(
                 ofExportPreset: preset,
