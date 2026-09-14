@@ -91,6 +91,21 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
     var wordByWordHighlight: Bool
     var shadowRadius: CGFloat
     var shadowColor: CodableColor
+
+    /// Outline thickness, as a **percentage of the point size** — not points.
+    ///
+    /// This is `NSAttributedString.Key.strokeWidth`'s own unit, and keeping it
+    /// is what makes the outline correct at every output resolution without
+    /// anyone scaling it: the export already scales the font, and a relative
+    /// width comes along for the ride. Multiplying it by the render scale
+    /// factor as well would make it four times too thick at 4x.
+    ///
+    /// Zero means no outline. `TextStrokeGateTests` holds the evidence for
+    /// both claims.
+    var strokeWidth: CGFloat = 0
+
+    var strokeColor: CodableColor = .init("#000000")
+
     var isUppercase: Bool = false
 
     // MARK: - SwiftUI Helpers

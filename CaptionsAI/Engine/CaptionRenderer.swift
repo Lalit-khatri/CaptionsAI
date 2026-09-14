@@ -258,11 +258,12 @@ final class CaptionRenderer {
                         ? UIColor(Color(hex: style.highlightColor.hex))
                         : UIColor(Color(hex: style.textColor.hex))
 
-                    let attrs: [NSAttributedString.Key: Any] = [
+                    var attrs: [NSAttributedString.Key: Any] = [
                         .font: font,
                         .foregroundColor: color,
                         .paragraphStyle: paragraphStyle,
                     ]
+                    applyStroke(style, to: &attrs)
 
                     let space = attributedString.length > 0 ? " " : ""
                     let displayWord = style.isUppercase ? word.word.uppercased() : word.word
@@ -272,11 +273,12 @@ final class CaptionRenderer {
                 drawText(attributedString, in: context, renderSize: renderSize, captionYPosition: captionYPosition, scaleFactor: scaleFactor, style: style)
             } else {
                 // Standard text rendering
-                let attrs: [NSAttributedString.Key: Any] = [
+                var attrs: [NSAttributedString.Key: Any] = [
                     .font: font,
                     .foregroundColor: UIColor(Color(hex: style.textColor.hex)),
                     .paragraphStyle: paragraphStyle,
                 ]
+                applyStroke(style, to: &attrs)
 
                 let displayText = style.isUppercase ? fullText.uppercased() : fullText
                 let attributedString = NSAttributedString(string: displayText, attributes: attrs)
@@ -289,6 +291,27 @@ final class CaptionRenderer {
     }
 
     // MARK: - Private Drawing
+
+    /// Adds the outline attributes, if the style has an outline.
+    ///
+    /// Two things here are deliberate and easy to get wrong.
+    ///
+    /// The width is **negated**. Positive `strokeWidth` means stroke *instead
+    /// of* fill, which produces hollow letters — legible on a still and
+    /// invisible over moving video. Negative means fill *and* stroke.
+    ///
+    /// And it is not multiplied by `scaleFactor`. `strokeWidth` is a
+    /// percentage of the point size, and the point size has already been
+    /// scaled by the caller; scaling here too would compound them and make the
+    /// outline four times too thick at 4x output.
+    private static func applyStroke(
+        _ style: CaptionStyle,
+        to attributes: inout [NSAttributedString.Key: Any]
+    ) {
+        guard style.strokeWidth > 0 else { return }
+        attributes[.strokeWidth] = -style.strokeWidth
+        attributes[.strokeColor] = UIColor(Color(hex: style.strokeColor.hex))
+    }
 
     private static func drawText(
         _ attributedString: NSAttributedString,
