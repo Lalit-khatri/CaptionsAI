@@ -140,6 +140,45 @@ struct PaywallView: View {
         var proIsGood: Bool = false
     }
 
+    // MARK: - Legal
+
+    struct LegalLink {
+        let title: String
+        let url: URL
+    }
+
+    /// Apple's standard EULA. An app that does not supply its own Terms of Use
+    /// is licensed under this one, and linking it is explicitly allowed —
+    /// which makes it the right answer for a solo developer with no lawyer.
+    static let termsOfUseURL = URL(
+        string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+    )!
+
+    /// The policy lives in this repository rather than on separate hosting.
+    ///
+    /// A privacy policy URL is a mandatory App Store Connect field *and* a
+    /// mandatory in-app link under 3.1.2, and the usual failure is that the
+    /// domain it points at lapses years later while the shipped binary keeps
+    /// pointing at it. Keeping the document next to the code means the link is
+    /// live the moment the commit lands, it is versioned with the behaviour it
+    /// describes, and it cannot rot on its own.
+    static let privacyPolicyURL = URL(
+        string: "https://github.com/Lalit-khatri/CaptionsAI/blob/main/PRIVACY.md"
+    )!
+
+    /// Both documents, as data, so the footer's wiring can be asserted.
+    ///
+    /// The screen this replaces had a `Text("Terms & Privacy")` that looked
+    /// finished and did nothing. Two constants that no view renders would be
+    /// the same defect wearing a better hat, so the footer reads this array
+    /// and a test checks it points at both.
+    static var legalLinks: [LegalLink] {
+        [
+            LegalLink(title: "Terms of Use", url: termsOfUseURL),
+            LegalLink(title: "Privacy Policy", url: privacyPolicyURL),
+        ]
+    }
+
     /// What the table claims, derived rather than written down.
     ///
     /// The Free column used to be hand-written and described an app that did
@@ -443,9 +482,13 @@ struct PaywallView: View {
             .font(.subheadline)
             .foregroundColor(.secondary)
 
-            Text("Terms & Privacy")
-                .font(.caption2)
-                .foregroundColor(.gray)
+            HStack(spacing: 16) {
+                ForEach(Self.legalLinks, id: \.title) { link in
+                    Link(link.title, destination: link.url)
+                }
+            }
+            .font(.caption2)
+            .foregroundColor(.secondary)
         }
         .padding(.bottom, 32)
     }
