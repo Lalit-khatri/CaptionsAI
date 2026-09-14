@@ -132,6 +132,40 @@ struct PaywallView: View {
         return "Free for \(freeTrialName), then \(recurring)"
     }
 
+    /// One row of the Free-vs-Pro table.
+    struct ComparisonClaim: Equatable {
+        let feature: String
+        let free: String
+        let pro: String
+        var proIsGood: Bool = false
+    }
+
+    /// What the table claims, derived rather than written down.
+    ///
+    /// The Free column used to be hand-written and described an app that did
+    /// not exist: two exports a day where the code allows five, and Free
+    /// denied caption styles and word highlighting, neither of which is gated
+    /// anywhere. Overstating what Pro adds is both an App Review 3.1.1 problem
+    /// and a way of selling someone something they already have. The two rows
+    /// that are not differences now say so plainly.
+    static var comparisonRows: [ComparisonClaim] {
+        [
+            ComparisonClaim(
+                feature: "Exports per day",
+                free: "\(AppState.freeExportLimit)",
+                pro: "Unlimited"
+            ),
+            ComparisonClaim(feature: "Watermark", free: "Yes", pro: "No", proIsGood: true),
+            ComparisonClaim(
+                feature: "Caption Styles",
+                free: proStyleCountText,
+                pro: proStyleCountText
+            ),
+            ComparisonClaim(feature: "Word Highlight", free: "Yes", pro: "Yes"),
+            ComparisonClaim(feature: "Priority Support", free: "No", pro: "Yes", proIsGood: true),
+        ]
+    }
+
     private var selectedProduct: Product? {
         selectedPlan == StoreKitManager.yearlyID
             ? storeKit.yearlyProduct
@@ -299,11 +333,14 @@ struct PaywallView: View {
             .padding(.bottom, 12)
 
             // Rows
-            ComparisonRow(feature: "Exports per day", free: "2", pro: "Unlimited")
-            ComparisonRow(feature: "Watermark", free: "Yes", pro: "No", proIsGood: true)
-            ComparisonRow(feature: "Caption Styles", free: "3", pro: Self.proStyleCountText)
-            ComparisonRow(feature: "Word Highlight", free: "No", pro: "Yes", proIsGood: true)
-            ComparisonRow(feature: "Priority Support", free: "No", pro: "Yes", proIsGood: true)
+            ForEach(Self.comparisonRows, id: \.feature) { claim in
+                ComparisonRow(
+                    feature: claim.feature,
+                    free: claim.free,
+                    pro: claim.pro,
+                    proIsGood: claim.proIsGood
+                )
+            }
         }
     }
 

@@ -744,3 +744,55 @@ final class FreeExportQuotaTests: XCTestCase {
         XCTAssertNotNil(today.exportedFileURL)
     }
 }
+
+// MARK: - Paywall Comparison Table
+
+/// The Free column was written by hand and describes an app that does not
+/// exist. It says two exports a day where the code allows five, and it claims
+/// free users are denied caption styles and word highlighting, neither of
+/// which is gated anywhere — no `isPro` check guards either one. Overstating
+/// what Pro adds is the kind of claim App Review reads closely, and a user who
+/// pays for styles they already had has been sold nothing.
+final class PaywallComparisonTests: XCTestCase {
+    private func row(_ feature: String) -> PaywallView.ComparisonClaim? {
+        PaywallView.comparisonRows.first { $0.feature == feature }
+    }
+
+    /// The number in the table is the number the code enforces.
+    func testTheTableQuotesTheRealFreeExportLimit() {
+        let exports = row("Exports per day")
+        XCTAssertEqual(exports?.free, "\(AppState.freeExportLimit)")
+        XCTAssertEqual(exports?.free, "5")
+        XCTAssertEqual(exports?.pro, "Unlimited")
+    }
+
+    /// Every style ships to everyone, so the table must not sell them.
+    func testTheTableDoesNotClaimFreeUsersLackStyles() {
+        let styles = row("Caption Styles")
+        XCTAssertEqual(styles?.free, PaywallView.proStyleCountText)
+        XCTAssertEqual(styles?.free, styles?.pro)
+    }
+
+    /// Same for word highlighting.
+    func testTheTableDoesNotClaimFreeUsersLackWordHighlight() {
+        let highlight = row("Word Highlight")
+        XCTAssertEqual(highlight?.free, "Yes")
+        XCTAssertEqual(highlight?.free, highlight?.pro)
+    }
+
+    /// The watermark is a real difference and stays one.
+    func testTheWatermarkIsStillAdvertisedAsADifference() {
+        let watermark = row("Watermark")
+        XCTAssertEqual(watermark?.free, "Yes")
+        XCTAssertEqual(watermark?.pro, "No")
+    }
+
+    func testEveryRowSaysSomethingForBothTiers() {
+        XCTAssertFalse(PaywallView.comparisonRows.isEmpty)
+        for claim in PaywallView.comparisonRows {
+            XCTAssertFalse(claim.feature.isEmpty)
+            XCTAssertFalse(claim.free.isEmpty, "\(claim.feature) has no Free value")
+            XCTAssertFalse(claim.pro.isEmpty, "\(claim.feature) has no Pro value")
+        }
+    }
+}
