@@ -148,15 +148,9 @@ final class ExportResolutionTests: XCTestCase {
         XCTAssertEqual(atTenEighty, CGSize(width: 1920, height: 1080))
     }
 
-    // MARK: - The estimate is untouched
-
-    /// The size estimate borrowed the same property, so it is worth pinning
-    /// that separating them changed none of its numbers.
-    func testTheFileSizeEstimateIsUnchanged() {
-        var settings = ExportSettings()
-        settings.resolution = .uhd4K
-        settings.quality = .high
-        settings.codec = .h264
-        XCTAssertEqual(settings.estimatedFileSize(durationSeconds: 60), "~75 MB")
-    }
+    // The size estimate used to be pinned here, to show that separating it
+    // from the geometry property changed none of its numbers. Its numbers have
+    // since been corrected — bitrate now scales by pixels rather than by lines
+    // — so the same 4K case lives in `ExportSizeEstimateTests`, alongside the
+    // reasoning for the value it expects.
 }

@@ -336,3 +336,44 @@ final class PaywallCTATests: XCTestCase {
 
 
 
+
+// MARK: - Export Size Estimate
+
+/// The export sheet quotes a file size before the user commits to a render.
+/// The quote scaled bitrate by resolution *tier* rather than by pixels, so a 4K
+/// export was advertised at roughly half its real size — the user picked 4K on
+/// the strength of "~75 MB" and got a file twice that. The audio track was
+/// missing from the arithmetic entirely, so muting a clip changed nothing.
+final class ExportSizeEstimateTests: XCTestCase {
+    private func settings(
+        _ resolution: ExportResolution,
+        audio: Bool = true
+    ) -> ExportSettings {
+        var s = ExportSettings()
+        s.resolution = resolution
+        s.quality = .high
+        s.codec = .h264
+        s.includeAudio = audio
+        return s
+    }
+
+    /// 4K carries four times the pixels of 1080p, so it must quote roughly four
+    /// times the size. It used to quote two.
+    func testFourKIsQuotedAtFourTimesTenEightyNotTwice() {
+        XCTAssertEqual(settings(.full1080).estimatedFileSize(durationSeconds: 60), "~38 MB")
+        XCTAssertEqual(settings(.uhd4K).estimatedFileSize(durationSeconds: 60), "~151 MB")
+    }
+
+    /// 720p is 44% of 1080p's pixels, not 67%.
+    func testSevenTwentyIsQuotedByPixelsNotByLineCount() {
+        XCTAssertEqual(settings(.hd720).estimatedFileSize(durationSeconds: 60), "~18 MB")
+    }
+
+    /// Dropping the audio track makes the file smaller, so the quote must move.
+    func testMutingTheExportLowersTheQuote() {
+        let withAudio = settings(.uhd4K).estimatedFileSize(durationSeconds: 60)
+        let silent = settings(.uhd4K, audio: false).estimatedFileSize(durationSeconds: 60)
+        XCTAssertNotEqual(withAudio, silent)
+        XCTAssertEqual(silent, "~150 MB")
+    }
+}

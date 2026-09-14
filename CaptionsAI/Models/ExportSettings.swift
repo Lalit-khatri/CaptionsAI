@@ -164,7 +164,17 @@ struct ExportSettings {
     /// Base bitrate in Mbps for 1080p H.264 High quality.
     private static let kBaseBitrateMbps: Double = 5.0
 
-    /// Rough bitrate weighting per resolution tier, for the size estimate only.
+    /// Bitrate for the AAC stereo audio track, in Mbps.
+    private static let kAudioBitrateMbps: Double = 0.128
+
+    /// Rough bitrate weighting per resolution tier, relative to 1080p.
+    ///
+    /// These are **pixel-count** ratios against 1920×1080, because that is what
+    /// bitrate tracks: 1280×720 is 0.44 of 1080p's pixels and 3840×2160 is 4.0
+    /// of them. The table previously read 0.667 and 2.0, which are the *line*
+    /// ratios (720/1080 and 2160/1080). Scaling by lines where pixels go as the
+    /// square meant a 4K export was advertised at about half its true size —
+    /// the user chose 4K on the strength of "~75 MB" and got a file twice that.
     ///
     /// Deliberately *not* derived from ``ExportResolution/outputSize(for:)``:
     /// the estimate is shown before a source is known, so it can only be a
@@ -172,20 +182,23 @@ struct ExportSettings {
     /// factor again — doing exactly that is what produced 8K exports.
     private var resolutionBitrateScale: Double {
         switch resolution {
+        // Unknown source. 1080p is the commonest capture, so guess that.
         case .original: return 1.0
-        case .hd720: return 0.667
+        case .hd720: return 0.444
         case .full1080: return 1.0
-        case .uhd4K: return 2.0
+        case .uhd4K: return 4.0
         }
     }
 
     /// Returns a human-readable estimated file size string (e.g. "~48 MB").
     func estimatedFileSize(durationSeconds: Double) -> String {
-        let bitrateMbps = Self.kBaseBitrateMbps
+        let videoMbps = Self.kBaseBitrateMbps
             * resolutionBitrateScale
             * quality.bitrateMultiplier
             * codec.bitrateMultiplier
-        let fileSizeMB = (bitrateMbps * durationSeconds) / 8.0
+        // Muting the export makes a smaller file, so the quote has to move.
+        let audioMbps = includeAudio ? Self.kAudioBitrateMbps : 0
+        let fileSizeMB = ((videoMbps + audioMbps) * durationSeconds) / 8.0
 
         if fileSizeMB >= 1000 {
             return String(format: "~%.1f GB", fileSizeMB / 1000)
