@@ -377,3 +377,54 @@ final class ExportSizeEstimateTests: XCTestCase {
         XCTAssertEqual(silent, "~150 MB")
     }
 }
+
+// MARK: - Paywall Prices
+
+/// The paywall printed "$2.99" and "$14.99" whenever the real products had not
+/// arrived, and a "SAVE 58%" badge computed by hand from those same two
+/// invented numbers. A user in Tokyo or Berlin was quoted dollars they would
+/// never be charged, and the saving was asserted regardless of what the two
+/// plans actually cost in their storefront.
+final class PaywallPriceTests: XCTestCase {
+    /// A price we do not know is not a price we may guess at.
+    func testAnUnknownPriceIsNotInventedInDollars() {
+        let text = PaywallView.priceText(displayPrice: nil)
+        XCTAssertFalse(text.contains("$"))
+        XCTAssertNotEqual(text, "$2.99")
+        XCTAssertNotEqual(text, "$14.99")
+        XCTAssertFalse(text.isEmpty)
+    }
+
+    /// StoreKit already formats for the storefront's currency and locale, so
+    /// the string is passed through untouched.
+    func testTheStoresOwnPriceStringIsShownVerbatim() {
+        XCTAssertEqual(PaywallView.priceText(displayPrice: "¥480"), "¥480")
+        XCTAssertEqual(PaywallView.priceText(displayPrice: "2,99 €"), "2,99 €")
+    }
+
+    /// No prices means no claim about savings.
+    func testTheSavingsBadgeIsAbsentWhenPricesAreUnknown() {
+        XCTAssertNil(PaywallView.savingsBadge(monthlyPrice: nil, yearlyPrice: nil))
+        XCTAssertNil(PaywallView.savingsBadge(monthlyPrice: 2.99, yearlyPrice: nil))
+        XCTAssertNil(PaywallView.savingsBadge(monthlyPrice: nil, yearlyPrice: 14.99))
+    }
+
+    /// The badge is arithmetic on the real prices, not a number typed once.
+    func testTheSavingsBadgeIsComputedFromTheRealPrices() {
+        XCTAssertEqual(
+            PaywallView.savingsBadge(monthlyPrice: 2.99, yearlyPrice: 14.99),
+            "SAVE 58%"
+        )
+        XCTAssertEqual(
+            PaywallView.savingsBadge(monthlyPrice: 2.99, yearlyPrice: 29.99),
+            "SAVE 16%"
+        )
+    }
+
+    /// If a storefront prices the year above twelve months, the app must not
+    /// claim a discount it is not offering.
+    func testNoBadgeWhenTheYearlyPlanIsNotTheCheaperDeal() {
+        XCTAssertNil(PaywallView.savingsBadge(monthlyPrice: 2.99, yearlyPrice: 40.00))
+        XCTAssertNil(PaywallView.savingsBadge(monthlyPrice: 2.99, yearlyPrice: 35.88))
+    }
+}

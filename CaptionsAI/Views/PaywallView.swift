@@ -55,6 +55,39 @@ struct PaywallView: View {
         return .unavailable(error ?? genericUnavailableMessage)
     }
 
+    /// Stands in for a price the store has not given us.
+    static let unknownPriceText = "—"
+
+    /// The price to print for a plan.
+    ///
+    /// `Product.displayPrice` is already formatted for the user's storefront
+    /// and locale, so it is passed through untouched. When it is absent there
+    /// is nothing to print, and printing nothing is the honest answer: the
+    /// cards used to fall back to "$2.99" and "$14.99", quoting US dollars to
+    /// a user who would be charged yen or euros, at figures that need not
+    /// match their storefront even after converting.
+    static func priceText(displayPrice: String?) -> String {
+        displayPrice ?? unknownPriceText
+    }
+
+    /// How much cheaper a year is than twelve separate months, or `nil` when
+    /// there is no sound basis for the claim.
+    ///
+    /// The badge used to read a hardcoded "SAVE 58%" — arithmetic done once,
+    /// by hand, on the two hardcoded dollar prices. It survived into every
+    /// storefront that prices the plans differently, and would have survived a
+    /// price change, asserting a discount the user was not being offered.
+    static func savingsBadge(monthlyPrice: Decimal?, yearlyPrice: Decimal?) -> String? {
+        guard let monthlyPrice, let yearlyPrice else { return nil }
+        let twelveMonths = monthlyPrice * 12
+        // No claim unless the year genuinely undercuts paying monthly.
+        guard twelveMonths > 0, yearlyPrice < twelveMonths else { return nil }
+        let fraction = (twelveMonths - yearlyPrice) / twelveMonths
+        let percent = Int((fraction as NSDecimalNumber).doubleValue * 100)
+        guard percent > 0 else { return nil }
+        return "SAVE \(percent)%"
+    }
+
     private var selectedProduct: Product? {
         selectedPlan == StoreKitManager.yearlyID
             ? storeKit.yearlyProduct
@@ -184,7 +217,7 @@ struct PaywallView: View {
         HStack(spacing: 12) {
             // Monthly
             PricingCard(
-                price: storeKit.monthlyProduct?.displayPrice ?? "$2.99",
+                price: Self.priceText(displayPrice: storeKit.monthlyProduct?.displayPrice),
                 period: "/month",
                 badge: nil,
                 isSelected: selectedPlan == StoreKitManager.monthlyID,
@@ -194,9 +227,12 @@ struct PaywallView: View {
 
             // Yearly
             PricingCard(
-                price: storeKit.yearlyProduct?.displayPrice ?? "$14.99",
+                price: Self.priceText(displayPrice: storeKit.yearlyProduct?.displayPrice),
                 period: "/year",
-                badge: "SAVE 58%",
+                badge: Self.savingsBadge(
+                    monthlyPrice: storeKit.monthlyProduct?.price,
+                    yearlyPrice: storeKit.yearlyProduct?.price
+                ),
                 isSelected: selectedPlan == StoreKitManager.yearlyID,
                 isGradient: true
             )
