@@ -44,6 +44,7 @@ struct TranscriptSheetView: View {
             }
             .listStyle(.plain)
             .navigationTitle("Transcript")
+            .feedbackMenu()
             .navigationBarTitleDisplayMode(.inline)
             // Segment editor presented from within this sheet
             .sheet(item: $editingSegment) { segment in

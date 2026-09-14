@@ -39,6 +39,7 @@ struct ExportView: View {
             }
         }
         .navigationTitle("Export")
+        .feedbackMenu()
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(viewModel.isExporting)
         .toolbar {

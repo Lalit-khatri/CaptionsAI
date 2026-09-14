@@ -27,6 +27,7 @@ struct ImportView: View {
             .padding(.top, 20)
         }
         .navigationTitle("CaptionsAI")
+        .feedbackMenu()
         .background(Color(uiColor: .systemBackground))
         .onChange(of: selectedItem) { _, newItem in
             guard let newItem else { return }

@@ -37,6 +37,7 @@ struct EditorView: View {
             }
         }
         .navigationTitle("Edit")
+        .feedbackMenu()
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.black, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
