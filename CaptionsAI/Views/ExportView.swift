@@ -375,100 +375,103 @@ struct ExportView: View {
 
     // MARK: - State 3: Complete
 
+    /// Why this screen is a `ScrollView` and not the `VStack` with a `Spacer`
+    /// at each end that it used to be.
+    ///
+    /// The old column had 549pt of fixed content. An iPhone SE content area is
+    /// 603pt, so each `Spacer` got 27pt and the screen was already 91% full —
+    /// while a Pro Max had 246pt of slack for the same content to float in.
+    /// That is the "everything compacted in the centre" the owner reported:
+    /// one fixed cluster, sized for the smallest phone, shown on every phone.
+    ///
+    /// So: the hero takes a share of the viewport rather than a constant;
+    /// the summary card fills the width instead of hugging four columns; the
+    /// content scrolls when it cannot fit, which is the only honest answer at
+    /// the larger accessibility text sizes; and the buttons are pinned with
+    /// `safeAreaInset` so "Done" is reachable without scrolling to it,
+    /// whatever the content above does.
     private var completedView: some View {
-        VStack(spacing: 20) {
-            Spacer()
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: 20) {
+                    successHero(
+                        height: ExportCompletionLayout.heroHeight(forViewportHeight: proxy.size.height)
+                    )
 
-            // Thumbnail with green success badge
-            ZStack(alignment: .topTrailing) {
-                if let image = thumbnailImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 140, height: 210)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.green.opacity(0.3), lineWidth: 2)
-                        )
-                        .shadow(color: Color.green.opacity(0.2), radius: 20, y: 6)
+                    successTitle
+
+                    ExportSummaryRow(
+                        format: viewModel.selectedPreset.displayName
+                            .components(separatedBy: "/").first?
+                            .trimmingCharacters(in: .whitespaces) ?? "Video",
+                        quality: viewModel.settings.quality.rawValue,
+                        duration: formatDuration(videoDuration),
+                        style: project.selectedStyle.name
+                    )
                 }
-
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 32))
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, .green)
-                    .background(Circle().fill(.black))
-                    .offset(x: 8, y: -8)
-            }
-
-            VStack(spacing: 6) {
-                Text("Export Complete!")
-                    .font(.title2.bold())
-                    .foregroundColor(.white)
-
-                HStack(spacing: 6) {
-                    Image(systemName: "photo.on.rectangle")
-                        .foregroundColor(.green)
-                    Text("Saved to Photo Library")
-                        .foregroundColor(.secondary)
-                }
-                .font(.subheadline)
-            }
-
-            // Summary Info Card
-            HStack(spacing: 16) {
-                summaryDetail(
-                    title: "Format",
-                    value: viewModel.selectedPreset.displayName.components(separatedBy: "/").first?.trimmingCharacters(in: .whitespaces) ?? "Video"
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, kSectionPadding)
+                .padding(.vertical, 24)
+                // Fill the screen when the content is shorter than it, so the
+                // column is centred in the space it has rather than stacked at
+                // the top of it. When the content is taller this does nothing
+                // and the view scrolls.
+                .frame(
+                    minHeight: max(0, proxy.size.height - ExportCompletionLayout.footerReserve),
+                    alignment: .center
                 )
-                Divider().frame(height: 28)
-                summaryDetail(title: "Quality", value: viewModel.settings.quality.rawValue)
-                Divider().frame(height: 28)
-                summaryDetail(title: "Duration", value: formatDuration(videoDuration))
-                Divider().frame(height: 28)
-                summaryDetail(title: "Style", value: project.selectedStyle.name)
             }
-            .padding(.vertical, 14)
-            .padding(.horizontal, 16)
-            .background(Color(uiColor: .secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: kCardCornerRadius))
-
-            Spacer()
-
-            // Share & Done Buttons
-            VStack(spacing: 12) {
-                Button {
-                    showShareSheet = true
-                } label: {
-                    Label("Share Video", systemImage: "square.and.arrow.up")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                }
-
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Done")
-                        .font(.subheadline.bold())
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                }
+            // No rubber-banding on a screen whose content usually fits.
+            .scrollBounceBehavior(.basedOnSize)
+            .safeAreaInset(edge: .bottom) {
+                ExportCompletionFooter(
+                    onShare: { showShareSheet = true },
+                    onDone: { dismiss() }
+                )
+                .padding(.horizontal, kSectionPadding)
+                .background(Color.black)
             }
-            .padding(.bottom, 24)
         }
-        .padding(.horizontal, kSectionPadding)
+    }
+
+    private func successHero(height: CGFloat) -> some View {
+        ZStack(alignment: .topTrailing) {
+            if let image = thumbnailImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: height * ExportCompletionLayout.heroAspectRatio, height: height)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.green.opacity(0.3), lineWidth: 2)
+                    )
+                    .shadow(color: Color.green.opacity(0.2), radius: 20, y: 6)
+            }
+
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 32))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, .green)
+                .background(Circle().fill(.black))
+                .offset(x: 8, y: -8)
+        }
+    }
+
+    private var successTitle: some View {
+        VStack(spacing: 6) {
+            Text("Export Complete!")
+                .font(.title2.bold())
+                .foregroundColor(.white)
+
+            HStack(spacing: 6) {
+                Image(systemName: "photo.on.rectangle")
+                    .foregroundColor(.green)
+                Text("Saved to Photo Library")
+                    .foregroundColor(.secondary)
+            }
+            .font(.subheadline)
+        }
     }
 
     // MARK: - Helpers
@@ -504,17 +507,6 @@ struct ExportView: View {
                     thumbnailImage = UIImage(cgImage: cgImage)
                 }
             }
-        }
-    }
-
-    private func summaryDetail(title: String, value: String) -> some View {
-        VStack(spacing: 2) {
-            Text(title)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-            Text(value)
-                .font(.caption.bold())
-                .foregroundColor(.white)
         }
     }
 
