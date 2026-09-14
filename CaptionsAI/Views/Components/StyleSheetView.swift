@@ -109,13 +109,19 @@ struct StylePreviewCard: View {
     /// show what wrapping, weight and highlight do to a real caption.
     static let maximumSampleWords = 6
 
+    /// Drawn when there is no transcript yet. `EditorView` uses the same
+    /// string, so the chip cannot show one sentence before transcription and a
+    /// different one when handed an empty segment.
+    static let fallbackSample = "Check out this caption on video"
+
     /// The words the chip draws, in the style's own casing.
     ///
     /// A pure function of the sample so the rule can be pinned without
     /// rendering anything.
     static func sampleWords(from text: String, isUppercase: Bool) -> [String] {
         let split = text.split(separator: " ").map(String.init)
-        let base = split.isEmpty ? ["VIRAL", "CAPTIONS"] : Array(split.prefix(maximumSampleWords))
+        let source = split.isEmpty ? fallbackSample.split(separator: " ").map(String.init) : split
+        let base = Array(source.prefix(maximumSampleWords))
         return isUppercase ? base.map { $0.uppercased() } : base
     }
 

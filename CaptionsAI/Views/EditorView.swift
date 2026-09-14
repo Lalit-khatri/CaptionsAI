@@ -114,24 +114,32 @@ struct EditorView: View {
 
     /// What the style chips are asked to draw when there is nothing to quote
     /// from the video yet — the chips are visible before transcription runs.
-    static let fallbackPreviewText = "Hello World"
-
-    /// The sample the style chips draw, derived from the transcript.
     ///
-    /// Split out as a static function over a plain value rather than left as a
-    /// computed property over the view model, because the chip's sample text is
-    /// about to change and a rule that cannot be called cannot be pinned. The
-    /// rule itself is unchanged: the first four words of the first segment, or
-    /// the fallback when that yields nothing.
-    static func previewText(firstSegmentText: String?) -> String {
-        guard let firstSegmentText else { return fallbackPreviewText }
-        let words = firstSegmentText.split(separator: " ")
-        let preview = words.prefix(4).joined(separator: " ")
+    /// One string, shared with the chip, which used to carry a second and
+    /// different literal of its own for the empty case. Which of the two a user
+    /// saw was an accident of timing.
+    static let fallbackPreviewText = StylePreviewCard.fallbackSample
+
+    /// The sample the style chips draw, taken from the transcript.
+    ///
+    /// Reads across segments rather than from the first one alone: a
+    /// transcript's first segment is frequently one or two words, and a chip
+    /// showing a single word shows nothing about a style — no wrap, no rhythm,
+    /// and with word-by-word highlighting the entire sample lights up.
+    static func previewText(segmentTexts: [String]) -> String {
+        var words: [String] = []
+
+        for text in segmentTexts {
+            words += text.split(separator: " ").map(String.init)
+            if words.count >= StylePreviewCard.maximumSampleWords { break }
+        }
+
+        let preview = words.prefix(StylePreviewCard.maximumSampleWords).joined(separator: " ")
         return preview.isEmpty ? fallbackPreviewText : preview
     }
 
     private var previewTextForStyle: String {
-        Self.previewText(firstSegmentText: viewModel.segments.first?.text)
+        Self.previewText(segmentTexts: viewModel.segments.map(\.text))
     }
 
     // MARK: - Video Player (fills available space)

@@ -116,13 +116,13 @@ final class StyleChipGeometryTests: XCTestCase {
         XCTAssertNotEqual(try pixels(style, "ONE TWO THREE"), try pixels(style, "ONE TWO GAMMA"))
     }
 
-    /// With no words at all the chip substitutes its own literal rather than
-    /// drawing an empty plate. This is a second, independent fallback from the
-    /// one on `EditorView`, and the two do not agree on the string.
-    func testAnEmptySampleFallsBackToTheChipsOwnLiteral() throws {
+    /// With no words at all the chip substitutes the same sentence the editor
+    /// would have handed it. There used to be a second, disagreeing literal
+    /// here.
+    func testAnEmptySampleFallsBackToTheSharedSentence() throws {
         let style = try preset("Cinema")
 
-        XCTAssertEqual(try pixels(style, ""), try pixels(style, "VIRAL CAPTIONS"))
-        XCTAssertNotEqual(try pixels(style, ""), try pixels(style, EditorView.fallbackPreviewText))
+        XCTAssertEqual(try pixels(style, ""), try pixels(style, EditorView.fallbackPreviewText))
+        XCTAssertNotEqual(try pixels(style, ""), try pixels(style, "VIRAL CAPTIONS"))
     }
 }

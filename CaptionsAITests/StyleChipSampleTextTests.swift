@@ -3,54 +3,80 @@ import XCTest
 
 /// The string the style chips draw.
 ///
-/// This is a pure seam over what was a `private var` on `EditorView`, extracted
-/// ahead of the change that widens the chip so that the change has something to
-/// be measured against. Nothing here asserts that the current answer is a *good*
-/// answer — it asserts what the answer is today, so that a later commit which
-/// alters it cannot do so silently.
+/// Two words of "Hello World" told a user nothing about a caption style: no
+/// wrap, no rhythm, and with word-by-word highlighting, half the sample lit up.
+/// The sample is now a short sentence, and it is topped up across segments
+/// rather than taken from the first one alone — a transcript's first segment is
+/// frequently one or two words.
 final class StyleChipSampleTextTests: XCTestCase {
-    // MARK: - Today's rules, stated out loud
+    // MARK: - Where the sample comes from
 
-    func testTheSampleIsTheFirstFourWordsOfTheFirstSegment() {
+    func testTheSampleIsTheFirstSixWordsOfTheTranscript() {
         XCTAssertEqual(
-            EditorView.previewText(firstSegmentText: "one two three four five six"),
-            "one two three four"
+            EditorView.previewText(segmentTexts: ["one two three four five six seven eight"]),
+            "one two three four five six"
         )
     }
 
     func testAShorterSegmentIsUsedWhole() {
-        XCTAssertEqual(EditorView.previewText(firstSegmentText: "two words"), "two words")
+        XCTAssertEqual(EditorView.previewText(segmentTexts: ["two words"]), "two words")
     }
 
-    /// The chip is drawn before transcription finishes, so there is no segment
-    /// to read from and the app falls back to a literal.
-    func testWithNoSegmentTheSampleIsTheFallbackLiteral() {
-        XCTAssertEqual(EditorView.previewText(firstSegmentText: nil), EditorView.fallbackPreviewText)
+    /// The defect this rule exists for: a transcript's first segment is often
+    /// a single word, and the chip then had one word to show.
+    func testAShortFirstSegmentIsToppedUpFromTheNext() {
+        XCTAssertEqual(
+            EditorView.previewText(segmentTexts: ["So", "here is the whole idea really"]),
+            "So here is the whole idea"
+        )
     }
 
-    /// A segment can exist and still hold nothing useful — `split` on an empty
-    /// or whitespace-only string yields no words at all.
-    func testAnEmptySegmentAlsoFallsBack() {
-        XCTAssertEqual(EditorView.previewText(firstSegmentText: ""), EditorView.fallbackPreviewText)
-        XCTAssertEqual(EditorView.previewText(firstSegmentText: "   "), EditorView.fallbackPreviewText)
+    func testSegmentsAreJoinedInOrder() {
+        XCTAssertEqual(
+            EditorView.previewText(segmentTexts: ["alpha", "bravo", "charlie"]),
+            "alpha bravo charlie"
+        )
     }
 
-    /// Pinned because the copy is user-visible and two words is short enough
-    /// that it exercises none of the chip's width behaviour.
-    func testTheFallbackLiteralIsTwoWords() {
-        XCTAssertEqual(EditorView.fallbackPreviewText, "Hello World")
-        XCTAssertEqual(EditorView.fallbackPreviewText.split(separator: " ").count, 2)
+    // MARK: - When there is nothing to quote
+
+    /// The chip is drawn before transcription finishes.
+    func testWithNoSegmentsTheSampleIsTheFallbackSentence() {
+        XCTAssertEqual(EditorView.previewText(segmentTexts: []), EditorView.fallbackPreviewText)
     }
 
-    // MARK: - The seam agrees with what the chip can use
+    /// A segment can exist and hold nothing useful — `split` on an empty or
+    /// whitespace-only string yields no words at all.
+    func testEmptySegmentsAlsoFallBack() {
+        XCTAssertEqual(EditorView.previewText(segmentTexts: [""]), EditorView.fallbackPreviewText)
+        XCTAssertEqual(EditorView.previewText(segmentTexts: ["   ", ""]), EditorView.fallbackPreviewText)
+    }
 
-    /// The chip itself keeps only three words. Handing it four means the fourth
-    /// is computed and then thrown away — harmless, but it means a test that
-    /// changes the fourth word cannot observe anything, which is worth knowing
-    /// before writing one.
-    func testTheSampleCanBeLongerThanTheChipWillDraw() {
-        let sample = EditorView.previewText(firstSegmentText: "alpha bravo charlie delta echo")
+    // MARK: - The fallback is a sentence, and there is only one of it
 
-        XCTAssertEqual(sample.split(separator: " ").count, 4)
+    func testTheFallbackIsASentenceRatherThanAPairOfWords() {
+        XCTAssertEqual(EditorView.fallbackPreviewText, "Check out this caption on video")
+        XCTAssertEqual(
+            EditorView.fallbackPreviewText.split(separator: " ").count,
+            StylePreviewCard.maximumSampleWords
+        )
+    }
+
+    /// There used to be two fallbacks that disagreed: this one, and a
+    /// "VIRAL CAPTIONS" literal inside the chip for when it was handed an empty
+    /// string. Whichever one a user saw was an accident of timing.
+    func testTheChipAndTheEditorFallBackToTheSameString() {
+        XCTAssertEqual(
+            StylePreviewCard.sampleWords(from: "", isUppercase: false),
+            EditorView.fallbackPreviewText.split(separator: " ").map(String.init)
+        )
+    }
+
+    // MARK: - The seam agrees with what the chip can draw
+
+    func testTheSampleIsNeverLongerThanTheChipWillDraw() {
+        let sample = EditorView.previewText(segmentTexts: ["alpha bravo charlie delta echo foxtrot golf hotel"])
+
+        XCTAssertEqual(sample.split(separator: " ").count, StylePreviewCard.maximumSampleWords)
     }
 }
