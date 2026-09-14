@@ -148,6 +148,13 @@ struct PaywallView: View {
     /// anywhere. Overstating what Pro adds is both an App Review 3.1.1 problem
     /// and a way of selling someone something they already have. The two rows
     /// that are not differences now say so plainly.
+    ///
+    /// Priority Support used to be a fifth row and is gone for the same
+    /// reason. There is one feedback channel, it is on the same screens for
+    /// everyone, it routes to the same mailbox, and the message carries no
+    /// subscription marker — so a paid report is indistinguishable from a free
+    /// one on arrival. A row here has to name a difference the code actually
+    /// makes.
     static var comparisonRows: [ComparisonClaim] {
         [
             ComparisonClaim(
@@ -162,7 +169,6 @@ struct PaywallView: View {
                 pro: proStyleCountText
             ),
             ComparisonClaim(feature: "Word Highlight", free: "Yes", pro: "Yes"),
-            ComparisonClaim(feature: "Priority Support", free: "No", pro: "Yes", proIsGood: true),
         ]
     }
 

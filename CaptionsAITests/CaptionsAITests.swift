@@ -795,4 +795,28 @@ final class PaywallComparisonTests: XCTestCase {
             XCTAssertFalse(claim.pro.isEmpty, "\(claim.feature) has no Pro value")
         }
     }
+
+    /// There is one support channel and every user has it.
+    ///
+    /// The in-app feedback button is on the same screens for free and paid
+    /// users alike, it routes to the same mailbox, and the message it composes
+    /// carries no subscription marker — deliberately, because that marker
+    /// would be the one piece of the payload a user could not see and edit.
+    /// So there is no mechanism by which a Pro report could be prioritised,
+    /// and nothing to prioritise it against.
+    ///
+    /// This is the same defect the rest of this file exists to prevent, and it
+    /// survived the rewrite that fixed the other four rows: the table was
+    /// describing an app that did not exist. Selling a tier of support that is
+    /// not built is a 2.3.1 problem, and it is a refund request from the first
+    /// paying user who tests it.
+    func testTheTableDoesNotSellASupportTier() {
+        XCTAssertNil(
+            row("Priority Support"),
+            """
+            The table advertises Priority Support, but feedback is one channel \
+            shared by every user. Either build the tier or stop selling it.
+            """
+        )
+    }
 }
