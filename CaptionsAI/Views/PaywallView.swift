@@ -1,4 +1,27 @@
+import StoreKit
 import SwiftUI
+
+// MARK: - PaywallCTAState
+
+/// What the paywall's primary button can currently do.
+///
+/// Extracted so the "there is nothing to buy" case has somewhere to live. It
+/// previously had nowhere: the button body was `if let product { … }` with no
+/// `else`, so a failed product load turned the only call to action on the
+/// screen into a no-op that gave the user nothing to act on.
+enum PaywallCTAState: Equatable {
+    /// Still asking the App Store what is for sale.
+    case loading
+    /// There is a product and it can be bought.
+    case ready
+    /// There is nothing to buy, and this is why.
+    case unavailable(String)
+
+    /// Whether tapping can actually start a purchase.
+    var isPurchasable: Bool {
+        self == .ready
+    }
+}
 
 // MARK: - PaywallView
 
@@ -7,6 +30,44 @@ struct PaywallView: View {
     @Environment(StoreKitManager.self) private var storeKit
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPlan: String = StoreKitManager.yearlyID
+    @State private var purchaseError: String?
+
+    /// Shown when the store could not say why it has nothing to sell.
+    static let genericUnavailableMessage =
+        "Subscriptions are unavailable right now. Check your connection and try again."
+
+    /// The Pro column's claim about caption styles.
+    ///
+    /// Derived rather than written down. The table used to read "All 10+"
+    /// against exactly ten presets, and a hardcoded replacement would simply
+    /// go stale the next time a style is added or removed.
+    static var proStyleCountText: String {
+        "All \(CaptionStyle.presets.count)"
+    }
+
+    /// What the button can do, given what the store has told us so far.
+    ///
+    /// Pure, and takes its inputs rather than reading them, so the three
+    /// failure shapes can be asserted without a StoreKit session.
+    static func ctaState(isLoading: Bool, hasProduct: Bool, error: String?) -> PaywallCTAState {
+        if hasProduct { return .ready }
+        if isLoading { return .loading }
+        return .unavailable(error ?? genericUnavailableMessage)
+    }
+
+    private var selectedProduct: Product? {
+        selectedPlan == StoreKitManager.yearlyID
+            ? storeKit.yearlyProduct
+            : storeKit.monthlyProduct
+    }
+
+    private var ctaState: PaywallCTAState {
+        Self.ctaState(
+            isLoading: storeKit.isLoading,
+            hasProduct: selectedProduct != nil,
+            error: storeKit.error
+        )
+    }
 
     var body: some View {
         NavigationStack {
@@ -23,6 +84,9 @@ struct PaywallView: View {
 
                     // CTA
                     ctaButton
+
+                    // Anything that went wrong, said out loud
+                    statusMessage
 
                     // Restore + Terms
                     footerLinks
@@ -50,6 +114,27 @@ struct PaywallView: View {
             AnalyticsService.paywallShown(trigger: "manual")
         }
     }
+
+    // MARK: - Status
+
+    /// The reason the button is not going to work, or the reason a tap did not
+    /// result in a purchase. Both used to be recorded and never shown.
+    @ViewBuilder
+    private var statusMessage: some View {
+        if let message = purchaseError ?? unavailableMessage {
+            Text(message)
+                .font(.footnote)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 24)
+        }
+    }
+
+    private var unavailableMessage: String? {
+        if case let .unavailable(message) = ctaState { return message }
+        return nil
+    }
+
 
     // MARK: - Header
 
@@ -87,7 +172,7 @@ struct PaywallView: View {
             // Rows
             ComparisonRow(feature: "Exports per day", free: "2", pro: "Unlimited")
             ComparisonRow(feature: "Watermark", free: "Yes", pro: "No", proIsGood: true)
-            ComparisonRow(feature: "Caption Styles", free: "3", pro: "All 10+")
+            ComparisonRow(feature: "Caption Styles", free: "3", pro: Self.proStyleCountText)
             ComparisonRow(feature: "Word Highlight", free: "No", pro: "Yes", proIsGood: true)
             ComparisonRow(feature: "Priority Support", free: "No", pro: "Yes", proIsGood: true)
         }
@@ -122,35 +207,54 @@ struct PaywallView: View {
 
     // MARK: - CTA
 
+    /// The primary call to action.
+    ///
+    /// Reads `ctaState` rather than re-deriving the product inline, so the
+    /// three cases the store can be in — still loading, ready, nothing to
+    /// sell — each produce a button the user can make sense of. The old
+    /// version wrapped the whole action in `if let product` with no `else`,
+    /// so when the product load failed the button stayed fully lit and did
+    /// nothing at all when tapped.
     private var ctaButton: some View {
         Button {
+            guard let product = selectedProduct else { return }
             Task {
-                let product = selectedPlan == StoreKitManager.yearlyID
-                    ? storeKit.yearlyProduct
-                    : storeKit.monthlyProduct
-
-                if let product {
-                    _ = try? await storeKit.purchase(product)
+                purchaseError = nil
+                do {
+                    _ = try await storeKit.purchase(product)
                     if storeKit.isPro {
                         dismiss()
                     }
+                } catch {
+                    // Previously `try?`, which discarded the reason the
+                    // purchase failed and left the screen looking idle.
+                    purchaseError = error.localizedDescription
                 }
             }
         } label: {
-            Text("Start Free Trial")
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    LinearGradient(
-                        colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+            Group {
+                if ctaState == .loading {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Text("Start Free Trial")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                    startPoint: .leading,
+                    endPoint: .trailing
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .opacity(ctaState.isPurchasable ? 1 : 0.5)
         }
+        .disabled(!ctaState.isPurchasable)
         .padding(.horizontal, 24)
     }
 

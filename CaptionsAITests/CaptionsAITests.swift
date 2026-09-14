@@ -272,6 +272,65 @@ final class ExportQualityTests: XCTestCase {
     }
 }
 
+/// What the paywall's only button does when there is nothing to buy.
+///
+/// The defect: the CTA body was `if let product { … }` with no `else`. When
+/// `Product.products(for:)` had failed — no network, a sandbox account not
+/// signed in, product IDs not yet approved — `monthlyProduct` and
+/// `yearlyProduct` are both nil, so tapping "Start Free Trial" ran an empty
+/// closure. No purchase, no spinner, no message. `storeKit.error` was
+/// assigned by `loadProducts()` and read by nobody, and `isLoading` likewise,
+/// so the screen could not even say it was still trying.
+final class PaywallCTATests: XCTestCase {
+    func testTheButtonSaysItIsWorkingWhileProductsAreLoading() {
+        XCTAssertEqual(
+            PaywallView.ctaState(isLoading: true, hasProduct: false, error: nil),
+            .loading
+        )
+    }
+
+    /// The load failed and said why. The reason belongs on screen, not in a
+    /// property nothing reads.
+    func testAFailedLoadSurfacesTheReason() {
+        let state = PaywallView.ctaState(
+            isLoading: false,
+            hasProduct: false,
+            error: "Failed to load products: offline"
+        )
+        XCTAssertEqual(state, .unavailable("Failed to load products: offline"))
+    }
+
+    /// No product and no error is still a dead button, so it still has to say
+    /// something rather than silently doing nothing.
+    func testAMissingProductWithNoErrorStillExplainsItself() {
+        guard case let .unavailable(message) = PaywallView.ctaState(
+            isLoading: false, hasProduct: false, error: nil
+        ) else {
+            return XCTFail("a tappable button with nothing to buy must explain itself")
+        }
+        XCTAssertFalse(message.isEmpty)
+    }
+
+    func testTheButtonIsOnlyBuyableWhenThereIsSomethingToBuy() {
+        XCTAssertEqual(
+            PaywallView.ctaState(isLoading: false, hasProduct: true, error: nil),
+            .ready
+        )
+        XCTAssertTrue(PaywallView.ctaState(isLoading: false, hasProduct: true, error: nil).isPurchasable)
+        XCTAssertFalse(PaywallView.ctaState(isLoading: true, hasProduct: false, error: nil).isPurchasable)
+        XCTAssertFalse(PaywallView.ctaState(isLoading: false, hasProduct: false, error: nil).isPurchasable)
+    }
+
+    /// The comparison table advertised "All 10+" against exactly ten presets.
+    /// Deriving the number means the copy cannot drift from the product again.
+    func testTheStyleCountClaimMatchesTheStylesThatExist() {
+        XCTAssertEqual(PaywallView.proStyleCountText, "All 10")
+        XCTAssertEqual(PaywallView.proStyleCountText, "All \(CaptionStyle.presets.count)")
+        XCTAssertFalse(PaywallView.proStyleCountText.contains("+"))
+    }
+}
+
+
 
 
 
