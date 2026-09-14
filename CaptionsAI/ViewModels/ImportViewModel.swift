@@ -105,10 +105,18 @@ final class ImportViewModel {
 
     // MARK: - Recent Projects
 
+    /// How many projects the home screen's strip shows.
+    ///
+    /// A *window*, not a cull. Project eleven is still stored, still has its
+    /// video, and is still reachable from the full list — it simply is not one
+    /// of the ten thumbnails decoded every time the home screen appears.
+    static let recentProjectsLimit = 10
+
     func loadRecentProjects(context: ModelContext) {
-        let descriptor = FetchDescriptor<Project>(
+        var descriptor = FetchDescriptor<Project>(
             sortBy: [SortDescriptor(\.modifiedAt, order: .reverse)]
         )
+        descriptor.fetchLimit = Self.recentProjectsLimit
         recentProjects = (try? context.fetch(descriptor)) ?? []
     }
 
