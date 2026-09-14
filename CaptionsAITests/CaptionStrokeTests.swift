@@ -5,9 +5,9 @@ import XCTest
 
 /// The export renderer's outline capability.
 ///
-/// No shipped preset uses it yet — this commit adds the ability and nothing
-/// that switches it on — so the first assertion here is that the app looks
-/// exactly as it did.
+/// One shipped preset uses it — "Outline", which is named after it — and the
+/// first assertion here is that the list of presets that outline is exactly
+/// the list we meant.
 ///
 /// The interesting one is the scale test. The export renders at up to 4x the
 /// preview and multiplies absolute lengths by a scaleFactor derived from the
@@ -42,15 +42,16 @@ final class CaptionStrokeTests: XCTestCase {
         return try XCTUnwrap(UIImage(cgImage: cgImage).pngData())
     }
 
-    // MARK: - Nothing changes today
+    // MARK: - Who uses it
 
-    /// This commit is a capability, not a visible change. If any preset picked
-    /// up a stroke here, it changed the look of the app in a commit whose
-    /// message says it did not.
-    func testNoShippedPresetDrawsAnOutlineYet() {
-        for preset in CaptionStyle.presets {
-            XCTAssertEqual(preset.strokeWidth, 0, "\(preset.name) gained an outline")
-        }
+    /// Exactly which presets outline is a product decision, so it is written
+    /// down. A preset that quietly gains a stroke changes the look of the app
+    /// in a commit whose message probably does not say so.
+    func testTheOutlinedPresetsAreExactlyTheOnesWeChose() {
+        XCTAssertEqual(
+            CaptionStyle.presets.filter { $0.strokeWidth > 0 }.map(\.name),
+            ["Outline"]
+        )
     }
 
     func testAStyleWithNoStrokeRendersExactlyAsItDidBefore() throws {
