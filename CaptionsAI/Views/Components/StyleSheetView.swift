@@ -9,18 +9,24 @@ struct StyleSheetView: View {
     let previewText: String
     @Environment(\.dismiss) private var dismiss
 
+    /// Where the sheet sits before anyone drags it. Tall enough for the chip
+    /// row and the Text Size slider together.
+    static let restingHeight: CGFloat = 380
+
+    /// A single fixed detent is a hard cap — there is no gesture that can grow
+    /// a sheet with nowhere to grow to. At the largest accessibility text sizes
+    /// that pushed the Text Size slider below the fold and left it unreachable,
+    /// which is a particularly unkind thing to do to the control that exists to
+    /// make text bigger.
+    static let detents: Set<PresentationDetent> = [.height(restingHeight), .large]
+
     var body: some View {
         VStack(spacing: 16) {
-            // Drag indicator
-            Capsule()
-                .fill(Color.gray.opacity(0.5))
-                .frame(width: 36, height: 5)
-                .padding(.top, 8)
-
             // Title
             Text("Caption Style")
                 .font(.headline)
                 .foregroundColor(.white)
+                .padding(.top, 8)
 
             // Style cards - horizontal scroll
             ScrollView(.horizontal, showsIndicators: false) {
@@ -72,9 +78,9 @@ struct StyleSheetView: View {
 
             Spacer()
         }
-        .presentationDetents([.height(300)])
+        .presentationDetents(Self.detents)
         .presentationBackground(.ultraThinMaterial)
-        .presentationDragIndicator(.hidden)
+        .presentationDragIndicator(.visible)
     }
 }
 
@@ -198,5 +204,17 @@ struct StylePreviewCard: View {
                 .fontWeight(isSelected ? .bold : .medium)
                 .foregroundColor(isSelected ? Color(hex: "#A78BFA") : .secondary)
         }
+        // The chip is a swatch, not body copy, and it has to keep the height
+        // of the row it scrolls in. Measured with this line removed, the card
+        // grows from 124pt to 158pt at accessibility5 — for every preset, not
+        // only the six that name a real typeface, because the style-name label
+        // scales too. (Inside the plate there is a second, smaller effect:
+        // `Font.custom(_:size:)` scales with the text size and
+        // `Font.system(size:)` does not, so the two groups would diverge.)
+        //
+        // The captions themselves are drawn by the renderer and are unaffected
+        // either way; the Text Size slider below is how caption size is meant
+        // to be changed.
+        .dynamicTypeSize(...DynamicTypeSize.large)
     }
 }
