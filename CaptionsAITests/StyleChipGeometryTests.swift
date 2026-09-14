@@ -35,58 +35,81 @@ final class StyleChipGeometryTests: XCTestCase {
 
     // MARK: - The plate
 
-    /// 104x64 is the literal on the `RoundedRectangle`. When the sample is
-    /// short enough to fit, the whole chip is that wide.
+    /// The chip is exactly its plate, whatever it is asked to draw.
     func testAShortSampleGivesAChipTheWidthOfItsPlate() throws {
         let width = try size(preset("Cinema"), "A B").width
 
-        XCTAssertEqual(width, 104, accuracy: 0.5)
+        XCTAssertEqual(width, StylePreviewCard.plateWidth, accuracy: 0.5)
     }
 
-    // MARK: - The defect this unit exists to make visible
+    func testTheChipIsBigEnoughToReadASentenceIn() {
+        XCTAssertGreaterThanOrEqual(StylePreviewCard.plateWidth, 140)
+        XCTAssertGreaterThanOrEqual(StylePreviewCard.plateHeight, 96)
+    }
 
-    /// The `.frame(width: 104, height: 64)` is on the plate, which is a
-    /// *sibling* of the text inside the ZStack — so it constrains the plate and
-    /// nothing else. A horizontal `ScrollView` proposes unbounded width, the
-    /// text takes its full single-line ideal width, and the ZStack grows with
-    /// it. The rounded corners and the selection ring are applied to the ZStack,
-    /// so they grow too: the chip is simply a wider chip, not a clipped one.
+    /// Two chips and a sliver of a third is the signal that the row scrolls.
+    /// Wider than this and the second chip is the last thing on a small phone,
+    /// which reads as a two-item list rather than a scroller.
+    func testTwoChipsAndAPeekFitOnTheNarrowestPhone() {
+        let screen: CGFloat = 375
+        let row = StylePreviewCard.plateWidth * 2 + 12 + 32
+
+        XCTAssertLessThan(row, screen, "two chips no longer fit on a 375pt screen")
+        XCTAssertGreaterThan(row + StylePreviewCard.plateWidth, screen, "a third chip fits entirely — no peek")
+    }
+
+    // MARK: - The defect this unit existed to make visible
+
+    /// Was: `.frame(width:height:)` sat on the plate, a *sibling* of the text
+    /// inside the ZStack, so it constrained the plate and nothing else. A
+    /// horizontal `ScrollView` proposes unbounded width, the text took its full
+    /// single-line ideal width, and the ZStack — along with the rounded corners
+    /// and the selection ring applied to it — grew with the sample.
     ///
-    /// This is why the chip keeps only three words. When the chip is rebuilt to
-    /// constrain its text, this assertion must be inverted, not deleted.
-    func testTodayALongSampleMakesTheWholeChipWiderThanItsPlate() throws {
-        let width = try size(preset("Cinema"), "EXTRAORDINARY UNBELIEVABLE MAGNIFICENT").width
+    /// The text now carries its own width, so the chip is a constant.
+    func testALongSampleNoLongerStretchesTheChip() throws {
+        let width = try size(preset("Cinema"), "EXTRAORDINARY UNBELIEVABLE MAGNIFICENT SPECTACULAR").width
 
-        XCTAssertGreaterThan(
-            width, 104,
-            "the chip now constrains its text — invert this test and raise the word count"
-        )
+        XCTAssertEqual(width, StylePreviewCard.plateWidth, accuracy: 0.5)
     }
 
-    /// The corollary, stated separately so a fix shows up as two failures and
-    /// not one: chip width is a function of the sample text today. It should be
-    /// a constant.
-    func testTodayTwoDifferentSamplesGiveTwoDifferentChipWidths() throws {
+    /// The corollary, stated separately so a regression shows up as two
+    /// failures and not one: chip width must not be a function of the sample.
+    func testTwoDifferentSamplesGiveTheSameChipWidth() throws {
         let style = try preset("Cinema")
 
-        XCTAssertNotEqual(try size(style, "A B").width, try size(style, "WIDER SAMPLE HERE").width)
+        XCTAssertEqual(
+            try size(style, "A B").width,
+            try size(style, "A MUCH WIDER SAMPLE THAN THAT ONE").width,
+            accuracy: 0.5
+        )
     }
 
     // MARK: - How much of the sample survives
 
-    /// `words` keeps `.prefix(3)`. Anything past the third word cannot affect a
-    /// single pixel, so a test that varies the fourth word is testing nothing.
-    func testOnlyTheFirstThreeWordsAreDrawn() throws {
+    /// The sixth word changing the pixels is also the proof that the sample
+    /// wraps. A chip that clipped to one line would hide the tail of the
+    /// sentence, and these two renders would be identical.
+    func testTheSixthWordIsDrawn() throws {
         let style = try preset("Cinema")
 
-        XCTAssertEqual(
+        XCTAssertNotEqual(
             try pixels(style, "ONE TWO THREE FOUR FIVE SIX"),
-            try pixels(style, "ONE TWO THREE ALPHA BETA GAMMA"),
-            "the chip now draws more than three words"
+            try pixels(style, "ONE TWO THREE FOUR FIVE ZETA")
         )
     }
 
-    /// ...and the third word does.
+    /// There is still a limit; a whole transcript would scale to nothing.
+    func testNothingPastTheSixthWordIsDrawn() throws {
+        let style = try preset("Cinema")
+
+        XCTAssertEqual(
+            try pixels(style, "ONE TWO THREE FOUR FIVE SIX SEVEN EIGHT"),
+            try pixels(style, "ONE TWO THREE FOUR FIVE SIX ALPHA BETA"),
+            "the chip now draws more than six words"
+        )
+    }
+
     func testTheThirdWordIsDrawn() throws {
         let style = try preset("Cinema")
 
