@@ -133,14 +133,7 @@ final class ImportViewModel {
     // MARK: - Delete
 
     func deleteProject(_ project: Project, context: ModelContext) {
-        // Now that videos are kept deliberately rather than parked in `tmp/`,
-        // nothing else will ever clean them up. Read the reference before the
-        // delete, while the object is still valid.
-        let videoReference = project.videoURLString
-
-        context.delete(project)
-        try? context.save()
-        VideoLibrary.remove(videoReference)
+        ProjectDeletion.delete(project, context: context)
         loadRecentProjects(context: context)
     }
 
