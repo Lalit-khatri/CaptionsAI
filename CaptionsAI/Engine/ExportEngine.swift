@@ -62,7 +62,7 @@ final class ExportEngine {
         segments: [CaptionSegment],
         style: CaptionStyle,
         captionYPosition: Double,
-        addWatermark _: Bool
+        addWatermark: Bool
     ) async throws -> URL {
         isExporting = true
         progress = 0
@@ -126,7 +126,8 @@ final class ExportEngine {
             style: style,
             outputSize: renderSize,
             captionYPosition: captionYPosition,
-            preferredOrientation: preferredOrientation
+            preferredOrientation: preferredOrientation,
+            addWatermark: addWatermark
         )
 
         // Select export preset based on codec and quality

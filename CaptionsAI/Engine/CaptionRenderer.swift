@@ -40,7 +40,8 @@ final class CaptionRenderer {
         style: CaptionStyle,
         outputSize: CGSize,
         captionYPosition: Double,
-        preferredOrientation: CGImagePropertyOrientation = .up
+        preferredOrientation: CGImagePropertyOrientation = .up,
+        addWatermark: Bool = false
     ) async throws -> AVMutableVideoComposition {
         let composition = AVMutableVideoComposition()
         composition.renderSize = outputSize
@@ -63,7 +64,8 @@ final class CaptionRenderer {
             style: style,
             renderSize: outputSize,
             captionYPosition: captionYPosition,
-            preferredOrientation: preferredOrientation
+            preferredOrientation: preferredOrientation,
+            addWatermark: addWatermark
         )
 
         // Set up source track ID
@@ -131,6 +133,86 @@ final class CaptionRenderer {
             return image
         }
         return overlay.composited(over: image)
+    }
+
+    // MARK: - Watermark
+
+    /// The mark burned into free-tier exports.
+    static let watermarkText = "CaptionsAI"
+
+    /// Point size of the watermark for a given render size.
+    ///
+    /// Tied to the short side so it reads the same at 360p and at 4K. A fixed
+    /// size would be a shout on one and invisible on the other.
+    static func watermarkFontSize(for renderSize: CGSize) -> CGFloat {
+        let shortSide = min(renderSize.width, renderSize.height)
+        return max(shortSide * 0.045, 10)
+    }
+
+    /// Where the watermark sits, in CoreImage's bottom-left origin space.
+    ///
+    /// Bottom-right, inset by a margin that also scales, and clamped so it
+    /// stays on screen even on an implausibly small frame.
+    static func watermarkRect(for renderSize: CGSize) -> CGRect {
+        let fontSize = watermarkFontSize(for: renderSize)
+        let margin = fontSize * 0.8
+        // Roughly the advance width of the mark at this size. Generous rather
+        // than exact: the text is drawn right-aligned within the box, so a box
+        // that is a little wide costs nothing and a box that is too narrow
+        // would clip.
+        let width = min(fontSize * CGFloat(watermarkText.count) * 0.62, renderSize.width - 2 * margin)
+        let height = fontSize * 1.3
+        return CGRect(
+            x: max(renderSize.width - width - margin, margin),
+            y: margin,
+            width: width,
+            height: height
+        )
+    }
+
+    /// Draws the watermark, or `nil` if it could not be rendered.
+    ///
+    /// White with a soft shadow, so it survives both a bright and a dark
+    /// frame underneath.
+    static func renderWatermark(renderSize: CGSize) -> CIImage? {
+        guard renderSize.width > 0, renderSize.height > 0 else { return nil }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: renderSize, format: format)
+
+        let fontSize = watermarkFontSize(for: renderSize)
+        let rect = watermarkRect(for: renderSize)
+
+        let image = renderer.image { ctx in
+            let context = ctx.cgContext
+            context.setShadow(
+                offset: CGSize(width: 0, height: fontSize * 0.05),
+                blur: fontSize * 0.25,
+                color: UIColor.black.withAlphaComponent(0.6).cgColor
+            )
+
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .right
+
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: fontSize, weight: .semibold),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.85),
+                .paragraphStyle: paragraph,
+            ]
+
+            // UIKit draws top-left; the rect is bottom-left, so flip it.
+            let drawRect = CGRect(
+                x: rect.minX,
+                y: renderSize.height - rect.maxY,
+                width: rect.width,
+                height: rect.height
+            )
+            (watermarkText as NSString).draw(in: drawRect, withAttributes: attributes)
+        }
+
+        return CIImage(image: image)
     }
 
     /// Renders ONLY the caption text as a standalone transparent CIImage.
@@ -285,13 +367,17 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
     /// beside it, stored and never read.
     let preferredOrientation: CGImagePropertyOrientation
 
+    /// Whether to burn the free-tier watermark into each frame.
+    let addWatermark: Bool
+
     init(
         timeRange: CMTimeRange,
         segments: [CaptionSegment],
         style: CaptionStyle,
         renderSize: CGSize,
         captionYPosition: Double,
-        preferredOrientation: CGImagePropertyOrientation = .up
+        preferredOrientation: CGImagePropertyOrientation = .up,
+        addWatermark: Bool = false
     ) {
         self.timeRange = timeRange
         self.segments = segments
@@ -299,6 +385,7 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
         self.renderSize = renderSize
         self.captionYPosition = captionYPosition
         self.preferredOrientation = preferredOrientation
+        self.addWatermark = addWatermark
         super.init()
     }
 }
@@ -330,6 +417,8 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
     private var cachedCaptionImage: CIImage?
     private var cachedSegmentId: UUID?
     private var cachedActiveWordIndex: Int?
+    private var cachedWatermarkImage: CIImage?
+    private var cachedWatermarkSize: CGSize = .zero
 
     func renderContextChanged(_: AVVideoCompositionRenderContext) {}
 
@@ -423,7 +512,20 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
             cachedActiveWordIndex = nil
         }
 
-        // 5. Render to output pixel buffer
+        // 5. Burn in the free-tier watermark, above the captions so it cannot
+        // be hidden behind one. Rendered once per size and reused, like the
+        // background — it is identical on every frame.
+        if instruction.addWatermark {
+            if cachedWatermarkImage == nil || cachedWatermarkSize != renderSize {
+                cachedWatermarkImage = CaptionRenderer.renderWatermark(renderSize: renderSize)
+                cachedWatermarkSize = renderSize
+            }
+            if let watermark = cachedWatermarkImage {
+                videoImage = watermark.composited(over: videoImage)
+            }
+        }
+
+        // 6. Render to output pixel buffer
         guard let outputBuffer = request.renderContext.newPixelBuffer() else {
             request.finish(with: NSError(domain: "CaptionCompositor", code: -2))
             return

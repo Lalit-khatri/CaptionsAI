@@ -490,3 +490,134 @@ final class PaywallDisclosureTests: XCTestCase {
         XCTAssertEqual(PaywallView.periodName(unit: .month, value: 3), "3 months")
     }
 }
+
+// MARK: - Export Watermark
+
+/// The paywall's comparison table promises Free users a watermark and Pro
+/// users none, and `ExportViewModel` duly computed `addWatermark = !isPro` and
+/// passed it down. `ExportEngine.export` then declared the parameter as
+/// `addWatermark _: Bool` and discarded it, so no watermark was ever drawn and
+/// a Free export was byte-for-byte what a Pro export would have been. Pro
+/// bought nothing.
+final class ExportWatermarkTests: XCTestCase {
+    // MARK: Geometry
+
+    /// A watermark sized for 360p is invisible on a 4K render, so it scales.
+    func testTheWatermarkScalesWithTheFrame() {
+        let small = CaptionRenderer.watermarkFontSize(for: CGSize(width: 640, height: 360))
+        let large = CaptionRenderer.watermarkFontSize(for: CGSize(width: 3840, height: 2160))
+        XCTAssertGreaterThan(large, small)
+        XCTAssertGreaterThan(small, 0)
+    }
+
+    /// It sits in the bottom-right corner, inset, and entirely on screen.
+    func testTheWatermarkSitsInsideTheBottomRightCorner() {
+        let size = CGSize(width: 1920, height: 1080)
+        let rect = CaptionRenderer.watermarkRect(for: size)
+
+        XCTAssertGreaterThan(rect.minX, size.width / 2, "should be on the right")
+        XCTAssertLessThan(rect.maxY, size.height / 2, "should be along the bottom")
+        XCTAssertGreaterThan(rect.minX, 0)
+        XCTAssertGreaterThan(rect.minY, 0)
+        XCTAssertLessThan(rect.maxX, size.width)
+        XCTAssertLessThan(rect.maxY, size.height)
+    }
+
+    // MARK: The pixels that actually reach the file
+
+    /// The real thing: export the same clip twice and look at the corner.
+    ///
+    /// The fixture's first frame is solid black, so a watermark can only make
+    /// that corner brighter. Comparing against an unwatermarked export of the
+    /// same source means the assertion is about the watermark and nothing else.
+    func testAFreeExportCarriesAWatermarkAndAProExportDoesNot() async throws {
+        let source = try await TestSupport.makeTestVideo(
+            seconds: 1.0, size: CGSize(width: 640, height: 360), fps: 30
+        )
+        defer { try? FileManager.default.removeItem(at: source) }
+
+        let corner = CaptionRenderer.watermarkRect(for: CGSize(width: 640, height: 360))
+
+        // Measured one at a time: `export` sweeps stale `CaptionsAI_` scratch
+        // files out of tmp on entry, so the second export would delete the
+        // first one's output before we had looked at it.
+        let watermarked = try await exportFixture(source, addWatermark: true)
+        let withMark = try brightness(ofFirstFrameOf: watermarked, in: corner)
+        try? FileManager.default.removeItem(at: watermarked)
+
+        let clean = try await exportFixture(source, addWatermark: false)
+        let withoutMark = try brightness(ofFirstFrameOf: clean, in: corner)
+        try? FileManager.default.removeItem(at: clean)
+
+        XCTAssertGreaterThan(
+            withMark, withoutMark + 1.0,
+            "a free export must carry a visible watermark in the corner"
+        )
+        XCTAssertLessThan(
+            withoutMark, 8.0,
+            "a pro export's corner must stay as dark as the source frame"
+        )
+    }
+
+    // MARK: Helpers
+
+    private func exportFixture(_ source: URL, addWatermark: Bool) async throws -> URL {
+        let engine = ExportEngine()
+        // A test bundle holds no Photos authorization, so the save is stubbed.
+        await MainActor.run { engine.photoLibrarySaver = { _ in } }
+
+        var settings = ExportSettings()
+        settings.resolution = .original
+        settings.includeAudio = false
+
+        return try await engine.export(
+            videoURL: source,
+            settings: settings,
+            preset: .original,
+            segments: [],
+            style: CaptionStyle.presets[0],
+            captionYPosition: 0.5,
+            addWatermark: addWatermark
+        )
+    }
+
+    /// Mean luminance of `rect`, in CoreImage's bottom-left coordinate space.
+    private func brightness(ofFirstFrameOf url: URL, in rect: CGRect) throws -> Double {
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = CMTime(value: 1, timescale: 30)
+        let frame = try generator.copyCGImage(
+            at: CMTime(value: 1, timescale: 30), actualTime: nil
+        )
+
+        // CGImage is top-left origin; the rect came from CoreImage.
+        let flipped = CGRect(
+            x: rect.minX,
+            y: Double(frame.height) - rect.maxY,
+            width: rect.width,
+            height: rect.height
+        )
+        guard let crop = frame.cropping(to: flipped) else {
+            throw NSError(domain: "watermark", code: 1)
+        }
+
+        let width = crop.width
+        let height = crop.height
+        var pixels = [UInt8](repeating: 0, count: width * height)
+        guard let context = CGContext(
+            data: &pixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width,
+            space: CGColorSpaceCreateDeviceGray(),
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
+        ) else {
+            throw NSError(domain: "watermark", code: 2)
+        }
+        context.draw(crop, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        return pixels.reduce(0.0) { $0 + Double($1) } / Double(pixels.count)
+    }
+}
