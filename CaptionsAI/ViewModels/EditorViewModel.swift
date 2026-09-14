@@ -43,6 +43,11 @@ final class EditorViewModel {
 
     var player: AVPlayer?
     var isPlaying = false
+
+    /// Whether the project's video file could not be found when this editor
+    /// opened. Decided once, in `init`, and not revisited — see the comment
+    /// there for why a view must not ask the filesystem this question.
+    private(set) var videoIsMissing = false
     private var timeObserver: Any?
     private var endObserver: NSObjectProtocol?
 
@@ -111,6 +116,12 @@ final class EditorViewModel {
         if let url = project.videoURL {
             player = AVPlayer(url: url)
             observePlaybackEnd()
+        } else {
+            // Recorded here, once, rather than asked of the view. `videoURL`
+            // is not a stored property — it calls VideoLibrary.resolve, which
+            // hits the filesystem — so reading it from a `body` is a stat per
+            // frame on the screen that is also decoding video.
+            videoIsMissing = true
         }
     }
 

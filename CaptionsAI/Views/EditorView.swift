@@ -98,6 +98,18 @@ struct EditorView: View {
         }
     }
 
+    // MARK: - Export Availability
+
+    /// Whether Export should be offered.
+    ///
+    /// `ExportView`'s own button does `guard let videoURL = project.videoURL
+    /// else { return }`, so with no video the user taps a live-looking control
+    /// and nothing happens at all — and then taps it again. Better to say no
+    /// up front.
+    static func exportIsAvailable(videoIsMissing: Bool) -> Bool {
+        !videoIsMissing
+    }
+
     // MARK: - Preview Text for Style Cards
 
     /// What the style chips are asked to draw when there is nothing to quote
@@ -147,6 +159,8 @@ struct EditorView: View {
                         .onTapGesture {
                             togglePlayPause()
                         }
+                } else if viewModel.videoIsMissing {
+                    MissingVideoView()
                 } else {
                     Rectangle()
                         .fill(Color.gray.opacity(0.2))
@@ -210,6 +224,12 @@ struct EditorView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
             }
+            // Export's own button guards on the URL and silently returns, so
+            // without this the user presses a live-looking control and nothing
+            // whatsoever happens. Dimmed as well as disabled, because a
+            // disabled control that still looks enabled is the same bug.
+            .disabled(!Self.exportIsAvailable(videoIsMissing: viewModel.videoIsMissing))
+            .opacity(Self.exportIsAvailable(videoIsMissing: viewModel.videoIsMissing) ? 1 : 0.35)
         }
         .padding(.horizontal, 8)
         .padding(.top, 12)
