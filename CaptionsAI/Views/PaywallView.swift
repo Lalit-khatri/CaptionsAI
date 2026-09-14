@@ -31,6 +31,9 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPlan: String = StoreKitManager.yearlyID
     @State private var purchaseError: String?
+    /// Whether StoreKit says this user may still take the introductory offer.
+    /// Assumed false until asked, so we never promise a trial we cannot give.
+    @State private var isEligibleForIntroOffer = false
 
     /// Shown when the store could not say why it has nothing to sell.
     static let genericUnavailableMessage =
@@ -88,6 +91,47 @@ struct PaywallView: View {
         return "SAVE \(percent)%"
     }
 
+    /// The words on the primary button.
+    ///
+    /// It used to read "Start Free Trial" unconditionally. A returning
+    /// subscriber who had already consumed the introductory offer — or any
+    /// user at all, if the product never carried one — tapped a promise of a
+    /// free trial and was charged instead.
+    static func ctaTitle(hasFreeTrial: Bool) -> String {
+        hasFreeTrial ? "Start Free Trial" : "Subscribe"
+    }
+
+    /// How a subscription period reads inside a sentence.
+    static func periodName(unit: Product.SubscriptionPeriod.Unit, value: Int) -> String {
+        let singular: String
+        switch unit {
+        case .day: singular = "day"
+        case .week: singular = "week"
+        case .month: singular = "month"
+        case .year: singular = "year"
+        @unknown default: singular = "period"
+        }
+        // "per year", not "per 1 year" — but "7 days" has to keep its count.
+        return value == 1 ? singular : "\(value) \(singular)s"
+    }
+
+    /// What the user will actually be charged, and when.
+    ///
+    /// The screen said this nowhere. A trial in particular has to name the
+    /// price that follows it, both because App Review 3.1.2 requires it and
+    /// because it is the number the decision turns on. Returns `nil` when the
+    /// price is unknown: silence beats a sentence with a hole in it.
+    static func priceDisclosure(
+        displayPrice: String?,
+        periodName: String,
+        freeTrialName: String?
+    ) -> String? {
+        guard let displayPrice else { return nil }
+        let recurring = "\(displayPrice) per \(periodName). Cancel anytime."
+        guard let freeTrialName else { return recurring }
+        return "Free for \(freeTrialName), then \(recurring)"
+    }
+
     private var selectedProduct: Product? {
         selectedPlan == StoreKitManager.yearlyID
             ? storeKit.yearlyProduct
@@ -99,6 +143,34 @@ struct PaywallView: View {
             isLoading: storeKit.isLoading,
             hasProduct: selectedProduct != nil,
             error: storeKit.error
+        )
+    }
+
+    /// The selected plan's free trial, but only if this user can still take it.
+    ///
+    /// Eligibility is a question only StoreKit can answer, and only
+    /// asynchronously, so it is resolved in a `.task` and cached. Defaulting
+    /// to ineligible means the worst case is that we fail to advertise a trial
+    /// the user could have had — the opposite mistake charges them.
+    private var freeTrialName: String? {
+        guard isEligibleForIntroOffer,
+              let offer = selectedProduct?.subscription?.introductoryOffer,
+              offer.paymentMode == .freeTrial
+        else { return nil }
+        return Self.periodName(unit: offer.period.unit, value: offer.period.value)
+    }
+
+    private var selectedPeriodName: String? {
+        guard let period = selectedProduct?.subscription?.subscriptionPeriod else { return nil }
+        return Self.periodName(unit: period.unit, value: period.value)
+    }
+
+    private var priceDisclosureText: String? {
+        guard let periodName = selectedPeriodName else { return nil }
+        return Self.priceDisclosure(
+            displayPrice: selectedProduct?.displayPrice,
+            periodName: periodName,
+            freeTrialName: freeTrialName
         )
     }
 
@@ -117,6 +189,9 @@ struct PaywallView: View {
 
                     // CTA
                     ctaButton
+
+                    // What this will actually cost, and when
+                    disclosureMessage
 
                     // Anything that went wrong, said out loud
                     statusMessage
@@ -146,6 +221,15 @@ struct PaywallView: View {
         .onAppear {
             AnalyticsService.paywallShown(trigger: "manual")
         }
+        // Keyed on the product id so this also runs on the nil-to-loaded
+        // transition, not just when the user switches plan.
+        .task(id: selectedProduct?.id) {
+            guard let subscription = selectedProduct?.subscription else {
+                isEligibleForIntroOffer = false
+                return
+            }
+            isEligibleForIntroOffer = await subscription.isEligibleForIntroOffer
+        }
     }
 
     // MARK: - Status
@@ -166,6 +250,18 @@ struct PaywallView: View {
     private var unavailableMessage: String? {
         if case let .unavailable(message) = ctaState { return message }
         return nil
+    }
+
+    /// The terms of the thing the button is about to do.
+    @ViewBuilder
+    private var disclosureMessage: some View {
+        if let text = priceDisclosureText {
+            Text(text)
+                .font(.footnote)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 24)
+        }
     }
 
 
@@ -273,7 +369,7 @@ struct PaywallView: View {
                     ProgressView()
                         .tint(.white)
                 } else {
-                    Text("Start Free Trial")
+                    Text(Self.ctaTitle(hasFreeTrial: freeTrialName != nil))
                         .font(.headline)
                         .foregroundColor(.white)
                 }

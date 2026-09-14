@@ -1,6 +1,7 @@
 @testable import CaptionsAI
 import AVFoundation
 import Speech
+import StoreKit
 import SwiftUI
 import UIKit
 import XCTest
@@ -426,5 +427,66 @@ final class PaywallPriceTests: XCTestCase {
     func testNoBadgeWhenTheYearlyPlanIsNotTheCheaperDeal() {
         XCTAssertNil(PaywallView.savingsBadge(monthlyPrice: 2.99, yearlyPrice: 40.00))
         XCTAssertNil(PaywallView.savingsBadge(monthlyPrice: 2.99, yearlyPrice: 35.88))
+    }
+}
+
+// MARK: - Paywall Disclosure
+
+/// The button read "Start Free Trial" unconditionally, whether or not the
+/// product carried an introductory offer and whether or not this user was
+/// still eligible for one. A returning subscriber tapped a promise of a free
+/// trial and was charged. Nowhere on the screen did it say what the charge
+/// would be after any trial ended, which App Review 3.1.2 requires and a user
+/// deciding whether to subscribe plainly needs.
+final class PaywallDisclosureTests: XCTestCase {
+    /// No offer, no promise.
+    func testTheButtonDoesNotPromiseATrialThatIsNotOffered() {
+        let title = PaywallView.ctaTitle(hasFreeTrial: false)
+        XCTAssertFalse(title.lowercased().contains("trial"))
+        XCTAssertFalse(title.lowercased().contains("free"))
+        XCTAssertFalse(title.isEmpty)
+    }
+
+    func testTheButtonOffersTheTrialWhenThereIsOneToOffer() {
+        XCTAssertEqual(PaywallView.ctaTitle(hasFreeTrial: true), "Start Free Trial")
+    }
+
+    /// What the user will be charged, and how often, said out loud.
+    func testTheDisclosureStatesWhatWillBeCharged() {
+        XCTAssertEqual(
+            PaywallView.priceDisclosure(
+                displayPrice: "¥480", periodName: "year", freeTrialName: nil
+            ),
+            "¥480 per year. Cancel anytime."
+        )
+    }
+
+    /// A trial has to name the price that follows it.
+    func testTheDisclosureNamesTheTrialAndWhatFollowsIt() {
+        XCTAssertEqual(
+            PaywallView.priceDisclosure(
+                displayPrice: "¥480", periodName: "year", freeTrialName: "7 days"
+            ),
+            "Free for 7 days, then ¥480 per year. Cancel anytime."
+        )
+    }
+
+    /// Silence beats a sentence with a hole where the price should be.
+    func testThereIsNoDisclosureWhenThePriceIsUnknown() {
+        XCTAssertNil(
+            PaywallView.priceDisclosure(
+                displayPrice: nil, periodName: "year", freeTrialName: "7 days"
+            )
+        )
+    }
+
+    /// "per year" reads better than "per 1 year", and "7 days" has to keep its
+    /// count or it stops meaning anything.
+    func testPeriodNamesReadLikeEnglish() {
+        XCTAssertEqual(PaywallView.periodName(unit: .year, value: 1), "year")
+        XCTAssertEqual(PaywallView.periodName(unit: .month, value: 1), "month")
+        XCTAssertEqual(PaywallView.periodName(unit: .week, value: 1), "week")
+        XCTAssertEqual(PaywallView.periodName(unit: .day, value: 7), "7 days")
+        XCTAssertEqual(PaywallView.periodName(unit: .month, value: 3), "3 months")
     }
 }
