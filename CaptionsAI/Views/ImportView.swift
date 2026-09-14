@@ -17,8 +17,10 @@ struct ImportView: View {
                 // Import area
                 importSection
 
-                // Recent projects
-                if !viewModel.recentProjects.isEmpty {
+                // Recent projects, or an acknowledgement that there are none
+                if Self.showsEmptyState(projectCount: viewModel.recentProjects.count) {
+                    EmptyProjectsView()
+                } else {
                     recentProjectsSection
                 }
             }
@@ -53,6 +55,20 @@ struct ImportView: View {
         } message: {
             Text(viewModel.error ?? "")
         }
+    }
+
+    // MARK: - Empty State
+
+    /// Whether the home screen should say "no projects" rather than draw the
+    /// strip.
+    ///
+    /// Trivial, and a static function anyway: it is the one place the
+    /// condition is written down, so an inverted `!` here is a test failure
+    /// rather than a screen nobody can explain. The count is the *loaded*
+    /// count, which is capped — but the cap is never zero, so a capped strip
+    /// and an empty library can never be confused.
+    static func showsEmptyState(projectCount: Int) -> Bool {
+        projectCount == 0
     }
 
     // MARK: - Import Section
@@ -141,6 +157,33 @@ struct ImportView: View {
                 }
                 .padding(.horizontal, 24)
             }
+        }
+    }
+}
+
+// MARK: - Empty Projects View
+
+/// Shown under the import box when the library is empty.
+///
+/// `ContentUnavailableView` deliberately without a symbol. Its usual shape is
+/// a large glyph over a title, but this screen already opens with a 48pt
+/// `film.stack` inside the import box; a second hero glyph a couple of hundred
+/// points below it reads as a second, competing call to action and pushes the
+/// real one — the Choose Video button — towards the fold on a small phone.
+/// Passing only a title and a description keeps it to a quiet footnote, which
+/// is all an empty list needs to be.
+///
+/// Internal rather than private so its copy and its height can be asserted;
+/// the risk being guarded is that it grows.
+struct EmptyProjectsView: View {
+    static let title = "No projects yet"
+    static let message = "Videos you caption will show up here."
+
+    var body: some View {
+        ContentUnavailableView {
+            Text(Self.title)
+        } description: {
+            Text(Self.message)
         }
     }
 }
