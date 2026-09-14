@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The app has no network code, no analytics provider, no crash
+	     reporter and no third-party SDKs. Nothing leaves the device except
+	     a video the user explicitly exports to their own photo library.
+	     These three keys are what lets the App Store nutrition label's
+	     "Data Not Collected" be a claim the binary can back up. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!-- UserDefaults is read and written in exactly two places: the
+		     onboarding "seen" flag in AppState, and the daily export count
+		     and reset date in ExportViewModel. Both are the app reading
+		     back its own settings on the same device.
+
+		     CA92.1 is the reason for that. 1C8F.1 is the one for defaults
+		     shared through an App Group, which would be a false
+		     declaration here: CaptionsAI.entitlements declares no group.
+
+		     Note for anyone adding an API here later. Apple's scanner
+		     reads symbols in the binary, not the arguments passed to them,
+		     so sysctlbyname("hw.machine") trips the system boot-time
+		     category just as readily as reading uptime does. That is why
+		     no diagnostics code in this app collects a device model. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
