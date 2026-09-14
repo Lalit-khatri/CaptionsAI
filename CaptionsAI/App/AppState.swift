@@ -33,6 +33,7 @@ final class AppState {
 enum AppScreen: Hashable {
     case onboarding
     case importVideo
+    case allProjects
     case editor(Project)
     case preview(Project)
     case export(Project)
@@ -43,6 +44,7 @@ enum AppScreen: Hashable {
         switch self {
         case .onboarding: hasher.combine("onboarding")
         case .importVideo: hasher.combine("import")
+        case .allProjects: hasher.combine("allProjects")
         case let .editor(p): hasher.combine("editor"); hasher.combine(p.id)
         case let .preview(p): hasher.combine("preview"); hasher.combine(p.id)
         case let .export(p): hasher.combine("export"); hasher.combine(p.id)
@@ -54,6 +56,7 @@ enum AppScreen: Hashable {
         switch (lhs, rhs) {
         case (.onboarding, .onboarding): return true
         case (.importVideo, .importVideo): return true
+        case (.allProjects, .allProjects): return true
         case let (.editor(a), .editor(b)): return a.id == b.id
         case let (.preview(a), .preview(b)): return a.id == b.id
         case let (.export(a), .export(b)): return a.id == b.id

@@ -34,6 +34,10 @@ final class ImportViewModel {
 
     var selectedVideoURL: URL?
     var recentProjects: [Project] = []
+
+    /// How many projects exist, not how many are shown. ``recentProjects`` is
+    /// capped, so it cannot be asked this.
+    var totalProjectCount = 0
     var isLoading = false
     var thumbnailImage: UIImage?
     var error: String?
@@ -118,6 +122,12 @@ final class ImportViewModel {
         )
         descriptor.fetchLimit = Self.recentProjectsLimit
         recentProjects = (try? context.fetch(descriptor)) ?? []
+
+        // Counted separately because the strip cannot answer this about
+        // itself: capped at ten, a library of ten and a library of five
+        // hundred both load ten rows. `fetchCount` does it in the store
+        // rather than by materialising every project to call `.count`.
+        totalProjectCount = (try? context.fetchCount(FetchDescriptor<Project>())) ?? recentProjects.count
     }
 
     // MARK: - Delete

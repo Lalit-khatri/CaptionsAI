@@ -71,6 +71,16 @@ struct ImportView: View {
         projectCount == 0
     }
 
+    /// Whether to offer a way past the strip.
+    ///
+    /// Offered only when it leads somewhere new: at exactly the cap the strip
+    /// already is the whole library, and a "See All" that opens the same ten
+    /// rows is worse than no link at all. Takes the *total*, which is why the
+    /// view model counts separately from what it loads.
+    static func showsSeeAll(totalProjectCount: Int) -> Bool {
+        totalProjectCount > ImportViewModel.recentProjectsLimit
+    }
+
     // MARK: - Import Section
 
     private var importSection: some View {
@@ -135,10 +145,25 @@ struct ImportView: View {
 
     private var recentProjectsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Recent Projects")
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding(.horizontal, 24)
+            HStack(alignment: .firstTextBaseline) {
+                Text("Recent Projects")
+                    .font(.headline)
+                    .foregroundColor(.white)
+
+                Spacer()
+
+                if Self.showsSeeAll(totalProjectCount: viewModel.totalProjectCount) {
+                    NavigationLink(value: AppScreen.allProjects) {
+                        Text("See All")
+                            .font(.subheadline.weight(.semibold))
+                            // #A78BFA rather than the #7C3AED used elsewhere:
+                            // the darker purple is 3.69:1 on black and fails
+                            // the 4.5:1 contrast minimum for body text.
+                            .foregroundColor(Color(hex: "#A78BFA"))
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {

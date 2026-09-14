@@ -13,6 +13,10 @@ struct ContentView: View {
             NavigationStack(path: $navigationPath) {
                 ImportView(navigationPath: $navigationPath)
                     .navigationDestination(for: AppScreen.self) { screen in
+                        // Exhaustive on purpose. A `default:` here turns a
+                        // destination somebody forgot to wire into a second
+                        // copy of the home screen, pushed on top of the first,
+                        // which is indistinguishable from a navigation bug.
                         switch screen {
                         case let .editor(project):
                             EditorView(project: project)
@@ -22,7 +26,9 @@ struct ContentView: View {
                             ExportView(project: project)
                         case .paywall:
                             PaywallView()
-                        default:
+                        case .allProjects:
+                            AllProjectsView()
+                        case .onboarding, .importVideo:
                             ImportView(navigationPath: $navigationPath)
                         }
                     }
