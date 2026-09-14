@@ -93,11 +93,11 @@ struct FeedbackMenuModifier: ViewModifier {
                             Button {
                                 copyAddress()
                             } label: {
-                                Label(FeedbackMail.copyTitle, systemImage: "doc.on.doc")
+                                Label(FeedbackMail.copyTitle, systemImage: FeedbackMail.copySymbol)
                             }
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: FeedbackMail.buttonSymbol)
                     }
                     // Not "More options", which tells a VoiceOver user
                     // nothing about what is behind the button.

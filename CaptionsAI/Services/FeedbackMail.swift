@@ -62,6 +62,13 @@ enum FeedbackMail {
 
     static let copyTitle = "Copy email address"
 
+    /// Every SF Symbol this feature draws, named here rather than at each use
+    /// site so a test can check them. A symbol name that does not resolve
+    /// renders as nothing at all — a toolbar button that is invisible but
+    /// still tappable, which no compiler and no other test would catch.
+    static let buttonSymbol = "ellipsis.circle"
+    static let copySymbol = "doc.on.doc"
+
     /// `mailto:` has no documented length limit and Apple Mail is generous,
     /// but third-party clients vary and a body that is silently cut in the
     /// middle is worse than one that says it was cut.
