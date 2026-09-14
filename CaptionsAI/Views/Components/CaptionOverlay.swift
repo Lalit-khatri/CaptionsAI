@@ -181,6 +181,7 @@ struct CaptionOverlay: View {
                 .font(style.font(size: style.fontSize * scale))
                 .foregroundColor(style.textColor.color)
                 .multilineTextAlignment(.center)
+                .captionStroke(style: style, scale: scale)
                 .shadow(
                     color: style.shadowColor.color,
                     radius: style.shadowRadius * scale,
@@ -218,6 +219,7 @@ struct CaptionOverlay: View {
                 .font(style.font(size: style.fontSize * scale))
                 .foregroundColor(style.textColor.color)
                 .multilineTextAlignment(.center)
+                .captionStroke(style: style, scale: scale)
                 .shadow(
                     color: style.shadowColor.color,
                     radius: style.shadowRadius * scale,
@@ -226,6 +228,7 @@ struct CaptionOverlay: View {
         } else {
             formattedWordText(for: segment, scale: scale)
                 .multilineTextAlignment(.center)
+                .captionStroke(style: style, scale: scale)
                 .shadow(
                     color: style.shadowColor.color,
                     radius: style.shadowRadius * scale,
@@ -248,6 +251,60 @@ struct CaptionOverlay: View {
             combined = combined + wordText
         }
         return combined
+    }
+}
+
+// MARK: - Caption Stroke Modifier
+
+/// The preview's approximation of the export's text outline.
+///
+/// The export outlines glyphs properly, with `NSAttributedString`'s
+/// `.strokeWidth`. SwiftUI has no equivalent at iOS 17, and the word-by-word
+/// caption is worse than that: it is a concatenation of `Text` values, a form
+/// that only accepts modifiers returning `Text`, which rules out anything that
+/// draws. So the outline has to be produced from the composed view's
+/// silhouette.
+///
+/// Four chained hard shadows do it. Each `.shadow` draws a copy of everything
+/// so far behind itself, so chaining left and right spreads the silhouette
+/// horizontally by `inset`, and chaining up and down then spreads *that*
+/// vertically — the result is the shape grown by `inset` in every direction.
+/// Square-cornered rather than round, and slightly generous on the diagonals,
+/// but the right thickness where it is measured.
+///
+/// `inset` is derived to match the export exactly. `.strokeWidth` is a
+/// percentage of the point size and describes a pen centred on the glyph
+/// outline, so half of it falls outside: `pointSize * strokeWidth / 200`.
+///
+/// What this cannot promise is that it *looks* like an outline rather than a
+/// smear. Ink bounds are extremal, so a clean edge and a ragged one measure
+/// the same. `CaptionStrokePreviewTests` checks the thickness; the appearance
+/// is unverified.
+private struct CaptionStrokeModifier: ViewModifier {
+    let style: CaptionStyle
+    let scale: CGFloat
+
+    func body(content: Content) -> some View {
+        if style.strokeWidth <= 0 {
+            content
+        } else {
+            let inset = style.fontSize * scale * style.strokeWidth / 200
+            let color = style.strokeColor.color
+
+            content
+                .shadow(color: color, radius: 0, x: -inset, y: 0)
+                .shadow(color: color, radius: 0, x: inset, y: 0)
+                .shadow(color: color, radius: 0, x: 0, y: -inset)
+                .shadow(color: color, radius: 0, x: 0, y: inset)
+        }
+    }
+}
+
+extension View {
+    /// Draws ``CaptionStyle/strokeWidth`` around this view, or nothing when the
+    /// style has no outline.
+    func captionStroke(style: CaptionStyle, scale: CGFloat) -> some View {
+        modifier(CaptionStrokeModifier(style: style, scale: scale))
     }
 }
 
