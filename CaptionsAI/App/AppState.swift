@@ -15,37 +15,17 @@ final class AppState {
         didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding") }
     }
 
-    var dailyExportCount: Int {
-        get {
-            resetExportCountIfNewDay()
-            return UserDefaults.standard.integer(forKey: "dailyExportCount")
-        }
-        set { UserDefaults.standard.set(newValue, forKey: "dailyExportCount") }
-    }
-
-    var isPro: Bool = false
-
     // MARK: - Constants
 
-    static let freeExportLimit = 2
-
-    // MARK: - Methods
-
-    func incrementExportCount() {
-        dailyExportCount += 1
-    }
-
-    func canExport() -> Bool {
-        isPro || dailyExportCount < Self.freeExportLimit
-    }
-
-    private func resetExportCountIfNewDay() {
-        let lastResetDate = UserDefaults.standard.object(forKey: "lastExportResetDate") as? Date ?? .distantPast
-        if !Calendar.current.isDateInToday(lastResetDate) {
-            UserDefaults.standard.set(0, forKey: "dailyExportCount")
-            UserDefaults.standard.set(Date(), forKey: "lastExportResetDate")
-        }
-    }
+    /// Exports a free user gets per day. Pro is unlimited.
+    ///
+    /// `ExportViewModel` owns the counting and the daily reset. A second copy
+    /// of that logic used to live here — its own `dailyExportCount`,
+    /// `canExport()` and `incrementExportCount()`, over the same UserDefaults
+    /// key, plus an `isPro` mirror nothing ever assigned, so it answered
+    /// "not pro" forever. Nothing called any of it. It is gone rather than
+    /// reconciled: one owner of a rule is the only way it stays true.
+    static let freeExportLimit = 5
 }
 
 // MARK: - Navigation Destinations

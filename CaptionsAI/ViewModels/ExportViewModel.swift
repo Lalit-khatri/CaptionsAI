@@ -34,10 +34,10 @@ final class ExportViewModel {
         captionYPosition: Double,
         isPro: Bool
     ) async {
-//        guard checkExportQuota(isPro: isPro) else {
-//            error = "Daily export limit reached. Upgrade to Pro for unlimited exports."
-//            return
-//        }
+        guard checkExportQuota(isPro: isPro) else {
+            error = "Daily export limit reached. Upgrade to Pro for unlimited exports."
+            return
+        }
 
         isExporting = true
         exportProgress = 0

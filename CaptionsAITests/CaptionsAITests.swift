@@ -621,3 +621,126 @@ final class ExportWatermarkTests: XCTestCase {
         return pixels.reduce(0.0) { $0 + Double($1) } / Double(pixels.count)
     }
 }
+
+// MARK: - Free Export Quota
+
+/// The paywall promises free users a capped number of exports per day and Pro
+/// users unlimited. The cap was commented out in both places that enforced it
+/// -- the guard in `ExportViewModel.startExport` and the branch in `ExportView`
+/// that raised the paywall -- so every user had unlimited exports and the
+/// paywall could never appear. The counter kept incrementing the whole time,
+/// against a second, unreachable copy of the same logic in `AppState` that
+/// read the same UserDefaults key and never reset itself.
+@MainActor
+final class FreeExportQuotaTests: XCTestCase {
+    private static let countKey = "dailyExportCount"
+    private static let resetKey = "lastExportResetDate"
+
+    override func setUp() {
+        super.setUp()
+        clearQuota()
+    }
+
+    override func tearDown() {
+        clearQuota()
+        super.tearDown()
+    }
+
+    private func clearQuota() {
+        UserDefaults.standard.removeObject(forKey: Self.countKey)
+        UserDefaults.standard.removeObject(forKey: Self.resetKey)
+    }
+
+    private func makeViewModel() -> ExportViewModel {
+        let exporter = FakeExporter()
+        exporter.outcome = .succeed(TestSupport.placeholderVideoURL)
+        return ExportViewModel(exportEngine: exporter)
+    }
+
+    private func export(_ viewModel: ExportViewModel, isPro: Bool) async {
+        await viewModel.startExport(
+            videoURL: TestSupport.placeholderVideoURL,
+            segments: [],
+            style: .hormozi,
+            captionYPosition: 0.8,
+            isPro: isPro
+        )
+    }
+
+    /// Five a day, as the comparison table says.
+    func testTheFreeTierIsFivePerDay() {
+        XCTAssertEqual(AppState.freeExportLimit, 5)
+    }
+
+    /// The cap is enforced, not merely counted.
+    func testTheSixthFreeExportOfTheDayIsRefused() async {
+        let viewModel = makeViewModel()
+
+        for attempt in 1 ... 5 {
+            await export(viewModel, isPro: false)
+            XCTAssertNil(viewModel.error, "export \(attempt) should have been allowed")
+            XCTAssertNotNil(viewModel.exportedFileURL, "export \(attempt) produced no file")
+        }
+
+        await export(viewModel, isPro: false)
+        XCTAssertNotNil(viewModel.error, "the sixth free export of the day must be refused")
+        XCTAssertFalse(viewModel.isExporting)
+    }
+
+    /// Paying removes the cap. That is the whole proposition.
+    func testAProUserIsNeverRefused() async {
+        let viewModel = makeViewModel()
+
+        for _ in 1 ... 8 {
+            await export(viewModel, isPro: true)
+            XCTAssertNil(viewModel.error)
+        }
+    }
+
+    /// One export, one tick. Two counters sharing a key would burn the
+    /// allowance at double rate.
+    func testEachExportCountsOnce() async {
+        let viewModel = makeViewModel()
+
+        await export(viewModel, isPro: false)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: Self.countKey), 1)
+
+        await export(viewModel, isPro: false)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: Self.countKey), 2)
+    }
+
+    /// A refused export must not consume allowance it was never granted.
+    func testARefusedExportDoesNotIncrementTheCount() async {
+        let viewModel = makeViewModel()
+
+        for _ in 1 ... 5 {
+            await export(viewModel, isPro: false)
+        }
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: Self.countKey), 5)
+
+        await export(viewModel, isPro: false)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: Self.countKey), 5)
+    }
+
+    /// Yesterday's exports do not count against today.
+    func testTheAllowanceResetsOnANewDay() async {
+        let viewModel = makeViewModel()
+
+        for _ in 1 ... 5 {
+            await export(viewModel, isPro: false)
+        }
+        await export(viewModel, isPro: false)
+        XCTAssertNotNil(viewModel.error, "precondition: the allowance is spent")
+
+        // Roll the clock back a day.
+        UserDefaults.standard.set(
+            Calendar.current.date(byAdding: .day, value: -1, to: Date()),
+            forKey: Self.resetKey
+        )
+
+        let today = makeViewModel()
+        await export(today, isPro: false)
+        XCTAssertNil(today.error, "a new day restores the allowance")
+        XCTAssertNotNil(today.exportedFileURL)
+    }
+}
