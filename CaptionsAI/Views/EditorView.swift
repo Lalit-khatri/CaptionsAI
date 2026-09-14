@@ -100,14 +100,26 @@ struct EditorView: View {
 
     // MARK: - Preview Text for Style Cards
 
-    /// Gets a short transcript snippet for style card preview
+    /// What the style chips are asked to draw when there is nothing to quote
+    /// from the video yet — the chips are visible before transcription runs.
+    static let fallbackPreviewText = "Hello World"
+
+    /// The sample the style chips draw, derived from the transcript.
+    ///
+    /// Split out as a static function over a plain value rather than left as a
+    /// computed property over the view model, because the chip's sample text is
+    /// about to change and a rule that cannot be called cannot be pinned. The
+    /// rule itself is unchanged: the first four words of the first segment, or
+    /// the fallback when that yields nothing.
+    static func previewText(firstSegmentText: String?) -> String {
+        guard let firstSegmentText else { return fallbackPreviewText }
+        let words = firstSegmentText.split(separator: " ")
+        let preview = words.prefix(4).joined(separator: " ")
+        return preview.isEmpty ? fallbackPreviewText : preview
+    }
+
     private var previewTextForStyle: String {
-        if let firstSegment = viewModel.segments.first {
-            let words = firstSegment.text.split(separator: " ")
-            let preview = words.prefix(4).joined(separator: " ")
-            return preview.isEmpty ? "Hello World" : preview
-        }
-        return "Hello World"
+        Self.previewText(firstSegmentText: viewModel.segments.first?.text)
     }
 
     // MARK: - Video Player (fills available space)
