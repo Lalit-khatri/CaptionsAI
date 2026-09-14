@@ -50,7 +50,7 @@ final class CaptionStrokeTests: XCTestCase {
     func testTheOutlinedPresetsAreExactlyTheOnesWeChose() {
         XCTAssertEqual(
             CaptionStyle.presets.filter { $0.strokeWidth > 0 }.map(\.name),
-            ["Outline"]
+            ["Outline", "Punch", "Bubble"]
         )
     }
 

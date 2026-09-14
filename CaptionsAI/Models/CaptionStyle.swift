@@ -205,7 +205,13 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
 // MARK: - Style Presets
 
 extension CaptionStyle {
-    /// Top 10 viral caption style presets (each defined in its own file in Models/Styles/)
+    /// Every caption style the app offers, in picker order (each defined in
+    /// its own file in Models/Styles/).
+    ///
+    /// Order matters twice: it is the order of the style scroller, and the
+    /// first entry is what `Project.selectedStyle` falls back to for any
+    /// stored name it cannot resolve. New presets are therefore appended
+    /// rather than interleaved.
     static let presets: [CaptionStyle] = [
         hormozi,
         beast,
@@ -217,6 +223,16 @@ extension CaptionStyle {
         fire,
         boldBox,
         outline,
+        ticker,
+        candy,
+        sticker,
+        punch,
+        terminal,
+        editorial,
+        focus,
+        frosted,
+        bubble,
+        marker,
     ]
 }
 

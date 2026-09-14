@@ -11,7 +11,7 @@
 ## ✨ Features
 
 - **AI-Powered Captions** — On-device speech recognition via Apple's Speech framework
-- **10+ Caption Styles** — Clean, Bold, Neon, Minimal, Highlight, Typewriter, Subtitle, Pop
+- **20 Caption Styles** — from Hormozi-style word-by-word highlighting to outlined, boxed, monospaced, serif and hand-lettered looks
 - **Word-by-Word Highlighting** — Hormozi/podcast style word highlighting
 - **Export Presets** — Instagram Reels, TikTok, YouTube, YouTube Shorts, Original
 - **100% Offline** — No cloud, no API keys, your videos stay on your device

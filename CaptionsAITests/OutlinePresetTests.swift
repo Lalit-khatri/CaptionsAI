@@ -66,8 +66,12 @@ final class OutlinePresetTests: XCTestCase {
 
     /// `name` is the persistence key: every project that chose this style
     /// stores the string. The look may change; the name may not.
+    ///
+    /// Its position is pinned too, because position is the order of the style
+    /// scroller — changing the look of a preset is one decision and moving it
+    /// somewhere else in the picker is another.
     func testThePresetKeepsItsNameAndItsPlace() {
-        XCTAssertEqual(CaptionStyle.presets.map(\.name).last, "Outline")
+        XCTAssertEqual(CaptionStyle.presets.firstIndex { $0.name == "Outline" }, 9)
     }
 
     func testEverythingElseAboutThePresetIsUnchanged() throws {
