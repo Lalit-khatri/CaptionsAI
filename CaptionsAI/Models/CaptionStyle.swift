@@ -70,6 +70,32 @@ enum AnimationType: String, Codable, CaseIterable, Hashable {
     }
 }
 
+// MARK: - WordHighlightEffect
+
+/// Visual styling applied to the currently active word during playback.
+enum WordHighlightEffect: String, Codable, CaseIterable, Hashable {
+    /// Changes font color to `highlightColor`.
+    case colorSwitch
+    /// Encases the active word in its own colored background pill/box.
+    case pillBox
+    /// Scales up the active word (~1.18x) with spring motion.
+    case popScale
+    /// Dims inactive words to ~42% opacity so the active word commands viewer focus.
+    case dimInactive
+    /// Draws a solid colored marker underline beneath the active word.
+    case underline
+
+    var displayName: String {
+        switch self {
+        case .colorSwitch: return "Color"
+        case .pillBox: return "Pill Box"
+        case .popScale: return "Pop Scale"
+        case .dimInactive: return "Focus"
+        case .underline: return "Underline"
+        }
+    }
+}
+
 // MARK: - CaptionStyle
 
 /// Defines the visual appearance of captions on video.
@@ -107,6 +133,24 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
     var strokeColor: CodableColor = .init("#000000")
 
     var isUppercase: Bool = false
+
+    /// Maximum fraction of video width available for captions (0.45 to 0.85).
+    /// Smaller fractions (e.g. 0.55 - 0.65) constrain the text horizontally,
+    /// making captions stack into compact vertical blocks rather than stretching full width.
+    var maxWidthFraction: CGFloat = 0.85
+
+    /// Horizontal offset fraction from center (-0.35 to +0.35).
+    /// Negative shifts captions left, positive shifts right, 0 is centered.
+    var horizontalOffsetFraction: CGFloat = 0.0
+
+    /// How the active word is visually emphasized.
+    var wordHighlightEffect: WordHighlightEffect = .colorSwitch
+
+    /// Background color for the active word when `wordHighlightEffect == .pillBox`.
+    var wordHighlightBgColor: CodableColor = .init("#FFE600")
+
+    /// Text color for the active word inside a pill box (defaults to black for high contrast).
+    var wordHighlightTextColor: CodableColor = .init("#000000")
 
     // MARK: - SwiftUI Helpers
 
@@ -173,6 +217,13 @@ struct CaptionStyle: Codable, Identifiable, Hashable {
 
     var uiFont: UIFont {
         uiFontScaled(to: fontSize)
+    }
+
+    /// A copy of this style with outline removed, used when drawing text inside a solid background pill.
+    var withoutStroke: CaptionStyle {
+        var copy = self
+        copy.strokeWidth = 0
+        return copy
     }
 
     /// Returns a UIFont matching the style's font family/weight at a custom size.

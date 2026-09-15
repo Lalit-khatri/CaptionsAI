@@ -74,10 +74,11 @@ struct CaptionOverlay: View {
                             .position(x: geo.size.width / 2, y: geo.size.height * effectiveY)
                     }
 
+                    let effectiveX = geo.size.width * (0.5 + viewModel.selectedStyle.horizontalOffsetFraction)
                     captionText(for: activeSegment, in: geo.size)
                         .offset(y: bounceOffset)
                         .position(
-                            x: geo.size.width / 2,
+                            x: effectiveX,
                             y: geo.size.height * effectiveY
                         )
                         .gesture(
@@ -204,7 +205,7 @@ struct CaptionOverlay: View {
     /// text first would stretch the background to the full width even behind a
     /// two-word caption.
     private func captionMaxWidth(in size: CGSize, scale: CGFloat) -> CGFloat {
-        size.width * kTextMaxWidthFraction + kCaptionHorizontalPadding * scale * 2
+        size.width * viewModel.selectedStyle.maxWidthFraction + kCaptionHorizontalPadding * scale * 2
     }
 
     // MARK: - Word-by-Word
@@ -226,14 +227,33 @@ struct CaptionOverlay: View {
                     x: 0, y: 1 * scale
                 )
         } else {
-            formattedWordText(for: segment, scale: scale)
-                .multilineTextAlignment(.center)
-                .captionStroke(style: style, scale: scale)
-                .shadow(
-                    color: style.shadowColor.color,
-                    radius: style.shadowRadius * scale,
-                    x: 0, y: 1 * scale
-                )
+            let needsFlowLayout = style.wordHighlightEffect == .pillBox
+                || style.wordHighlightEffect == .popScale
+                || style.wordHighlightEffect == .underline
+                || style.animation == .bounce
+
+            if !needsFlowLayout {
+                formattedWordText(for: segment, scale: scale)
+                    .multilineTextAlignment(.center)
+                    .captionStroke(style: style, scale: scale)
+                    .shadow(
+                        color: style.shadowColor.color,
+                        radius: style.shadowRadius * scale,
+                        x: 0, y: 1 * scale
+                    )
+            } else {
+                WordFlowLayout(spacing: 4 * scale, lineSpacing: 4 * scale) {
+                    ForEach(words) { word in
+                        let isActive = currentTime >= word.startTime && currentTime < word.endTime
+                        CaptionWordView(
+                            word: word,
+                            isActive: isActive,
+                            style: style,
+                            scale: scale
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -244,13 +264,145 @@ struct CaptionOverlay: View {
         for (index, word) in words.enumerated() {
             let isActive = currentTime >= word.startTime && currentTime < word.endTime
             let displayWord = style.isUppercase ? word.word.uppercased() : word.word
+            let color: Color = {
+                if isActive {
+                    return style.highlightColor.color
+                } else if style.wordHighlightEffect == .dimInactive {
+                    return style.textColor.color.opacity(0.42)
+                } else {
+                    return style.textColor.color
+                }
+            }()
             let wordText = Text(displayWord + (index < words.count - 1 ? " " : ""))
                 .font(style.font(size: style.fontSize * scale))
-                .foregroundColor(isActive ? style.highlightColor.color : style.textColor.color)
+                .foregroundColor(color)
                 .fontWeight(style.weight(highlighted: isActive))
             combined = combined + wordText
         }
         return combined
+    }
+}
+
+// MARK: - Caption Word View
+
+/// Individual animated word within a caption segment.
+struct CaptionWordView: View {
+    let word: WordTiming
+    let isActive: Bool
+    let style: CaptionStyle
+    let scale: CGFloat
+
+    var body: some View {
+        let displayWord = style.isUppercase ? word.word.uppercased() : word.word
+        let isPill = isActive && style.wordHighlightEffect == .pillBox
+        let isPop = isActive && (style.wordHighlightEffect == .popScale || style.animation == .bounce)
+        let isDimmed = !isActive && style.wordHighlightEffect == .dimInactive
+        let isUnderline = isActive && style.wordHighlightEffect == .underline
+
+        let textColor: Color = {
+            if isPill {
+                return style.wordHighlightTextColor.color
+            } else if isActive {
+                return style.highlightColor.color
+            } else if isDimmed {
+                return style.textColor.color.opacity(0.42)
+            } else {
+                return style.textColor.color
+            }
+        }()
+
+        Text(displayWord)
+            .font(style.font(size: style.fontSize * scale))
+            .fontWeight(style.weight(highlighted: isActive))
+            .foregroundColor(textColor)
+            .padding(.horizontal, isPill ? 8 * scale : 0)
+            .padding(.vertical, isPill ? 4 * scale : 0)
+            .background(
+                Group {
+                    if isPill {
+                        RoundedRectangle(cornerRadius: 6 * scale)
+                            .fill(style.wordHighlightBgColor.color)
+                    }
+                }
+            )
+            .overlay(alignment: .bottom) {
+                if isUnderline {
+                    Rectangle()
+                        .fill(style.highlightColor.color)
+                        .frame(height: 3 * scale)
+                        .offset(y: 2 * scale)
+                }
+            }
+            .captionStroke(style: isPill ? style.withoutStroke : style, scale: scale)
+            .shadow(
+                color: isPill ? .clear : style.shadowColor.color,
+                radius: isPill ? 0 : style.shadowRadius * scale,
+                x: 0, y: 1 * scale
+            )
+            .scaleEffect(isPop ? 1.16 : 1.0)
+            .animation(.spring(response: 0.22, dampingFraction: 0.6), value: isActive)
+    }
+}
+
+// MARK: - Word Flow Layout
+
+/// Wraps caption words onto multiple lines while centering each line within the container.
+struct WordFlowLayout: Layout {
+    var spacing: CGFloat = 6
+    var lineSpacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        var totalWidth: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > maxWidth && currentX > 0 {
+                currentX = 0
+                currentY += lineHeight + lineSpacing
+                lineHeight = 0
+            }
+            lineHeight = max(lineHeight, size.height)
+            currentX += size.width + spacing
+            totalWidth = max(totalWidth, currentX - spacing)
+        }
+        return CGSize(width: min(totalWidth, maxWidth), height: currentY + lineHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var lines: [[(LayoutSubview, CGSize)]] = [[]]
+        var lineWidths: [CGFloat] = [0]
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            let currentWidth = lineWidths.last ?? 0
+            if currentWidth + size.width > bounds.width && !lines.last!.isEmpty {
+                lines.append([(subview, size)])
+                lineWidths.append(size.width)
+            } else {
+                let lastIndex = lines.count - 1
+                lines[lastIndex].append((subview, size))
+                lineWidths[lastIndex] += (lines[lastIndex].count > 1 ? spacing : 0) + size.width
+            }
+        }
+
+        var currentY = bounds.minY
+        for (index, line) in lines.enumerated() {
+            let lineWidth = lineWidths[index]
+            let maxHeight = line.map(\.1.height).max() ?? 0
+            let currentX = bounds.minX + max(0, (bounds.width - lineWidth) / 2)
+            var x = currentX
+
+            for (subview, size) in line {
+                let y = currentY + (maxHeight - size.height) / 2
+                subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            currentY += maxHeight + lineSpacing
+        }
     }
 }
 

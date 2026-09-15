@@ -254,16 +254,42 @@ final class CaptionRenderer {
 
                 for word in words {
                     let isActive = currentTime >= word.startTime && currentTime < word.endTime
-                    let color = isActive
-                        ? UIColor(Color(hex: style.highlightColor.hex))
-                        : UIColor(Color(hex: style.textColor.hex))
+                    let isPill = isActive && style.wordHighlightEffect == .pillBox
+                    let isPop = isActive && (style.wordHighlightEffect == .popScale || style.animation == .bounce)
+                    let isDimmed = !isActive && style.wordHighlightEffect == .dimInactive
+                    let isUnderline = isActive && style.wordHighlightEffect == .underline
+
+                    let wordFontSize = isPop ? scaledFontSize * 1.15 : scaledFontSize
+                    let wordFont = style.uiFontScaled(to: wordFontSize)
+
+                    let color: UIColor = {
+                        if isPill {
+                            return UIColor(Color(hex: style.wordHighlightTextColor.hex))
+                        } else if isActive {
+                            return UIColor(Color(hex: style.highlightColor.hex))
+                        } else if isDimmed {
+                            return UIColor(Color(hex: style.textColor.hex)).withAlphaComponent(0.42)
+                        } else {
+                            return UIColor(Color(hex: style.textColor.hex))
+                        }
+                    }()
 
                     var attrs: [NSAttributedString.Key: Any] = [
-                        .font: font,
+                        .font: wordFont,
                         .foregroundColor: color,
                         .paragraphStyle: paragraphStyle,
                     ]
-                    applyStroke(style, to: &attrs)
+
+                    if isPill {
+                        attrs[.backgroundColor] = UIColor(Color(hex: style.wordHighlightBgColor.hex))
+                    } else {
+                        applyStroke(style, to: &attrs)
+                    }
+
+                    if isUnderline {
+                        attrs[.underlineStyle] = NSUnderlineStyle.single.rawValue
+                        attrs[.underlineColor] = UIColor(Color(hex: style.highlightColor.hex))
+                    }
 
                     let space = attributedString.length > 0 ? " " : ""
                     let displayWord = style.isUppercase ? word.word.uppercased() : word.word
@@ -321,7 +347,7 @@ final class CaptionRenderer {
         scaleFactor: CGFloat,
         style: CaptionStyle
     ) {
-        let maxWidth = renderSize.width * kTextMaxWidthFraction
+        let maxWidth = renderSize.width * style.maxWidthFraction
         let scaledPadding = kTextBackgroundPadding * scaleFactor
 
         let textRect = attributedString.boundingRect(
@@ -331,9 +357,10 @@ final class CaptionRenderer {
         )
 
         let yCenter = renderSize.height * captionYPosition
+        let xCenter = (renderSize.width / 2) + (renderSize.width * style.horizontalOffsetFraction)
 
         let bgRect = CGRect(
-            x: (renderSize.width - textRect.width) / 2 - scaledPadding,
+            x: xCenter - textRect.width / 2 - scaledPadding,
             y: yCenter - textRect.height / 2 - scaledPadding,
             width: textRect.width + scaledPadding * 2,
             height: textRect.height + scaledPadding * 2
@@ -361,7 +388,7 @@ final class CaptionRenderer {
 
         // Draw text
         let textDrawRect = CGRect(
-            x: (renderSize.width - textRect.width) / 2,
+            x: xCenter - textRect.width / 2,
             y: yCenter - textRect.height / 2,
             width: textRect.width,
             height: textRect.height
