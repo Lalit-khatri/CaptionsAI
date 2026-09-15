@@ -28,6 +28,7 @@ final class NewStylePresetsTests: XCTestCase {
         "Dan Slate",
         "Side Note",
         "Blink Box",
+        "Comic Hero",
     ]
 
     private static let newNames = Array(expectedNames.dropFirst(10))
@@ -41,8 +42,8 @@ final class NewStylePresetsTests: XCTestCase {
 
     // MARK: - They exist, in order
 
-    func testThereAreTwentyEightPresets() {
-        XCTAssertEqual(CaptionStyle.presets.count, 28)
+    func testThereAreTwentyNinePresets() {
+        XCTAssertEqual(CaptionStyle.presets.count, 29)
     }
 
     func testThePresetsAreTheOnesWeMeant() {
@@ -299,6 +300,14 @@ final class NewStylePresetsTests: XCTestCase {
         XCTAssertEqual(blinkBox.wordHighlightBgColor?.hex, "#FFEB3B")
         XCTAssertEqual(blinkBox.wordHighlightTextColor?.hex, "#000000")
         XCTAssertGreaterThan(blinkBox.strokeWidth, 0)
+    }
+
+    func testComicHeroHasCyanHighlightAndStroke() throws {
+        let comicHero = try preset("Comic Hero")
+        XCTAssertEqual(comicHero.textColor.hex, "#FFDF00")
+        XCTAssertEqual(comicHero.highlightColor.hex, "#00E5FF")
+        XCTAssertGreaterThan(comicHero.strokeWidth, 0)
+        XCTAssertEqual(comicHero.wordHighlightEffect, .popScale)
     }
 
     // MARK: - The new ten as a group

@@ -292,6 +292,7 @@ extension CaptionStyle {
         danSlate,
         sideNote,
         blinkBox,
+        comicHero,
     ]
 }
 
