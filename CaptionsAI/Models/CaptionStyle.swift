@@ -291,6 +291,7 @@ extension CaptionStyle {
         imanLuxe,
         danSlate,
         sideNote,
+        blinkBox,
     ]
 }
 
