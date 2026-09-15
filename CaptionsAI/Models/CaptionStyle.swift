@@ -290,6 +290,7 @@ extension CaptionStyle {
         powerGym,
         imanLuxe,
         danSlate,
+        sideNote,
     ]
 }
 
