@@ -284,6 +284,7 @@ extension CaptionStyle {
         frosted,
         bubble,
         marker,
+        shamani,
     ]
 }
 

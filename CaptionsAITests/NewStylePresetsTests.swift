@@ -20,6 +20,7 @@ final class NewStylePresetsTests: XCTestCase {
         "Karaoke", "Cinema", "Fire", "Vox Box", "Outline",
         "Ticker", "Candy", "Sticker", "Punch", "Terminal",
         "Editorial", "Focus", "Frosted", "Bubble", "Marker",
+        "Shamani",
     ]
 
     private static let newNames = Array(expectedNames.dropFirst(10))
@@ -33,8 +34,8 @@ final class NewStylePresetsTests: XCTestCase {
 
     // MARK: - They exist, in order
 
-    func testThereAreTwentyPresets() {
-        XCTAssertEqual(CaptionStyle.presets.count, 20)
+    func testThereAreTwentyOnePresets() {
+        XCTAssertEqual(CaptionStyle.presets.count, 21)
     }
 
     func testThePresetsAreTheOnesWeMeant() {
@@ -225,6 +226,14 @@ final class NewStylePresetsTests: XCTestCase {
         XCTAssertEqual(marker.fontName, "Noteworthy-Bold")
         XCTAssertEqual(marker.uiFont.familyName, "Noteworthy")
         XCTAssertFalse(marker.isUppercase)
+    }
+
+    func testShamaniIsCompactVerticalStackWithPopScale() throws {
+        let shamani = try preset("Shamani")
+        XCTAssertEqual(shamani.maxWidthFraction, 0.55, "constrained width forces compact vertical stack")
+        XCTAssertEqual(shamani.wordHighlightEffect, .popScale)
+        XCTAssertEqual(shamani.animation, .bounce)
+        XCTAssertEqual(shamani.highlightColor.hex, "#FFE600")
     }
 
     // MARK: - The new ten as a group
