@@ -48,4 +48,6 @@ Carthage/Build/
 *.dSYM.zip
 *.dSYM
 *.hmap
+GoogleService-Info.plist
+CaptionsAI/Resources/GoogleService-Info.plist
 *.playground/timeline.xctimeline

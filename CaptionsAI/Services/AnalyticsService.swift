@@ -7,6 +7,17 @@ protocol AnalyticsProvider {
     func logEvent(_ name: String, parameters: [String: Any]?)
 }
 
+#if canImport(FirebaseAnalytics)
+import FirebaseAnalytics
+
+/// Conforms Firebase Analytics to AnalyticsProvider.
+final class FirebaseAnalyticsProvider: AnalyticsProvider {
+    func logEvent(_ name: String, parameters: [String: Any]?) {
+        Analytics.logEvent(name, parameters: parameters)
+    }
+}
+#endif
+
 // MARK: - AnalyticsService
 
 /// Lightweight analytics wrapper. Only 5 events — no complex tracking.
