@@ -287,6 +287,7 @@ extension CaptionStyle {
         shamani,
         capCutPop,
         autoPill,
+        powerGym,
     ]
 }
 
