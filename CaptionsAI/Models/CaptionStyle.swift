@@ -286,6 +286,7 @@ extension CaptionStyle {
         marker,
         shamani,
         capCutPop,
+        autoPill,
     ]
 }
 
