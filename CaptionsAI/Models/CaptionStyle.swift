@@ -289,6 +289,7 @@ extension CaptionStyle {
         autoPill,
         powerGym,
         imanLuxe,
+        danSlate,
     ]
 }
 
