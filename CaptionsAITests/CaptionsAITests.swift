@@ -65,6 +65,7 @@ final class CaptionStyleTests: XCTestCase {
         "Ticker", "Candy", "Sticker", "Punch", "Terminal",
         "Editorial", "Focus", "Frosted", "Bubble", "Marker",
         "Shamani",
+        "CapCut Pop",
     ]
 
     func testPresetsCount() {
@@ -328,7 +329,7 @@ final class PaywallCTATests: XCTestCase {
     /// The comparison table advertised "All 10+" against exactly ten presets.
     /// Deriving the number means the copy cannot drift from the product again.
     func testTheStyleCountClaimMatchesTheStylesThatExist() {
-        XCTAssertEqual(PaywallView.proStyleCountText, "All 21")
+        XCTAssertEqual(PaywallView.proStyleCountText, "All 22")
         XCTAssertEqual(PaywallView.proStyleCountText, "All \(CaptionStyle.presets.count)")
         XCTAssertFalse(PaywallView.proStyleCountText.contains("+"))
     }

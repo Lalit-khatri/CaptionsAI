@@ -285,6 +285,7 @@ extension CaptionStyle {
         bubble,
         marker,
         shamani,
+        capCutPop,
     ]
 }
 

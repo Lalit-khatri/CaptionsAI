@@ -21,6 +21,7 @@ final class NewStylePresetsTests: XCTestCase {
         "Ticker", "Candy", "Sticker", "Punch", "Terminal",
         "Editorial", "Focus", "Frosted", "Bubble", "Marker",
         "Shamani",
+        "CapCut Pop",
     ]
 
     private static let newNames = Array(expectedNames.dropFirst(10))
@@ -34,8 +35,8 @@ final class NewStylePresetsTests: XCTestCase {
 
     // MARK: - They exist, in order
 
-    func testThereAreTwentyOnePresets() {
-        XCTAssertEqual(CaptionStyle.presets.count, 21)
+    func testThereAreTwentyTwoPresets() {
+        XCTAssertEqual(CaptionStyle.presets.count, 22)
     }
 
     func testThePresetsAreTheOnesWeMeant() {
@@ -234,6 +235,15 @@ final class NewStylePresetsTests: XCTestCase {
         XCTAssertEqual(shamani.wordHighlightEffect, .popScale)
         XCTAssertEqual(shamani.animation, .bounce)
         XCTAssertEqual(shamani.highlightColor.hex, "#FFE600")
+    }
+
+    func testCapCutPopHasNeonGreenHighlightAndStroke() throws {
+        let capCutPop = try preset("CapCut Pop")
+        XCTAssertEqual(capCutPop.highlightColor.hex, "#39FF14")
+        XCTAssertGreaterThan(capCutPop.strokeWidth, 0)
+        XCTAssertEqual(capCutPop.fontName, "System-Rounded")
+        XCTAssertEqual(capCutPop.maxWidthFraction, 0.60)
+        XCTAssertEqual(capCutPop.wordHighlightEffect, .popScale)
     }
 
     // MARK: - The new ten as a group
