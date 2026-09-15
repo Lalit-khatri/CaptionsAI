@@ -288,6 +288,7 @@ extension CaptionStyle {
         capCutPop,
         autoPill,
         powerGym,
+        imanLuxe,
     ]
 }
 

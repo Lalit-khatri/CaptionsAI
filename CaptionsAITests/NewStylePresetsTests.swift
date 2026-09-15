@@ -24,6 +24,7 @@ final class NewStylePresetsTests: XCTestCase {
         "CapCut Pop",
         "Auto Pill",
         "Power Gym",
+        "Iman Luxe",
     ]
 
     private static let newNames = Array(expectedNames.dropFirst(10))
@@ -37,8 +38,8 @@ final class NewStylePresetsTests: XCTestCase {
 
     // MARK: - They exist, in order
 
-    func testThereAreTwentyFourPresets() {
-        XCTAssertEqual(CaptionStyle.presets.count, 24)
+    func testThereAreTwentyFivePresets() {
+        XCTAssertEqual(CaptionStyle.presets.count, 25)
     }
 
     func testThePresetsAreTheOnesWeMeant() {
@@ -263,6 +264,14 @@ final class NewStylePresetsTests: XCTestCase {
         XCTAssertGreaterThan(powerGym.strokeWidth, 0)
         XCTAssertEqual(powerGym.maxWidthFraction, 0.62)
         XCTAssertEqual(powerGym.wordHighlightEffect, .popScale)
+    }
+
+    func testImanLuxeHasGoldHighlightAndDimInactive() throws {
+        let imanLuxe = try preset("Iman Luxe")
+        XCTAssertEqual(imanLuxe.fontName, "AvenirNext-Heavy")
+        XCTAssertEqual(imanLuxe.highlightColor.hex, "#D4AF37")
+        XCTAssertEqual(imanLuxe.wordHighlightEffect, .dimInactive)
+        XCTAssertEqual(imanLuxe.strokeWidth, 0)
     }
 
     // MARK: - The new ten as a group
