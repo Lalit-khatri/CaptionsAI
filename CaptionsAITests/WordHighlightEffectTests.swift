@@ -30,6 +30,34 @@ final class WordHighlightEffectTests: XCTestCase {
         XCTAssertEqual(stripped.wordHighlightEffect, original.wordHighlightEffect)
     }
 
+    func testPillBoxPresetsHaveBlackContrastingText() {
+        let pillPresets = CaptionStyle.presets.filter { $0.wordHighlightEffect == .pillBox }
+        XCTAssertFalse(pillPresets.isEmpty, "at least one pill box preset must exist")
+
+        for style in pillPresets {
+            XCTAssertEqual(style.wordHighlightTextColor.hex, "#000000", "\(style.name) text must be black for contrast")
+            XCTAssertFalse(style.wordHighlightBgColor.hex.isEmpty)
+        }
+    }
+
+    func testOffsetPresetsSitAwayFromCenter() {
+        let offsetPresets = CaptionStyle.presets.filter { $0.horizontalOffsetFraction != 0 }
+        XCTAssertFalse(offsetPresets.isEmpty)
+
+        for style in offsetPresets {
+            XCTAssertTrue((-0.45...0.45).contains(style.horizontalOffsetFraction))
+        }
+    }
+
+    func testConstrainedWidthPresetsAreUnderDefault() {
+        let constrained = CaptionStyle.presets.filter { $0.maxWidthFraction < 0.85 }
+        XCTAssertGreaterThanOrEqual(constrained.count, 5)
+
+        for style in constrained {
+            XCTAssertGreaterThanOrEqual(style.maxWidthFraction, 0.40)
+        }
+    }
+
     func testAllWordHighlightEffectsProduceExportInk() throws {
         let segment = CaptionInk.segment(text: "THE VIRAL FOCUS WORD", words: true)
         let size = CGSize(width: 1080, height: 1920)

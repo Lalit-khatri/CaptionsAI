@@ -293,6 +293,7 @@ extension CaptionStyle {
         sideNote,
         blinkBox,
         comicHero,
+        nordicMint,
     ]
 }
 

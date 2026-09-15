@@ -29,6 +29,7 @@ final class NewStylePresetsTests: XCTestCase {
         "Side Note",
         "Blink Box",
         "Comic Hero",
+        "Nordic Mint",
     ]
 
     private static let newNames = Array(expectedNames.dropFirst(10))
@@ -42,8 +43,8 @@ final class NewStylePresetsTests: XCTestCase {
 
     // MARK: - They exist, in order
 
-    func testThereAreTwentyNinePresets() {
-        XCTAssertEqual(CaptionStyle.presets.count, 29)
+    func testThereAreThirtyPresets() {
+        XCTAssertEqual(CaptionStyle.presets.count, 30)
     }
 
     func testThePresetsAreTheOnesWeMeant() {
@@ -256,8 +257,8 @@ final class NewStylePresetsTests: XCTestCase {
     func testAutoPillHasPillBoxHighlight() throws {
         let autoPill = try preset("Auto Pill")
         XCTAssertEqual(autoPill.wordHighlightEffect, .pillBox)
-        XCTAssertEqual(autoPill.wordHighlightBgColor?.hex, "#FFE600")
-        XCTAssertEqual(autoPill.wordHighlightTextColor?.hex, "#000000")
+        XCTAssertEqual(autoPill.wordHighlightBgColor.hex, "#FFE600")
+        XCTAssertEqual(autoPill.wordHighlightTextColor.hex, "#000000")
         XCTAssertGreaterThan(autoPill.strokeWidth, 0)
     }
 
@@ -297,8 +298,8 @@ final class NewStylePresetsTests: XCTestCase {
     func testBlinkBoxHasYellowPillWithBlackText() throws {
         let blinkBox = try preset("Blink Box")
         XCTAssertEqual(blinkBox.wordHighlightEffect, .pillBox)
-        XCTAssertEqual(blinkBox.wordHighlightBgColor?.hex, "#FFEB3B")
-        XCTAssertEqual(blinkBox.wordHighlightTextColor?.hex, "#000000")
+        XCTAssertEqual(blinkBox.wordHighlightBgColor.hex, "#FFEB3B")
+        XCTAssertEqual(blinkBox.wordHighlightTextColor.hex, "#000000")
         XCTAssertGreaterThan(blinkBox.strokeWidth, 0)
     }
 
@@ -308,6 +309,13 @@ final class NewStylePresetsTests: XCTestCase {
         XCTAssertEqual(comicHero.highlightColor.hex, "#00E5FF")
         XCTAssertGreaterThan(comicHero.strokeWidth, 0)
         XCTAssertEqual(comicHero.wordHighlightEffect, .popScale)
+    }
+
+    func testNordicMintHasMintHighlightAndDimInactive() throws {
+        let mint = try preset("Nordic Mint")
+        XCTAssertEqual(mint.highlightColor.hex, "#6EE7B7")
+        XCTAssertEqual(mint.wordHighlightEffect, .dimInactive)
+        XCTAssertEqual(mint.position, .bottomThird)
     }
 
     // MARK: - The new ten as a group
@@ -324,5 +332,9 @@ final class NewStylePresetsTests: XCTestCase {
         XCTAssertTrue(new.contains { $0.backgroundOpacity == 0 }, "all have a box")
         XCTAssertTrue(new.contains { $0.strokeWidth > 0 }, "none outline")
         XCTAssertGreaterThanOrEqual(Set(new.map(\.position)).count, 2, "all sit in the same place")
+        XCTAssertTrue(new.contains { $0.wordHighlightEffect == .pillBox }, "no pill box effect represented")
+        XCTAssertTrue(new.contains { $0.wordHighlightEffect == .popScale }, "no pop scale effect represented")
+        XCTAssertTrue(new.contains { $0.horizontalOffsetFraction != 0 }, "no offset placement represented")
+        XCTAssertTrue(new.contains { $0.maxWidthFraction < 0.6 }, "no compact column width represented")
     }
 }
