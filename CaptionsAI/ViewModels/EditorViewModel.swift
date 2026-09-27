@@ -455,6 +455,29 @@ final class EditorViewModel {
         self.timeObserver = nil
     }
 
+    /// Plays if paused, pauses if playing. Does nothing without a video.
+    func togglePlayPause() {
+        guard let player else { return }
+
+        if isPlaying {
+            player.pause()
+        } else {
+            player.play()
+        }
+        isPlaying.toggle()
+    }
+
+    /// Stops playback, whatever state it was in.
+    ///
+    /// Called when the editor goes off screen. Nothing used to pause the
+    /// player then, so pushing Export or Preview while the video played left
+    /// its audio running underneath the next screen — which was busy playing
+    /// its own copy of the same clip.
+    func pausePlayback() {
+        player?.pause()
+        isPlaying = false
+    }
+
     func seekTo(_ time: Double) {
         let cmTime = CMTime(seconds: time, preferredTimescale: 600)
         player?.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero)

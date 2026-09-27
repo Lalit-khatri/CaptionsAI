@@ -50,6 +50,7 @@ struct EditorView: View {
         // `.task` used to own the transcription and cancel it on disappear.
         // The view model owns it now, so the teardown has to be explicit.
         .onDisappear {
+            viewModel.pausePlayback()
             viewModel.cancelTranscription()
             viewModel.teardownTimeObserver()
             viewModel.endPlaybackSession()
@@ -166,7 +167,7 @@ struct EditorView: View {
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            togglePlayPause()
+                            viewModel.togglePlayPause()
                         }
                 } else if viewModel.videoIsMissing {
                     MissingVideoView()
@@ -199,7 +200,7 @@ struct EditorView: View {
 
             // Play/Pause button (larger, centered)
             Button {
-                togglePlayPause()
+                viewModel.togglePlayPause()
             } label: {
                 VStack(spacing: 4) {
                     ZStack {
@@ -266,18 +267,5 @@ struct EditorView: View {
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
         }
-    }
-
-    // MARK: - Playback
-
-    private func togglePlayPause() {
-        guard let player = viewModel.player else { return }
-
-        if viewModel.isPlaying {
-            player.pause()
-        } else {
-            player.play()
-        }
-        viewModel.isPlaying.toggle()
     }
 }
