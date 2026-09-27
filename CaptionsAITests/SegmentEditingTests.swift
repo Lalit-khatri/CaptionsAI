@@ -127,13 +127,16 @@ final class SegmentEditingTests: XCTestCase {
         XCTAssertEqual(segment.activeWord(at: 1.9)?.word, "d")
     }
 
-    func testClearingTheTextLeavesNoWordTimings() throws {
+    /// Blank text is not saved: the caption keeps its words, and their
+    /// timings, rather than becoming an invisible caption holding its slot.
+    func testClearingTheTextKeepsTheCaptionAsItWas() throws {
         let (editor, segment) = try makeEditor()
 
         editor.updateSegment(segment, text: "", start: 0, end: 2)
 
-        XCTAssertTrue(segment.words.isEmpty)
-        XCTAssertNil(segment.activeWord(at: 1.0))
+        XCTAssertEqual(segment.text, "one two")
+        XCTAssertEqual(segment.activeWord(at: 0.5)?.word, "one")
+        XCTAssertEqual(segment.activeWord(at: 1.5)?.word, "two")
     }
 
     // MARK: - Persistence

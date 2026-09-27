@@ -346,7 +346,21 @@ final class EditorViewModel {
         }
     }
 
+    /// The caption text to store, or nil if there is none to store.
+    ///
+    /// Blank text used to be saved as is: a caption that drew nothing but
+    /// still occupied its time, blocking the caption the user was expecting
+    /// and invisible in the preview, so there was no obvious way back to it.
+    /// Deleting a caption is the swipe action; saving blank is not.
+    static func captionText(from text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Stores `text` on the segment unless it is blank, in which case the
+    /// caption keeps what it said.
     private func applyText(_ text: String, to segment: CaptionSegment) {
+        guard let text = Self.captionText(from: text) else { return }
         segment.text = text
         segment.words = Self.wordTimings(
             for: text,
@@ -453,13 +467,14 @@ final class EditorViewModel {
     @discardableResult
     func addSegment(at time: Double, text: String = EditorViewModel.newCaptionText) -> CaptionSegment {
         let range = Self.newCaptionRange(at: time, videoDuration: project.videoDuration)
+        let shownText = Self.captionText(from: text) ?? Self.newCaptionText
         let segment = CaptionSegment(
             startTime: range.start,
             endTime: range.end,
-            text: text,
+            text: shownText,
             sortOrder: segments.count
         )
-        applyText(text, to: segment)
+        applyText(shownText, to: segment)
         project.addSegment(segment)
         reorderSegments()
         finishSegmentEdit()

@@ -133,6 +133,12 @@ struct SegmentEditorSheet: View {
     ///
     /// `end` is included so the value already on screen is always inside the
     /// range, even for a segment that somehow sits past the end of its video.
+    /// Save is offered only for text with something in it. The editor would
+    /// ignore blank text anyway; a live Save that does nothing is worse.
+    static func canSave(text: String) -> Bool {
+        EditorViewModel.captionText(from: text) != nil
+    }
+
     static func latestEnd(start: Double, end: Double, videoDuration: Double) -> Double {
         max(videoDuration, max(start, end))
     }
@@ -180,6 +186,7 @@ struct SegmentEditorSheet: View {
                         dismiss()
                     }
                     .bold()
+                    .disabled(!Self.canSave(text: text))
                 }
             }
         }
