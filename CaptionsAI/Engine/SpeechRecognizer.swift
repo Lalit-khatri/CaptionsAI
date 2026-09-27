@@ -73,6 +73,45 @@ final class ResumeOnce: @unchecked Sendable {
     }
 }
 
+/// Carries a Swift task's cancellation to work that is not a Swift task.
+///
+/// The recogniser task and the asset reader are only created partway through
+/// their `withTaskCancellationHandler` body, and cancellation can arrive
+/// before or after that. Whichever comes second runs the cancel action,
+/// exactly once.
+final class CancellationGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+    private var action: (() -> Void)?
+
+    var isCancelled: Bool {
+        lock.withLock { cancelled }
+    }
+
+    /// Runs `cancel` now if cancellation already arrived, otherwise when it
+    /// does. Attaching a second action replaces the first.
+    func attach(_ cancel: @escaping () -> Void) {
+        let runNow: Bool = lock.withLock {
+            if cancelled { return true }
+            action = cancel
+            return false
+        }
+        if runNow { cancel() }
+    }
+
+    /// Marks the gate cancelled and runs the attached action, if any. Later
+    /// calls do nothing.
+    func cancel() {
+        let pending: (() -> Void)? = lock.withLock {
+            guard !cancelled else { return nil }
+            cancelled = true
+            defer { action = nil }
+            return action
+        }
+        pending?()
+    }
+}
+
 // MARK: - SpeechRecognizer
 
 /// Wraps Apple's Speech framework to extract word-level captions from video audio.
@@ -128,6 +167,9 @@ final class SpeechRecognizer {
         let audioURL: URL
         do {
             audioURL = try await Self.extractAudioTrack(from: videoURL)
+        } catch is CancellationError {
+            // The user left. Not a failure to report.
+            throw CancellationError()
         } catch {
             let err = SpeechError.audioExtractionFailed
             self.error = err
@@ -145,36 +187,55 @@ final class SpeechRecognizer {
             supportsOnDevice: recognizer.supportsOnDeviceRecognition
         )
 
-        let result: SFSpeechRecognitionResult = try await withCheckedThrowingContinuation { continuation in
-            let once = ResumeOnce()
-            recognizer.recognitionTask(with: request) { [weak self] result, recognitionError in
-                if let self, let result {
-                    // Update partial results on main thread
-                    let transcription = result.bestTranscription
-                    let words = transcription.segments.map(\.substring)
-                    let heard = transcription.segments.last.map { $0.timestamp + $0.duration } ?? 0
-                    Task { @MainActor in
-                        self.partialResults = words
-                        self.progress = Self.recognitionProgress(heard: heard, of: clipDuration)
+        // Cancelling the Swift task used to cancel nothing: the recogniser
+        // kept working on a WAV file the `defer` above was about to delete,
+        // and its result was thrown away. Now the recognition task is
+        // cancelled with it and the caller gets `CancellationError` at once.
+        try Task.checkCancellation()
+        let gate = CancellationGate()
+        let result: SFSpeechRecognitionResult = try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let once = ResumeOnce()
+                let task = recognizer.recognitionTask(with: request) { [weak self] result, recognitionError in
+                    if let self, let result {
+                        // Update partial results on main thread
+                        let transcription = result.bestTranscription
+                        let words = transcription.segments.map(\.substring)
+                        let heard = transcription.segments.last.map { $0.timestamp + $0.duration } ?? 0
+                        Task { @MainActor in
+                            self.partialResults = words
+                            self.progress = Self.recognitionProgress(heard: heard, of: clipDuration)
+                        }
+                    }
+
+                    // Deliberately not behind `self`: returning early when the
+                    // recogniser object was gone left this continuation, and the
+                    // caller awaiting it, suspended for ever.
+                    switch Self.recognitionOutcome(
+                        result: result,
+                        isFinal: result?.isFinal ?? false,
+                        error: recognitionError
+                    ) {
+                    case .waiting:
+                        break
+                    case let .finished(final):
+                        if once.claim() { continuation.resume(returning: final) }
+                    case let .failed(failure):
+                        // A cancelled task reports an error of its own; the
+                        // caller should see the cancellation, not a failure.
+                        let thrown: Error = gate.isCancelled ? CancellationError() : failure
+                        if once.claim() { continuation.resume(throwing: thrown) }
                     }
                 }
-
-                // Deliberately not behind `self`: returning early when the
-                // recogniser object was gone left this continuation, and the
-                // caller awaiting it, suspended for ever.
-                switch Self.recognitionOutcome(
-                    result: result,
-                    isFinal: result?.isFinal ?? false,
-                    error: recognitionError
-                ) {
-                case .waiting:
-                    break
-                case let .finished(final):
-                    if once.claim() { continuation.resume(returning: final) }
-                case let .failed(failure):
-                    if once.claim() { continuation.resume(throwing: failure) }
+                // Resumed here as well, not only from the handler, so that
+                // cancellation cannot hang on a recogniser that goes quiet.
+                gate.attach {
+                    task.cancel()
+                    if once.claim() { continuation.resume(throwing: CancellationError()) }
                 }
             }
+        } onCancel: {
+            gate.cancel()
         }
 
         // Step 3: Group into segments
@@ -244,9 +305,11 @@ final class SpeechRecognizer {
 
     /// Extracts the audio track from a video and saves as a WAV file.
     static func extractAudioTrack(from videoURL: URL) async throws -> URL {
+        try Task.checkCancellation()
         let outputURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("wav")
+        let gate = CancellationGate()
 
         do {
             let asset = AVURLAsset(url: videoURL)
@@ -298,62 +361,74 @@ final class SpeechRecognizer {
             }
             writer.startSession(atSourceTime: .zero)
 
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                let queue = DispatchQueue(label: "audio.extraction")
-                let lock = NSLock()
-                var hasResumed = false
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    let queue = DispatchQueue(label: "audio.extraction")
+                    let lock = NSLock()
+                    var hasResumed = false
 
-                func finish(throwing error: Error?) {
-                    lock.lock()
-                    guard !hasResumed else {
+                    func finish(throwing error: Error?) {
+                        lock.lock()
+                        guard !hasResumed else {
+                            lock.unlock()
+                            return
+                        }
+                        hasResumed = true
                         lock.unlock()
-                        return
+
+                        writerInput.markAsFinished()
+                        if let error {
+                            writer.cancelWriting()
+                            reader.cancelReading()
+                            continuation.resume(throwing: error)
+                        } else {
+                            continuation.resume()
+                        }
                     }
-                    hasResumed = true
-                    lock.unlock()
 
-                    writerInput.markAsFinished()
-                    if let error {
-                        writer.cancelWriting()
-                        reader.cancelReading()
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume()
-                    }
-                }
+                    writerInput.requestMediaDataWhenReady(on: queue) {
+                        while writerInput.isReadyForMoreMediaData {
+                            var bufferToAppend: CMSampleBuffer?
+                            var isFinished = false
 
-                writerInput.requestMediaDataWhenReady(on: queue) {
-                    while writerInput.isReadyForMoreMediaData {
-                        var bufferToAppend: CMSampleBuffer?
-                        var isFinished = false
-
-                        autoreleasepool {
-                            if reader.status == .reading {
-                                if let buffer = readerOutput.copyNextSampleBuffer() {
-                                    bufferToAppend = buffer
+                            autoreleasepool {
+                                if reader.status == .reading {
+                                    if let buffer = readerOutput.copyNextSampleBuffer() {
+                                        bufferToAppend = buffer
+                                    } else {
+                                        isFinished = true
+                                    }
                                 } else {
                                     isFinished = true
                                 }
-                            } else {
-                                isFinished = true
                             }
-                        }
 
-                        if let buffer = bufferToAppend {
-                            if !writerInput.append(buffer) {
-                                finish(throwing: writer.error ?? SpeechError.audioExtractionFailed)
+                            if let buffer = bufferToAppend {
+                                if !writerInput.append(buffer) {
+                                    finish(throwing: writer.error ?? SpeechError.audioExtractionFailed)
+                                    return
+                                }
+                            } else if isFinished {
+                                if reader.status == .completed {
+                                    finish(throwing: nil)
+                                } else {
+                                    finish(throwing: reader.error ?? SpeechError.audioExtractionFailed)
+                                }
                                 return
                             }
-                        } else if isFinished {
-                            if reader.status == .completed {
-                                finish(throwing: nil)
-                            } else {
-                                finish(throwing: reader.error ?? SpeechError.audioExtractionFailed)
-                            }
-                            return
                         }
                     }
+
+                    // Leaving the editor used to let a long clip's extraction run
+                    // to the end. `finish` goes through the same serial queue as
+                    // the copy loop, so it never races an `append`.
+                    gate.attach {
+                        reader.cancelReading()
+                        queue.async { finish(throwing: CancellationError()) }
+                    }
                 }
+            } onCancel: {
+                gate.cancel()
             }
 
             await writer.finishWriting()
@@ -370,6 +445,9 @@ final class SpeechRecognizer {
             return outputURL
         } catch {
             try? FileManager.default.removeItem(at: outputURL)
+            if error is CancellationError || gate.isCancelled {
+                throw CancellationError()
+            }
             if let speechError = error as? SpeechError {
                 throw speechError
             }
