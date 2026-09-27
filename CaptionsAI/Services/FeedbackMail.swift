@@ -165,10 +165,36 @@ enum FeedbackMail {
         URL(string: "mailto:\(address)?subject=\(encode(kind.subject))&body=\(encode(body))")
     }
 
-    /// The banner shown when no mail route could even be started. With the
-    /// copy action gone, the address itself is the way out, so it is spelled
-    /// out here.
+    /// Appended wherever a mail route fails, so the address itself is always
+    /// the way out.
     static let writeDirectlyHint = "You can write to \(address) directly."
+
+    // MARK: - When Apple Mail has no account
+
+    static let contactTitle = "Contact CaptionsAI"
+    static let contactExplanation = "Mail isn't set up on this iPhone. Copy the address, or pick another app to send from."
+    static let addressHeader = "Email"
+    static let copyAddressTitle = "Copy address"
+    static let copiedTitle = "Copied"
+    static let shareTitle = "Send another way…"
+    static let defaultMailTitle = "Open default mail app"
+
+    static let copySymbol = "doc.on.doc"
+    static let copiedSymbol = "checkmark"
+    static let shareSymbol = "square.and.arrow.up"
+    static let defaultMailSymbol = "envelope"
+
+    /// What the share sheet carries. Most apps it reaches — Messages,
+    /// WhatsApp, Notes — have no recipient field, so the address and subject
+    /// travel inside the text rather than being lost.
+    static func shareText(kind: FeedbackKind, body: String) -> String {
+        """
+        To: \(address)
+        Subject: \(kind.subject)
+
+        \(body)
+        """
+    }
 
     // MARK: - Telling the truth afterwards
 

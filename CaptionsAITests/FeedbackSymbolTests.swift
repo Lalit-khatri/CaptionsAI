@@ -29,6 +29,15 @@ final class FeedbackSymbolTests: XCTestCase {
         assertResolves(FeedbackMail.versionSymbol)
     }
 
+    func testTheContactSheetRowsHaveIcons() {
+        for name in [
+            FeedbackMail.copySymbol, FeedbackMail.copiedSymbol,
+            FeedbackMail.shareSymbol, FeedbackMail.defaultMailSymbol,
+        ] {
+            assertResolves(name)
+        }
+    }
+
     func testEveryMenuActionHasAnIcon() {
         for kind in FeedbackKind.allCases {
             assertResolves(kind.menuIcon)

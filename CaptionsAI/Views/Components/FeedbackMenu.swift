@@ -46,29 +46,28 @@ struct MailComposer: UIViewControllerRepresentable {
 /// The action button in the top-right of every screen worth giving feedback
 /// from.
 ///
-/// Two routes to the same inbox, in the order they are offered:
+/// Two routes to the same inbox:
 ///
-/// 1. The in-app composer, which is the one that keeps the user here. It is
-///    also the one that satisfies Apple's optional-disclosure exception,
-///    because the diagnostics are visible in a body the user can edit before
-///    sending.
-/// 2. A `mailto:` URL, for the user whose only mail app is Gmail —
-///    `canSendMail()` reports only on Apple Mail, so that user would otherwise
-///    be told, wrongly, that they cannot send mail.
+/// 1. The in-app composer, whenever Apple Mail has an account. It is also the
+///    one that satisfies Apple's optional-disclosure exception, because the
+///    diagnostics are visible in a body the user can edit before sending.
+/// 2. Otherwise, `FeedbackContactSheet`: the address with a copy button, the
+///    share sheet, and the default mail app as an explicit choice.
 ///
-/// When neither can be started, the banner spells out the address. Below the
-/// mail actions sit the Privacy Policy link and the app version.
+/// Route 2 used to be a `mailto:` opened straight away. When Apple Mail is
+/// the default and has no account, `open` reports **success** and Mail shows
+/// its own setup screen — there is no callback in which to offer anything
+/// else. Asking the user first is the only way to avoid that dead end.
 ///
-/// Two traps this deliberately avoids. `canOpenURL` is never called: without
-/// an `LSApplicationQueriesSchemes` declaration it returns false even when a
-/// handler exists, so asking first is what creates the bug. And there is
-/// exactly one presentation modifier here, attached to the content rather
-/// than to anything inside `ToolbarItem` — a sheet attached inside a `Menu`'s
-/// content closure never presents at all.
+/// Below the mail actions sit the Privacy Policy link and the app version.
+///
+/// There is exactly one presentation modifier here, attached to the content
+/// rather than to anything inside `ToolbarItem` — a sheet attached inside a
+/// `Menu`'s content closure never presents at all.
 struct FeedbackMenuModifier: ViewModifier {
     @Environment(\.openURL) private var openURL
 
-    @State private var composing: FeedbackKind?
+    @State private var presented: FeedbackSheet?
     @State private var banner: String?
 
     func body(content: Content) -> some View {
@@ -107,12 +106,17 @@ struct FeedbackMenuModifier: ViewModifier {
                     .accessibilityLabel("Feedback and app info")
                 }
             }
-            .sheet(item: $composing) { kind in
-                MailComposer(kind: kind, body: mailBody(for: kind)) { result in
-                    composing = nil
-                    show(FeedbackMail.message(for: result))
+            .sheet(item: $presented) { sheet in
+                switch sheet {
+                case .compose(let kind):
+                    MailComposer(kind: kind, body: mailBody(for: kind)) { result in
+                        presented = nil
+                        show(FeedbackMail.message(for: result))
+                    }
+                    .ignoresSafeArea()
+                case .contact(let kind):
+                    FeedbackContactSheet(kind: kind, mailBody: mailBody(for: kind))
                 }
-                .ignoresSafeArea()
             }
             .overlay(alignment: .bottom) {
                 if let text = banner {
@@ -144,21 +148,7 @@ struct FeedbackMenuModifier: ViewModifier {
     // MARK: - Routing
 
     private func start(_ kind: FeedbackKind) {
-        if MFMailComposeViewController.canSendMail() {
-            composing = kind
-            return
-        }
-
-        guard let url = FeedbackMail.url(kind: kind, body: mailBody(for: kind)) else {
-            show("Could not open a mail draft. \(FeedbackMail.writeDirectlyHint)")
-            return
-        }
-
-        openURL(url) { accepted in
-            if !accepted {
-                show("No mail app is set up on this phone. \(FeedbackMail.writeDirectlyHint)")
-            }
-        }
+        presented = MFMailComposeViewController.canSendMail() ? .compose(kind) : .contact(kind)
     }
 
     private func show(_ message: String) {
@@ -204,5 +194,114 @@ extension View {
     /// Puts the feedback menu in this screen's top-right corner.
     func feedbackMenu() -> some View {
         modifier(FeedbackMenuModifier())
+    }
+}
+
+/// What the feedback menu's single `.sheet` is showing.
+private enum FeedbackSheet: Identifiable {
+    case compose(FeedbackKind)
+    case contact(FeedbackKind)
+
+    var id: String {
+        switch self {
+        case .compose(let kind): return "compose-\(kind.id)"
+        case .contact(let kind): return "contact-\(kind.id)"
+        }
+    }
+}
+
+/// Shown instead of Apple's composer when Apple Mail has no account.
+///
+/// Every row is something the user picks, so none of them can silently land
+/// on Mail's "set up an account" screen the way an automatic `mailto:` did.
+struct FeedbackContactSheet: View {
+    let kind: FeedbackKind
+    let mailBody: String
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+
+    @State private var copied = false
+    @State private var failure: String?
+
+    static let detents: Set<PresentationDetent> = [.medium, .large]
+    static let copiedResetDelay: Duration = .seconds(2)
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text(FeedbackMail.address)
+                        .textSelection(.enabled)
+
+                    Button {
+                        copyAddress()
+                    } label: {
+                        Label(
+                            copied ? FeedbackMail.copiedTitle : FeedbackMail.copyAddressTitle,
+                            systemImage: copied ? FeedbackMail.copiedSymbol : FeedbackMail.copySymbol
+                        )
+                    }
+                } header: {
+                    Text(FeedbackMail.addressHeader)
+                } footer: {
+                    Text(FeedbackMail.contactExplanation)
+                }
+
+                Section {
+                    ShareLink(
+                        item: FeedbackMail.shareText(kind: kind, body: mailBody),
+                        subject: Text(kind.subject)
+                    ) {
+                        Label(FeedbackMail.shareTitle, systemImage: FeedbackMail.shareSymbol)
+                    }
+
+                    Button {
+                        openDefaultMail()
+                    } label: {
+                        Label(FeedbackMail.defaultMailTitle, systemImage: FeedbackMail.defaultMailSymbol)
+                    }
+                } footer: {
+                    if let failure {
+                        Text(failure)
+                    }
+                }
+            }
+            .navigationTitle(FeedbackMail.contactTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .task(id: copied) {
+                guard copied else { return }
+                try? await Task.sleep(for: Self.copiedResetDelay)
+                copied = false
+            }
+        }
+        .presentationDetents(Self.detents)
+    }
+
+    private func copyAddress() {
+        UIPasteboard.general.string = FeedbackMail.address
+        copied = true
+    }
+
+    /// Still offered, but now as a named choice: for someone whose default
+    /// mail app is not in any list we could make, it is the right answer.
+    private func openDefaultMail() {
+        guard let url = FeedbackMail.url(kind: kind, body: mailBody) else {
+            failure = "Could not build a mail draft. \(FeedbackMail.writeDirectlyHint)"
+            return
+        }
+
+        openURL(url) { accepted in
+            if accepted {
+                dismiss()
+            } else {
+                failure = "No mail app could open that. \(FeedbackMail.writeDirectlyHint)"
+            }
+        }
     }
 }

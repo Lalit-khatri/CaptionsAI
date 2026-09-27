@@ -137,6 +137,19 @@ final class FeedbackMailTests: XCTestCase {
         XCTAssertEqual(FeedbackMail.versionLabel(version: "1.2.0", build: "37"), "Version 1.2.0 (37)")
     }
 
+    // MARK: - When Apple Mail has no account
+
+    /// Messages, WhatsApp and Notes have no recipient field, so the share
+    /// text is the only place the address can travel.
+    func testSharedTextCarriesTheAddressSubjectAndMessage() {
+        let body = FeedbackMail.body(kind: .featureRequest, message: "batch export", diagnostics: diagnostics)
+        let text = FeedbackMail.shareText(kind: .featureRequest, body: body)
+
+        XCTAssertTrue(text.contains("To: lk.khatri558@gmail.com"))
+        XCTAssertTrue(text.contains("Subject: CaptionsAI feature request"))
+        XCTAssertTrue(text.contains("batch export"))
+    }
+
     // MARK: - Telling the truth afterwards
 
     /// The one piece of copy in this feature that can lie. `.saved` means the
