@@ -14,8 +14,14 @@ final class StoreKitManagerTests: XCTestCase {
         var errorDescription: String? { "The Internet connection appears to be offline." }
     }
 
-    private func manager(products: @escaping (Set<String>) async throws -> [Product]) -> StoreKitManager {
-        StoreKitManager(client: StoreClient(products: products), startImmediately: false)
+    private func manager(
+        products: @escaping (Set<String>) async throws -> [Product] = { _ in [] },
+        entitlements: @escaping () async -> [Entitlement] = { [] }
+    ) -> StoreKitManager {
+        StoreKitManager(
+            client: StoreClient(products: products, entitlements: entitlements),
+            startImmediately: false
+        )
     }
 
     // MARK: - Loading products
@@ -111,5 +117,98 @@ final class StoreKitManagerTests: XCTestCase {
         XCTAssertNil(store.error)
         XCTAssertEqual(store.products.map(\.id), ["com.captionsai.pro.yearly", "com.captionsai.pro.monthly"])
         XCTAssertFalse(store.needsProducts)
+    }
+
+    // MARK: - Which transactions unlock Pro
+
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    func testAnUnrevokedUnexpiredSubscriptionIsActive() {
+        let entitlement = Entitlement(productID: "p", expirationDate: now.addingTimeInterval(60))
+        XCTAssertTrue(entitlement.isActive(at: now))
+    }
+
+    func testANonExpiringPurchaseIsActive() {
+        XCTAssertTrue(Entitlement(productID: "p").isActive(at: now))
+    }
+
+    func testARefundedOrRevokedTransactionIsNeverActive() {
+        let revoked = Entitlement(
+            productID: "p",
+            revocationDate: now.addingTimeInterval(-60),
+            expirationDate: now.addingTimeInterval(3600)
+        )
+        XCTAssertFalse(revoked.isActive(at: now))
+    }
+
+    func testAnExpiredSubscriptionIsNotActive() {
+        XCTAssertFalse(Entitlement(productID: "p", expirationDate: now.addingTimeInterval(-1)).isActive(at: now))
+    }
+
+    /// Expiring at exactly this instant means it has run out.
+    func testASubscriptionExpiringNowIsNotActive() {
+        XCTAssertFalse(Entitlement(productID: "p", expirationDate: now).isActive(at: now))
+    }
+
+    func testOnlyActiveEntitlementsCountTowardsPro() {
+        let ids = StoreKitManager.activeProductIDs(
+            in: [
+                Entitlement(productID: StoreKitManager.yearlyID, expirationDate: now.addingTimeInterval(86400)),
+                Entitlement(productID: StoreKitManager.monthlyID, revocationDate: now),
+            ],
+            at: now
+        )
+
+        XCTAssertEqual(ids, [StoreKitManager.yearlyID])
+    }
+
+    // MARK: - Rebuilding Pro
+
+    func testRefreshingWithAnActiveSubscriptionTurnsProOn() async {
+        let store = manager(entitlements: { [Entitlement(productID: StoreKitManager.yearlyID)] })
+
+        await store.refreshEntitlements(now: now)
+
+        XCTAssertTrue(store.isPro)
+        XCTAssertEqual(store.purchasedProductIDs, [StoreKitManager.yearlyID])
+    }
+
+    /// The defect: updates were inserted, never replaced, so a refund could
+    /// not take Pro away. A refresh after the refund must end Pro.
+    func testARefundTakesProAwayOnTheNextRefresh() async {
+        var revocationDate: Date?
+        let store = manager(entitlements: {
+            [Entitlement(productID: StoreKitManager.monthlyID, revocationDate: revocationDate)]
+        })
+
+        await store.refreshEntitlements(now: now)
+        XCTAssertTrue(store.isPro)
+
+        revocationDate = now
+        await store.refreshEntitlements(now: now)
+
+        XCTAssertFalse(store.isPro)
+    }
+
+    /// `currentEntitlements` stops listing a product once it lapses; the
+    /// rebuild has to drop it rather than keep the stale ID.
+    func testAProductNoLongerListedIsDropped() async {
+        var listed = [Entitlement(productID: StoreKitManager.monthlyID)]
+        let store = manager(entitlements: { listed })
+
+        await store.refreshEntitlements(now: now)
+        listed = []
+        await store.refreshEntitlements(now: now)
+
+        XCTAssertEqual(store.purchasedProductIDs, [])
+        XCTAssertFalse(store.isPro)
+    }
+
+    func testRestoreRebuildsFromTheStore() async {
+        let store = manager(entitlements: { [Entitlement(productID: StoreKitManager.yearlyID)] })
+
+        await store.restorePurchases()
+
+        XCTAssertTrue(store.isPro)
     }
 }

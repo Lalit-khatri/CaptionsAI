@@ -10,10 +10,53 @@ import SwiftUI
 /// that went wrong.
 struct StoreClient {
     var products: (Set<String>) async throws -> [Product]
+    /// The verified transactions the App Store currently says the user holds.
+    var entitlements: () async -> [Entitlement]
 
     static let live = StoreClient(
-        products: { try await Product.products(for: $0) }
+        products: { try await Product.products(for: $0) },
+        entitlements: {
+            var found: [Entitlement] = []
+            for await result in Transaction.currentEntitlements {
+                // Unverified transactions are not evidence of anything.
+                guard case let .verified(transaction) = result else { continue }
+                found.append(Entitlement(transaction))
+            }
+            return found
+        }
     )
+}
+
+// MARK: - Entitlement
+
+/// The three facts about a transaction that decide whether it unlocks Pro.
+struct Entitlement: Equatable {
+    var productID: String
+    var revocationDate: Date?
+    var expirationDate: Date?
+
+    init(productID: String, revocationDate: Date? = nil, expirationDate: Date? = nil) {
+        self.productID = productID
+        self.revocationDate = revocationDate
+        self.expirationDate = expirationDate
+    }
+
+    init(_ transaction: StoreKit.Transaction) {
+        self.init(
+            productID: transaction.productID,
+            revocationDate: transaction.revocationDate,
+            expirationDate: transaction.expirationDate
+        )
+    }
+
+    /// Refunded or revoked never counts; a subscription counts until it
+    /// expires. `currentEntitlements` should already leave these out — this
+    /// is the belt to its braces, and the part a test can hold.
+    func isActive(at now: Date) -> Bool {
+        guard revocationDate == nil else { return false }
+        guard let expirationDate else { return true }
+        return expirationDate > now
+    }
 }
 
 // MARK: - StoreKitManager
@@ -62,7 +105,7 @@ final class StoreKitManager {
         guard startImmediately else { return }
         transactionListener = listenForTransactions()
         Task { await loadProducts() }
-        Task { await restorePurchases() }
+        Task { await refreshEntitlements() }
     }
 
     deinit {
@@ -129,28 +172,36 @@ final class StoreKitManager {
 
     @MainActor
     func restorePurchases() async {
-        var purchasedIDs: Set<String> = []
+        await refreshEntitlements()
+    }
 
-        for await result in Transaction.currentEntitlements {
-            if let transaction = try? checkVerified(result) {
-                purchasedIDs.insert(transaction.productID)
-            }
-        }
+    // MARK: - Entitlements
 
-        purchasedProductIDs = purchasedIDs
+    /// The product IDs that unlock Pro right now.
+    static func activeProductIDs(in entitlements: [Entitlement], at now: Date) -> Set<String> {
+        Set(entitlements.filter { $0.isActive(at: now) }.map(\.productID))
+    }
+
+    /// Rebuilds Pro from what the App Store says now, replacing — never
+    /// adding to — what was believed before. That replacement is what lets a
+    /// refund or an expiry take Pro away.
+    @MainActor
+    func refreshEntitlements(now: Date = Date()) async {
+        purchasedProductIDs = Self.activeProductIDs(in: await client.entitlements(), at: now)
     }
 
     // MARK: - Transaction Listener
 
+    /// Every update — purchase, renewal, refund, revocation — ends in a full
+    /// rebuild. This used to `insert` the update's product ID whatever it
+    /// said, so a refund arriving here left Pro on until the next launch
+    /// happened to rebuild it.
     private func listenForTransactions() -> Task<Void, Never> {
         Task.detached { [weak self] in
             for await result in Transaction.updates {
-                if let transaction = try? self?.checkVerified(result) {
-                    await MainActor.run {
-                        self?.purchasedProductIDs.insert(transaction.productID)
-                    }
-                    await transaction.finish()
-                }
+                guard case let .verified(transaction) = result else { continue }
+                await transaction.finish()
+                await self?.refreshEntitlements()
             }
         }
     }
