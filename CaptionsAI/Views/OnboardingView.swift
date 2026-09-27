@@ -45,8 +45,8 @@ struct OnboardingView: View {
                 // Feature list
                 VStack(alignment: .leading, spacing: 20) {
                     FeatureRow(icon: "film", text: "Import any video")
-                    FeatureRow(icon: "sparkles", text: "10+ professional caption styles")
-                    FeatureRow(icon: "lock.shield", text: "100% offline — your videos stay private")
+                    FeatureRow(icon: "sparkles", text: "\(CaptionStyle.presets.count) professional caption styles")
+                    FeatureRow(icon: "lock.shield", text: "On-device captions where supported")
                 }
                 .padding(.horizontal, 40)
                 .padding(.top, 20)
