@@ -10,6 +10,14 @@ import FirebaseCore
 struct CaptionsAIApp: App {
     @State private var appState = AppState()
     @State private var storeKitManager = StoreKitManager()
+    /// Set only when the UI tests launch the app; see `UITestLaunch`.
+    @State private var testContainer: ModelContainer? = {
+        do {
+            return try UITestLaunch.current.makeTestContainer()
+        } catch {
+            fatalError("UI test store could not be created: \(error)")
+        }
+    }()
 
     init() {
         #if canImport(FirebaseCore)
@@ -29,7 +37,22 @@ struct CaptionsAIApp: App {
                 .environment(storeKitManager)
                 .preferredColorScheme(.dark)
                 .tint(Color(hex: "#7C3AED"))
+                .uiTestContainer(testContainer)
         }
         .modelContainer(for: [Project.self, CaptionSegment.self])
+    }
+}
+
+private extension View {
+    /// Swaps in the UI tests' in-memory store. The inner `.modelContainer`
+    /// wins over the scene's, so the on-disk library is never read or
+    /// written during a UI test, and without one nothing changes.
+    @ViewBuilder
+    func uiTestContainer(_ container: ModelContainer?) -> some View {
+        if let container {
+            modelContainer(container)
+        } else {
+            self
+        }
     }
 }
