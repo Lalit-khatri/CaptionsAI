@@ -101,7 +101,8 @@ final class FrameRateTests: XCTestCase {
         defer { TestSupport.remove(url) }
 
         let asset = AVURLAsset(url: url)
-        let source = try XCTUnwrap(try await asset.loadTracks(withMediaType: .video).first)
+        let videoTracks = try await asset.loadTracks(withMediaType: .video)
+        let source = try XCTUnwrap(videoTracks.first)
         let mutable = AVMutableComposition()
         let track = try XCTUnwrap(
             mutable.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
