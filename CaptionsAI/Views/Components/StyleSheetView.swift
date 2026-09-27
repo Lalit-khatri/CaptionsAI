@@ -148,7 +148,11 @@ struct StylePreviewCard: View {
     /// the per-word colour and weight while letting the text engine break the
     /// line, which is the whole point of giving the chip a fixed width.
     private var sample: Text {
-        words.enumerated().reduce(Text("")) { accumulated, entry in
+        // Read once. `words` is computed, and the closure below asks for its
+        // count on every word, so each chip re-split its sample once per
+        // word on every redraw of the style sheet.
+        let words = self.words
+        return words.enumerated().reduce(Text("")) { accumulated, entry in
             let (index, word) = entry
             let isHighlighted = style.wordByWordHighlight && (index == words.count - 1 || words.count == 1)
             let spacer = index == words.count - 1 ? "" : " "
