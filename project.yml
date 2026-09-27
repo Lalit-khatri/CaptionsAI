@@ -92,6 +92,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lalitkhatri.CaptionsAITests
+        # A signed bundle needs an Info.plist. Unsigned simulator builds never
+        # noticed there was none; a device build refuses to sign without it.
+        GENERATE_INFOPLIST_FILE: "YES"
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CaptionsAI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CaptionsAI"
         BUNDLE_LOADER: "$(TEST_HOST)"
 
@@ -107,6 +110,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lalitkhatri.CaptionsAIUITests
+        # A signed bundle needs an Info.plist. Unsigned simulator builds never
+        # noticed there was none; a device build refuses to sign without it.
+        GENERATE_INFOPLIST_FILE: "YES"
         TEST_TARGET_NAME: CaptionsAI
 
 schemes:
