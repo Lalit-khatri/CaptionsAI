@@ -193,8 +193,30 @@ final class EditorViewModel {
         isProcessing = false
     }
 
+    /// Whether a transcription has run to an end — captions, an error, or
+    /// a refusal — in this editor. A cancelled run does not count: it was
+    /// cut short, usually by the editor going off screen, and deserves
+    /// another go when it comes back.
+    private(set) var hasFinishedTranscription = false
+
+    /// Transcribes on the editor's first appearance if there is nothing yet.
+    ///
+    /// The view used to check `segments.isEmpty` alone, from `.task`, which
+    /// runs on every appearance. A user who deleted every caption on purpose
+    /// and then looked at Export came back to a fresh transcript they had not
+    /// asked for; a clip with no speech was re-transcribed, and the same
+    /// error shown, on every return.
+    @MainActor
+    func transcribeIfNeeded() {
+        guard segments.isEmpty, !hasFinishedTranscription, transcriptionTask == nil else { return }
+        startTranscription()
+    }
+
     @MainActor
     func generateCaptions() async {
+        defer {
+            if !Task.isCancelled { hasFinishedTranscription = true }
+        }
         guard let videoURL = project.videoURL else {
             error = "Video file not found"
             return

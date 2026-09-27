@@ -43,9 +43,7 @@ struct EditorView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .onAppear { viewModel.setupTimeObserver() }
         .task {
-            if viewModel.segments.isEmpty {
-                viewModel.startTranscription()
-            }
+            viewModel.transcribeIfNeeded()
         }
         // `.task` used to own the transcription and cancel it on disappear.
         // The view model owns it now, so the teardown has to be explicit.
