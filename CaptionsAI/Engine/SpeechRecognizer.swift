@@ -40,6 +40,39 @@ let kProgressAudioExtracted: Double = 0.3
 /// Fraction reported once recognition is done and grouping begins.
 let kProgressTranscribed: Double = 0.9
 
+// MARK: - Recognition Callback
+
+/// What one call of the recogniser's result handler means for the caller
+/// waiting on it.
+enum RecognitionOutcome<Result> {
+    /// A partial result: keep waiting for the final one.
+    case waiting
+    /// The final result.
+    case finished(Result)
+    /// The recogniser gave up, or broke its own contract.
+    case failed(SpeechError)
+}
+
+/// Lets exactly one of several racing callers through.
+///
+/// A continuation resumed twice crashes, and the recogniser's handler can be
+/// called again after it has delivered a final result or an error. A plain
+/// `var` was used for this before; the lock makes the claim safe whichever
+/// queue the handler happens to run on.
+final class ResumeOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isClaimed = false
+
+    /// True for the first caller only.
+    func claim() -> Bool {
+        lock.withLock {
+            guard !isClaimed else { return false }
+            isClaimed = true
+            return true
+        }
+    }
+}
+
 // MARK: - SpeechRecognizer
 
 /// Wraps Apple's Speech framework to extract word-level captions from video audio.
@@ -113,11 +146,9 @@ final class SpeechRecognizer {
         )
 
         let result: SFSpeechRecognitionResult = try await withCheckedThrowingContinuation { continuation in
-            var hasResumed = false
+            let once = ResumeOnce()
             recognizer.recognitionTask(with: request) { [weak self] result, recognitionError in
-                guard let self else { return }
-
-                if let result {
+                if let self, let result {
                     // Update partial results on main thread
                     let transcription = result.bestTranscription
                     let words = transcription.segments.map(\.substring)
@@ -126,14 +157,22 @@ final class SpeechRecognizer {
                         self.partialResults = words
                         self.progress = Self.recognitionProgress(heard: heard, of: clipDuration)
                     }
+                }
 
-                    if result.isFinal, !hasResumed {
-                        hasResumed = true
-                        continuation.resume(returning: result)
-                    }
-                } else if let recognitionError, !hasResumed {
-                    hasResumed = true
-                    continuation.resume(throwing: SpeechError.recognitionFailed(recognitionError))
+                // Deliberately not behind `self`: returning early when the
+                // recogniser object was gone left this continuation, and the
+                // caller awaiting it, suspended for ever.
+                switch Self.recognitionOutcome(
+                    result: result,
+                    isFinal: result?.isFinal ?? false,
+                    error: recognitionError
+                ) {
+                case .waiting:
+                    break
+                case let .finished(final):
+                    if once.claim() { continuation.resume(returning: final) }
+                case let .failed(failure):
+                    if once.claim() { continuation.resume(throwing: failure) }
                 }
             }
         }
@@ -152,6 +191,30 @@ final class SpeechRecognizer {
         progress = 1.0
 
         return captionSegments
+    }
+
+    // MARK: - Recognition Outcome
+
+    /// Reads one call of the recogniser's result handler.
+    ///
+    /// The error is checked first, the way the compiler does for the
+    /// continuations it synthesises for Objective-C APIs. The handler used to
+    /// look at the result first and only consider the error when there was no
+    /// result, so a partial result delivered alongside an error was treated as
+    /// "keep waiting", and nothing further ever came: the spinner ran until
+    /// the editor's timeout.
+    ///
+    /// No result and no error breaks the recogniser's contract. Waiting would
+    /// hang, so it fails instead, as "no speech", which offers the user the
+    /// way forward that is actually open to them: adding captions by hand.
+    static func recognitionOutcome<Result>(
+        result: Result?,
+        isFinal: Bool,
+        error: Error?
+    ) -> RecognitionOutcome<Result> {
+        if let error { return .failed(.recognitionFailed(error)) }
+        guard let result else { return .failed(.noSpeechDetected) }
+        return isFinal ? .finished(result) : .waiting
     }
 
     // MARK: - Progress
