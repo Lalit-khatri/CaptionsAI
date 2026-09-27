@@ -133,13 +133,8 @@ final class FeedbackMailTests: XCTestCase {
         }
     }
 
-    func testCopyingGivesTheUserSomethingWorthPasting() {
-        let body = FeedbackMail.body(kind: .featureRequest, message: "batch export", diagnostics: diagnostics)
-        let text = FeedbackMail.clipboardText(kind: .featureRequest, body: body)
-
-        XCTAssertTrue(text.contains(FeedbackMail.address))
-        XCTAssertTrue(text.contains(FeedbackKind.featureRequest.subject))
-        XCTAssertTrue(text.contains("batch export"))
+    func testTheVersionRowShowsVersionAndBuild() {
+        XCTAssertEqual(FeedbackMail.versionLabel(version: "1.2.0", build: "37"), "Version 1.2.0 (37)")
     }
 
     // MARK: - Telling the truth afterwards
@@ -159,9 +154,10 @@ final class FeedbackMailTests: XCTestCase {
     }
 
     func testAFailureOffersTheWayOut() {
-        let text = FeedbackMail.message(for: .failed).lowercased()
+        let text = FeedbackMail.message(for: .failed)
 
-        XCTAssertTrue(text.contains("copy"), "a failed send must point at the fallback")
+        XCTAssertTrue(text.contains("lk.khatri558@gmail.com"), "a failed send must say where to write instead")
+        XCTAssertFalse(text.lowercased().contains("copy"), "there is no copy action any more")
     }
 
     /// `.sent` means Mail accepted it, not that it arrived. No app can know

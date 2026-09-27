@@ -46,7 +46,7 @@ struct MailComposer: UIViewControllerRepresentable {
 /// The action button in the top-right of every screen worth giving feedback
 /// from.
 ///
-/// Three routes to the same inbox, in the order they are offered:
+/// Two routes to the same inbox, in the order they are offered:
 ///
 /// 1. The in-app composer, which is the one that keeps the user here. It is
 ///    also the one that satisfies Apple's optional-disclosure exception,
@@ -55,11 +55,9 @@ struct MailComposer: UIViewControllerRepresentable {
 /// 2. A `mailto:` URL, for the user whose only mail app is Gmail —
 ///    `canSendMail()` reports only on Apple Mail, so that user would otherwise
 ///    be told, wrongly, that they cannot send mail.
-/// 3. Copy the address. **Not a last resort.** On a phone with Mail installed
-///    but no account — the state of a freshly-imaged review device — `open`
-///    reports success: Mail launches and shows its own error. There is no
-///    callback in which to offer something else, so the something else has to
-///    be on the menu from the start, with the address shown next to it.
+///
+/// When neither can be started, the banner spells out the address. Below the
+/// mail actions sit the Privacy Policy link and the app version.
 ///
 /// Two traps this deliberately avoids. `canOpenURL` is never called: without
 /// an `LSApplicationQueriesSchemes` declaration it returns false even when a
@@ -86,22 +84,27 @@ struct FeedbackMenuModifier: ViewModifier {
                             }
                         }
 
-                        // The address, permanently on the surface, for the
-                        // case where both routes above appear to work and
-                        // neither does.
-                        Section(FeedbackMail.address) {
+                        // What App Review and a US privacy request both
+                        // expect to find without hunting: the policy, and
+                        // which build the user is on.
+                        Section {
                             Button {
-                                copyAddress()
+                                openURL(PaywallView.privacyPolicyURL)
                             } label: {
-                                Label(FeedbackMail.copyTitle, systemImage: FeedbackMail.copySymbol)
+                                Label(FeedbackMail.privacyTitle, systemImage: FeedbackMail.privacySymbol)
                             }
+
+                            // Read-only. A row in a menu that is not a
+                            // button renders disabled, which is what a
+                            // version is.
+                            Label(versionLabel, systemImage: FeedbackMail.versionSymbol)
                         }
                     } label: {
                         Image(systemName: FeedbackMail.buttonSymbol)
                     }
                     // Not "More options", which tells a VoiceOver user
                     // nothing about what is behind the button.
-                    .accessibilityLabel("Feedback")
+                    .accessibilityLabel("Feedback and app info")
                 }
             }
             .sheet(item: $composing) { kind in
@@ -147,20 +150,15 @@ struct FeedbackMenuModifier: ViewModifier {
         }
 
         guard let url = FeedbackMail.url(kind: kind, body: mailBody(for: kind)) else {
-            show("Could not open a mail draft. \(FeedbackMail.copyTitle) instead.")
+            show("Could not open a mail draft. \(FeedbackMail.writeDirectlyHint)")
             return
         }
 
         openURL(url) { accepted in
             if !accepted {
-                show("No mail app is set up on this phone. \(FeedbackMail.copyTitle) instead.")
+                show("No mail app is set up on this phone. \(FeedbackMail.writeDirectlyHint)")
             }
         }
-    }
-
-    private func copyAddress() {
-        UIPasteboard.general.string = FeedbackMail.address
-        show("Copied \(FeedbackMail.address)")
     }
 
     private func show(_ message: String) {
@@ -170,13 +168,26 @@ struct FeedbackMenuModifier: ViewModifier {
 
     // MARK: - What goes in the mail
 
+    private static let unknownValue = "unknown"
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? Self.unknownValue
+    }
+
+    private var appBuild: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? Self.unknownValue
+    }
+
+    private var versionLabel: String {
+        FeedbackMail.versionLabel(version: appVersion, build: appBuild)
+    }
+
     /// Read here, at the edge, and passed in as plain values — which is what
     /// lets the tests state what the mail contains.
     private var diagnostics: String {
-        let info = Bundle.main.infoDictionary
-        return FeedbackMail.diagnostics(
-            version: info?["CFBundleShortVersionString"] as? String ?? "unknown",
-            build: info?["CFBundleVersion"] as? String ?? "unknown",
+        FeedbackMail.diagnostics(
+            version: appVersion,
+            build: appBuild,
             systemVersion: UIDevice.current.systemVersion,
             locale: Locale.current.identifier
         )

@@ -60,14 +60,24 @@ enum FeedbackMail {
     /// forwards would be the safer thing to ship.
     static let address = "lk.khatri558@gmail.com"
 
-    static let copyTitle = "Copy email address"
-
     /// Every SF Symbol this feature draws, named here rather than at each use
     /// site so a test can check them. A symbol name that does not resolve
     /// renders as nothing at all — a toolbar button that is invisible but
     /// still tappable, which no compiler and no other test would catch.
     static let buttonSymbol = "ellipsis.circle"
-    static let copySymbol = "doc.on.doc"
+    static let privacySymbol = "hand.raised"
+    static let versionSymbol = "info.circle"
+
+    static let privacyTitle = "Privacy Policy"
+
+    /// The read-only "Version 1.0 (7)" row at the bottom of the menu.
+    ///
+    /// The build number is included because it is what distinguishes two
+    /// TestFlight builds of the same marketing version when a user reports a
+    /// bug.
+    static func versionLabel(version: String, build: String) -> String {
+        "Version \(version) (\(build))"
+    }
 
     /// `mailto:` has no documented length limit and Apple Mail is generous,
     /// but third-party clients vary and a body that is silently cut in the
@@ -155,21 +165,10 @@ enum FeedbackMail {
         URL(string: "mailto:\(address)?subject=\(encode(kind.subject))&body=\(encode(body))")
     }
 
-    /// What lands on the pasteboard when the user copies instead.
-    ///
-    /// This path is not a last resort reached after the other two fail. On a
-    /// phone with Mail installed but no account configured — the state of a
-    /// freshly-imaged review device — `open` reports **success**: Mail
-    /// launches and shows its own error. There is no callback in which to
-    /// offer a fallback, so the fallback has to be on the menu from the start.
-    static func clipboardText(kind: FeedbackKind, body: String) -> String {
-        """
-        To: \(address)
-        Subject: \(kind.subject)
-
-        \(body)
-        """
-    }
+    /// The banner shown when no mail route could even be started. With the
+    /// copy action gone, the address itself is the way out, so it is spelled
+    /// out here.
+    static let writeDirectlyHint = "You can write to \(address) directly."
 
     // MARK: - Telling the truth afterwards
 
@@ -187,7 +186,7 @@ enum FeedbackMail {
         case .saved:
             return "Saved to your Mail drafts. It has not gone anywhere yet."
         case .failed:
-            return "Mail could not send that. You can copy the address and write to me directly."
+            return "Mail could not send that. \(writeDirectlyHint)"
         case .cancelled:
             return ""
         @unknown default:

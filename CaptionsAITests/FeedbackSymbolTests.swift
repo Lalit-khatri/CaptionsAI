@@ -24,8 +24,9 @@ final class FeedbackSymbolTests: XCTestCase {
         assertResolves(FeedbackMail.buttonSymbol)
     }
 
-    func testTheCopyActionHasAnIcon() {
-        assertResolves(FeedbackMail.copySymbol)
+    func testThePrivacyAndVersionRowsHaveIcons() {
+        assertResolves(FeedbackMail.privacySymbol)
+        assertResolves(FeedbackMail.versionSymbol)
     }
 
     func testEveryMenuActionHasAnIcon() {
