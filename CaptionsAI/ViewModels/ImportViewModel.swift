@@ -53,6 +53,17 @@ final class ImportViewModel {
 
         defer { isLoading = false }
 
+        // The copy is made before the project exists. If anything after it
+        // fails, no project refers to the file and nothing would ever delete
+        // it, so a failed import used to leave a whole video behind.
+        var storedFileName: String?
+        var imported = false
+        defer {
+            if !imported, let storedFileName {
+                VideoLibrary.remove(storedFileName)
+            }
+        }
+
         do {
             // Stream video via file transfer to avoid materializing large assets in RAM
             let fileName: String
@@ -65,6 +76,7 @@ final class ImportViewModel {
                 error = "Could not load video data"
                 return
             }
+            storedFileName = fileName
 
             // Keep it somewhere the system will not reclaim. `tmp/` is emptied
             // whenever iOS wants the space back, which is how a project could
@@ -97,6 +109,7 @@ final class ImportViewModel {
 
             context.insert(project)
             try context.save()
+            imported = true
 
             createdProject = project
 
