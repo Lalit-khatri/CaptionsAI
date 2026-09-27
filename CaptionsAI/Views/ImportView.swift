@@ -10,6 +10,7 @@ struct ImportView: View {
     @Binding var navigationPath: NavigationPath
     @State private var viewModel = ImportViewModel()
     @State private var selectedItem: PhotosPickerItem?
+    @State private var pendingDeletion: Project?
 
     var body: some View {
         ScrollView {
@@ -55,6 +56,26 @@ struct ImportView: View {
             Button("OK") { viewModel.error = nil }
         } message: {
             Text(viewModel.error ?? "")
+        }
+        // Same wording as All Projects. The context-menu delete used to fire
+        // straight away, taking the project's video with it, with no undo.
+        .alert(
+            AllProjectsView.deleteTitle,
+            isPresented: Binding(
+                get: { pendingDeletion != nil },
+                set: { if !$0 { pendingDeletion = nil } }
+            ),
+            presenting: pendingDeletion
+        ) { project in
+            Button(AllProjectsView.deleteConfirmLabel, role: .destructive) {
+                viewModel.deleteProject(project, context: modelContext)
+                pendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDeletion = nil
+            }
+        } message: { project in
+            Text(AllProjectsView.deletePrompt(for: project.name))
         }
     }
 
@@ -174,7 +195,7 @@ struct ImportView: View {
                         }
                         .contextMenu {
                             Button(role: .destructive) {
-                                viewModel.deleteProject(project, context: modelContext)
+                                pendingDeletion = project
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
