@@ -140,4 +140,38 @@ final class CaptionSizeReadoutTests: XCTestCase {
 
         XCTAssertEqual(project.selectedStyle.fontSize, 4)
     }
+
+    // MARK: - The 4pt floor actually draws
+
+    private let frame = CGSize(width: 393, height: 852)
+
+    private func inkHeights(at fontSize: CGFloat) throws -> (preview: CGFloat, export: CGFloat) {
+        var style = try XCTUnwrap(CaptionInk.plainStyle(wordByWord: false))
+        style.fontSize = fontSize
+        let segment = CaptionInk.segment(text: "HELLO", words: false)
+
+        let preview = try XCTUnwrap(CaptionInk.previewBounds(style: style, segment: segment, in: frame))
+        let export = try XCTUnwrap(CaptionInk.exportBounds(style: style, segment: segment, in: frame))
+        return (preview.height, export.height)
+    }
+
+    /// A size the slider offers has to put ink on screen in both the editor
+    /// and the exported file; a renderer with its own hidden floor or a
+    /// zero-height layout at tiny sizes would leave the caption invisible.
+    func testFourPointCaptionsDrawInTheEditorAndTheExport() throws {
+        let ink = try inkHeights(at: StyleSheetView.fontSizeRange.lowerBound)
+
+        XCTAssertGreaterThan(ink.preview, 0, "the editor drew nothing at 4pt")
+        XCTAssertGreaterThan(ink.export, 0, "the export drew nothing at 4pt")
+    }
+
+    /// And 4pt is genuinely smaller than the old 16pt floor in both, not
+    /// silently clamped back up to it.
+    func testFourPointIsDrawnSmallerThanTheOldSixteenPointFloor() throws {
+        let tiny = try inkHeights(at: 4)
+        let old = try inkHeights(at: 16)
+
+        XCTAssertLessThan(tiny.preview, old.preview / 2, "the editor clamps small sizes")
+        XCTAssertLessThan(tiny.export, old.export / 2, "the export clamps small sizes")
+    }
 }
