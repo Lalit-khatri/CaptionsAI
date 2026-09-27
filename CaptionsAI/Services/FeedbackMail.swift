@@ -77,6 +77,12 @@ enum MailApp: String, CaseIterable, Identifiable {
     /// Asked of `canOpenURL` to decide whether the row is shown.
     var probeURL: URL? { URL(string: "\(scheme)://") }
 
+    /// The apps to offer, in declaration order. `canOpen` is
+    /// `UIApplication.canOpenURL` in the app and a stand-in in tests.
+    static func installed(canOpen: (URL) -> Bool) -> [MailApp] {
+        allCases.filter { app in app.probeURL.map(canOpen) ?? false }
+    }
+
     func composeURL(kind: FeedbackKind, body: String) -> URL? {
         let to = FeedbackMail.encode(FeedbackMail.address)
         let subject = FeedbackMail.encode(kind.subject)

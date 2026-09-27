@@ -163,6 +163,142 @@ final class FeedbackMailTests: XCTestCase {
         }
     }
 
+    /// The exact drafts, written out, so a change to any parameter name or
+    /// path — the part these undocumented schemes are fussy about — fails
+    /// here rather than on a user's phone.
+    func testGmailDraftURLIsExactlyTheDocumentedShape() {
+        XCTAssertEqual(
+            MailApp.gmail.composeURL(kind: .feedback, body: "hi")?.absoluteString,
+            "googlegmail:///co?to=lk.khatri558%40gmail.com&subject=CaptionsAI%20feedback&body=hi"
+        )
+    }
+
+    func testOutlookDraftURLIsExactlyTheDocumentedShape() {
+        XCTAssertEqual(
+            MailApp.outlook.composeURL(kind: .feedback, body: "hi")?.absoluteString,
+            "ms-outlook://compose?to=lk.khatri558%40gmail.com&subject=CaptionsAI%20feedback&body=hi"
+        )
+    }
+
+    /// Spark names the recipient `recipient`, not `to`.
+    func testSparkDraftURLIsExactlyTheDocumentedShape() {
+        XCTAssertEqual(
+            MailApp.spark.composeURL(kind: .featureRequest, body: "hi")?.absoluteString,
+            "readdle-spark://compose?recipient=lk.khatri558%40gmail.com&subject=CaptionsAI%20feature%20request&body=hi"
+        )
+    }
+
+    /// Three parameters means exactly two raw ampersands. A third would be the
+    /// user's own `&`, splitting their message into a bogus parameter.
+    func testNoMailAppDraftHasAStrayAmpersand() throws {
+        let body = FeedbackMail.body(kind: .feedback, message: "a & b && c", diagnostics: diagnostics)
+
+        for app in MailApp.allCases {
+            let string = try XCTUnwrap(app.composeURL(kind: .feedback, body: body)).absoluteString
+            XCTAssertEqual(string.filter { $0 == "&" }.count, 2, "\(app) draft splits the message")
+        }
+    }
+
+    /// Non-ASCII handed raw to `URL(string:)` returns nil, which would make the
+    /// row do nothing for anyone not writing in English. Newlines and `+`
+    /// must survive too: the body is multi-line and `+` can be read as space.
+    func testMailAppDraftsSurviveNonASCIINewlinesAndPlus() throws {
+        let body = "héllo 日本\nC++"
+
+        for app in MailApp.allCases {
+            let string = try XCTUnwrap(app.composeURL(kind: .feedback, body: body), "\(app) URL is nil").absoluteString
+            XCTAssertTrue(string.hasSuffix("body=h%C3%A9llo%20%E6%97%A5%E6%9C%AC%0AC%2B%2B"), "\(app): \(string)")
+        }
+    }
+
+    func testEveryMailAppHasADistinctSchemeAndAProbeURL() throws {
+        XCTAssertEqual(Set(MailApp.allCases.map(\.scheme)).count, MailApp.allCases.count)
+
+        for app in MailApp.allCases {
+            let probe = try XCTUnwrap(app.probeURL, "\(app) probe URL would not parse")
+            XCTAssertEqual(probe.absoluteString, "\(app.scheme)://")
+        }
+    }
+
+    func testTheRowTitleNamesTheApp() {
+        XCTAssertEqual(MailApp.allCases.map(\.menuTitle), ["Open in Gmail", "Open in Outlook", "Open in Spark"])
+    }
+
+    // MARK: - Which mail apps are offered
+
+    func testNoMailAppIsOfferedWhenNoneIsInstalled() {
+        XCTAssertEqual(MailApp.installed { _ in false }, [])
+    }
+
+    func testEveryMailAppIsOfferedWhenAllAreInstalled() {
+        XCTAssertEqual(MailApp.installed { _ in true }, [.gmail, .outlook, .spark])
+    }
+
+    func testOnlyTheInstalledAppsAreOfferedInAStableOrder() {
+        let installed: Set<String> = ["readdle-spark", "googlegmail"]
+
+        let offered = MailApp.installed { url in installed.contains(url.scheme ?? "") }
+
+        XCTAssertEqual(offered, [.gmail, .spark])
+    }
+
+    /// The probe asks about the scheme alone, not a compose URL: `canOpenURL`
+    /// is only allowed for declared schemes, and a draft is not what is being
+    /// asked about.
+    func testInstallationIsProbedWithTheBareScheme() {
+        var asked: [String] = []
+
+        _ = MailApp.installed { url in
+            asked.append(url.absoluteString)
+            return false
+        }
+
+        XCTAssertEqual(asked, ["googlegmail://", "ms-outlook://", "readdle-spark://"])
+    }
+
+    // MARK: - Which sheet the menu opens
+
+    func testAppleMailWithAnAccountGetsTheInAppComposer() {
+        for kind in FeedbackKind.allCases {
+            XCTAssertEqual(FeedbackSheet.route(for: kind, canSendMail: true), .compose(kind))
+        }
+    }
+
+    /// The defect this replaced: with no account, a `mailto:` was opened
+    /// without asking and could land on Mail's setup screen.
+    func testAppleMailWithoutAnAccountGetsTheContactSheet() {
+        for kind in FeedbackKind.allCases {
+            XCTAssertEqual(FeedbackSheet.route(for: kind, canSendMail: false), .contact(kind))
+        }
+    }
+
+    /// `.sheet(item:)` keys on `id`. If the composer and the contact sheet for
+    /// the same kind shared one, switching between them would not re-present.
+    func testEverySheetHasADistinctIdentity() {
+        let sheets = FeedbackKind.allCases.flatMap { [FeedbackSheet.compose($0), .contact($0)] }
+        XCTAssertEqual(Set(sheets.map(\.id)).count, sheets.count)
+    }
+
+    // MARK: - The share text and fallback copy
+
+    func testSharedTextUsesEachKindsOwnSubject() {
+        for kind in FeedbackKind.allCases {
+            XCTAssertTrue(FeedbackMail.shareText(kind: kind, body: "x").contains("Subject: \(kind.subject)"))
+        }
+    }
+
+    /// The body is passed through untouched, diagnostics and all — the user
+    /// has already been shown them.
+    func testSharedTextEndsWithTheBodyVerbatim() {
+        let body = FeedbackMail.body(kind: .feedback, message: "hi", diagnostics: diagnostics)
+
+        XCTAssertTrue(FeedbackMail.shareText(kind: .feedback, body: body).hasSuffix(body))
+    }
+
+    func testTheWriteDirectlyHintSpellsOutTheAddress() {
+        XCTAssertEqual(FeedbackMail.writeDirectlyHint, "You can write to lk.khatri558@gmail.com directly.")
+    }
+
     // MARK: - Telling the truth afterwards
 
     /// The one piece of copy in this feature that can lie. `.saved` means the
@@ -183,7 +319,6 @@ final class FeedbackMailTests: XCTestCase {
         let text = FeedbackMail.message(for: .failed)
 
         XCTAssertTrue(text.contains("lk.khatri558@gmail.com"), "a failed send must say where to write instead")
-        XCTAssertFalse(text.lowercased().contains("copy"), "there is no copy action any more")
     }
 
     /// `.sent` means Mail accepted it, not that it arrived. No app can know

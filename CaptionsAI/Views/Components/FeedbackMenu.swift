@@ -149,7 +149,7 @@ struct FeedbackMenuModifier: ViewModifier {
     // MARK: - Routing
 
     private func start(_ kind: FeedbackKind) {
-        presented = MFMailComposeViewController.canSendMail() ? .compose(kind) : .contact(kind)
+        presented = .route(for: kind, canSendMail: MFMailComposeViewController.canSendMail())
     }
 
     private func show(_ message: String) {
@@ -199,9 +199,16 @@ extension View {
 }
 
 /// What the feedback menu's single `.sheet` is showing.
-private enum FeedbackSheet: Identifiable {
+enum FeedbackSheet: Identifiable, Equatable {
     case compose(FeedbackKind)
     case contact(FeedbackKind)
+
+    /// Apple's composer only when Apple Mail can send; otherwise the contact
+    /// sheet. Never a `mailto:` opened without asking — see
+    /// `FeedbackMenuModifier`.
+    static func route(for kind: FeedbackKind, canSendMail: Bool) -> FeedbackSheet {
+        canSendMail ? .compose(kind) : .contact(kind)
+    }
 
     var id: String {
         switch self {
@@ -285,9 +292,7 @@ struct FeedbackContactSheet: View {
                 }
             }
             .task {
-                installedApps = MailApp.allCases.filter { app in
-                    app.probeURL.map { UIApplication.shared.canOpenURL($0) } ?? false
-                }
+                installedApps = MailApp.installed { UIApplication.shared.canOpenURL($0) }
             }
             .task(id: copied) {
                 guard copied else { return }
