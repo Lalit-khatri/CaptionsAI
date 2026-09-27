@@ -501,6 +501,26 @@ final class PaywallDisclosureTests: XCTestCase {
         XCTAssertEqual(PaywallView.periodName(unit: .day, value: 7), "7 days")
         XCTAssertEqual(PaywallView.periodName(unit: .month, value: 3), "3 months")
     }
+
+    /// A trial follows "Free for", so a count of one has to be said: the
+    /// shipped one-week trial read "Free for week".
+    func testTrialDurationsAlwaysKeepTheirCount() {
+        XCTAssertEqual(PaywallView.durationName(unit: .week, value: 1), "1 week")
+        XCTAssertEqual(PaywallView.durationName(unit: .month, value: 1), "1 month")
+        XCTAssertEqual(PaywallView.durationName(unit: .day, value: 3), "3 days")
+        XCTAssertEqual(PaywallView.durationName(unit: .year, value: 2), "2 years")
+    }
+
+    func testAOneWeekTrialDisclosureReadsLikeASentence() {
+        XCTAssertEqual(
+            PaywallView.priceDisclosure(
+                displayPrice: "$14.99",
+                periodName: PaywallView.periodName(unit: .year, value: 1),
+                freeTrialName: PaywallView.durationName(unit: .week, value: 1)
+            ),
+            "Free for 1 week, then $14.99 per year. Cancel anytime."
+        )
+    }
 }
 
 // MARK: - Export Watermark

@@ -151,6 +151,16 @@ struct PaywallView: View {
         return value == 1 ? singular : "\(value) \(singular)s"
     }
 
+    /// How long something lasts, always with its count: "1 week", "7 days".
+    ///
+    /// `periodName` drops a count of one because it follows "per". A trial
+    /// follows "Free for", and the shipped one-week trial read "Free for
+    /// week, then …".
+    static func durationName(unit: Product.SubscriptionPeriod.Unit, value: Int) -> String {
+        let name = periodName(unit: unit, value: value)
+        return value == 1 ? "1 \(name)" : name
+    }
+
     /// What the user will actually be charged, and when.
     ///
     /// The screen said this nowhere. A trial in particular has to name the
@@ -273,7 +283,7 @@ struct PaywallView: View {
               let offer = selectedProduct?.subscription?.introductoryOffer,
               offer.paymentMode == .freeTrial
         else { return nil }
-        return Self.periodName(unit: offer.period.unit, value: offer.period.value)
+        return Self.durationName(unit: offer.period.unit, value: offer.period.value)
     }
 
     private var selectedPeriodName: String? {
