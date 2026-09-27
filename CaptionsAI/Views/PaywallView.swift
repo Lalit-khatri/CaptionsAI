@@ -12,6 +12,9 @@ import SwiftUI
 enum PaywallCTAState: Equatable {
     /// Still asking the App Store what is for sale.
     case loading
+    /// A purchase sheet is up or a purchase is being confirmed. A second tap
+    /// here used to start a second purchase.
+    case purchasing
     /// There is a product and it can be bought.
     case ready
     /// There is nothing to buy, and this is why.
@@ -32,6 +35,7 @@ struct PaywallView: View {
     @State private var selectedPlan: String = StoreKitManager.yearlyID
     @State private var purchaseError: String?
     @State private var isRestoring = false
+    @State private var isPurchasing = false
     @State private var restoreMessage: String?
     /// Whether StoreKit says this user may still take the introductory offer.
     /// Assumed false until asked, so we never promise a trial we cannot give.
@@ -54,7 +58,13 @@ struct PaywallView: View {
     ///
     /// Pure, and takes its inputs rather than reading them, so the three
     /// failure shapes can be asserted without a StoreKit session.
-    static func ctaState(isLoading: Bool, hasProduct: Bool, error: String?) -> PaywallCTAState {
+    static func ctaState(
+        isLoading: Bool,
+        hasProduct: Bool,
+        error: String?,
+        isPurchasing: Bool = false
+    ) -> PaywallCTAState {
+        if isPurchasing { return .purchasing }
         if hasProduct { return .ready }
         if isLoading { return .loading }
         return .unavailable(error ?? genericUnavailableMessage)
@@ -91,6 +101,17 @@ struct PaywallView: View {
         let percent = Int((fraction as NSDecimalNumber).doubleValue * 100)
         guard percent > 0 else { return nil }
         return "SAVE \(percent)%"
+    }
+
+    /// What to tell the user after a purchase attempt that did not close the
+    /// paywall. `nil` when there is nothing to say.
+    static func purchaseMessage(for outcome: PurchaseOutcome) -> String? {
+        switch outcome {
+        case .purchased, .cancelled:
+            return nil
+        case .pending:
+            return "Your purchase is waiting for approval. Pro unlocks as soon as it's approved."
+        }
     }
 
     /// What to tell the user after Restore Purchases. `nil` for a restore that
@@ -236,7 +257,8 @@ struct PaywallView: View {
         Self.ctaState(
             isLoading: storeKit.isLoading,
             hasProduct: selectedProduct != nil,
-            error: storeKit.error
+            error: storeKit.error,
+            isPurchasing: isPurchasing
         )
     }
 
@@ -462,14 +484,18 @@ struct PaywallView: View {
     /// nothing at all when tapped.
     private var ctaButton: some View {
         Button {
-            guard let product = selectedProduct else { return }
+            guard let product = selectedProduct, !isPurchasing else { return }
             Task {
                 purchaseError = nil
                 restoreMessage = nil
+                isPurchasing = true
+                defer { isPurchasing = false }
                 do {
-                    _ = try await storeKit.purchase(product)
+                    let outcome = try await storeKit.purchase(product)
                     if storeKit.isPro {
                         dismiss()
+                    } else {
+                        purchaseError = Self.purchaseMessage(for: outcome)
                     }
                 } catch {
                     // Previously `try?`, which discarded the reason the
@@ -479,7 +505,7 @@ struct PaywallView: View {
             }
         } label: {
             Group {
-                if ctaState == .loading {
+                if ctaState == .loading || ctaState == .purchasing {
                     ProgressView()
                         .tint(.white)
                 } else {

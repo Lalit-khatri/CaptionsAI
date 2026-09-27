@@ -303,4 +303,44 @@ final class StoreKitManagerTests: XCTestCase {
             "Could not restore purchases. Network down."
         )
     }
+
+    // MARK: - While a purchase is in progress
+
+    /// A second tap during the purchase sheet used to start a second purchase.
+    func testTheButtonCannotBeTappedAgainWhilePurchasing() {
+        let state = PaywallView.ctaState(isLoading: false, hasProduct: true, error: nil, isPurchasing: true)
+
+        XCTAssertEqual(state, .purchasing)
+        XCTAssertFalse(state.isPurchasable)
+    }
+
+    /// Purchasing wins over a background reload finishing or failing mid-way.
+    func testPurchasingWinsOverLoadingAndErrors() {
+        XCTAssertEqual(
+            PaywallView.ctaState(isLoading: true, hasProduct: false, error: "x", isPurchasing: true),
+            .purchasing
+        )
+    }
+
+    func testTheButtonIsLiveAgainOncePurchasingEnds() {
+        XCTAssertEqual(
+            PaywallView.ctaState(isLoading: false, hasProduct: true, error: nil, isPurchasing: false),
+            .ready
+        )
+    }
+
+    // MARK: - What the paywall says after a purchase attempt
+
+    /// Ask to Buy used to look exactly like a cancel: nothing happened.
+    func testAPendingPurchaseSaysItIsWaitingForApproval() {
+        XCTAssertEqual(
+            PaywallView.purchaseMessage(for: .pending),
+            "Your purchase is waiting for approval. Pro unlocks as soon as it's approved."
+        )
+    }
+
+    func testAPurchaseOrCancelShowsNoMessage() {
+        XCTAssertNil(PaywallView.purchaseMessage(for: .purchased))
+        XCTAssertNil(PaywallView.purchaseMessage(for: .cancelled))
+    }
 }

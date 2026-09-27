@@ -31,6 +31,17 @@ struct StoreClient {
     )
 }
 
+// MARK: - PurchaseOutcome
+
+/// How a purchase attempt ended, when it did not throw.
+enum PurchaseOutcome: Equatable {
+    case purchased
+    case cancelled
+    /// Waiting on someone else — Ask to Buy, or a bank check. The transaction
+    /// arrives later through `Transaction.updates`.
+    case pending
+}
+
 // MARK: - RestoreOutcome
 
 /// What a Restore Purchases tap achieved, so the paywall can say so.
@@ -158,8 +169,10 @@ final class StoreKitManager {
 
     // MARK: - Purchase
 
+    /// `.pending` used to come back as `nil`, the same as a cancel, so a
+    /// child whose purchase went to a parent for approval saw nothing happen.
     @MainActor
-    func purchase(_ product: Product) async throws -> StoreKit.Transaction? {
+    func purchase(_ product: Product) async throws -> PurchaseOutcome {
         let result = try await product.purchase()
 
         switch result {
@@ -170,16 +183,16 @@ final class StoreKitManager {
 
             AnalyticsService.purchaseCompleted(productID: product.id)
 
-            return transaction
+            return .purchased
 
         case .userCancelled:
-            return nil
+            return .cancelled
 
         case .pending:
-            return nil
+            return .pending
 
         @unknown default:
-            return nil
+            return .cancelled
         }
     }
 
