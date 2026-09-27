@@ -465,10 +465,13 @@ struct ExportView: View {
                 .font(.title2.bold())
                 .foregroundColor(.white)
 
+            // The render is kept even when Photos refused it, so this line
+            // must say which of the two happened.
+            let saved = viewModel.exportEngine.savedToPhotoLibrary
             HStack(spacing: 6) {
-                Image(systemName: "photo.on.rectangle")
-                    .foregroundColor(.green)
-                Text("Saved to Photo Library")
+                Image(systemName: saved ? "photo.on.rectangle" : "exclamationmark.triangle.fill")
+                    .foregroundColor(saved ? .green : .yellow)
+                Text(saved ? "Saved to Photo Library" : "Not saved to Photos — use Share to keep it")
                     .foregroundColor(.secondary)
             }
             .font(.subheadline)
