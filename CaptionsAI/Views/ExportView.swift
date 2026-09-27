@@ -367,7 +367,6 @@ struct ExportView: View {
                         format: viewModel.selectedPreset.displayName
                             .components(separatedBy: "/").first?
                             .trimmingCharacters(in: .whitespaces) ?? "Video",
-                        quality: viewModel.settings.quality.rawValue,
                         duration: formatDuration(videoDuration),
                         style: project.selectedStyle.name
                     )

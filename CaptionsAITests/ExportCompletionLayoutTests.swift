@@ -45,7 +45,7 @@ final class ExportCompletionLayoutTests: XCTestCase {
     }
 
     private func summary(style: String = "Hormozi") -> ExportSummaryRow {
-        ExportSummaryRow(format: "Reel", quality: "High", duration: "0:15", style: style)
+        ExportSummaryRow(format: "Reel", duration: "0:15", style: style)
     }
 
     // MARK: - The hero
@@ -77,7 +77,7 @@ final class ExportCompletionLayoutTests: XCTestCase {
 
     // MARK: - The summary card
 
-    /// Was 301pt of 345. The four columns bunched in the middle of a grey box
+    /// Was 301pt of 345. The columns bunched in the middle of a grey box
     /// narrower than everything above and below it — the owner's "compacted in
     /// the centre", reproduced inside a single element.
     func testTheSummaryCardFillsTheWidthItIsGiven() throws {
