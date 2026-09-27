@@ -128,9 +128,7 @@ final class TranscriptionTimeoutTests: XCTestCase {
                 sleep: { _ in } // Instant sleep to trigger timeout immediately
             ) {
                 // Operation that never returns
-                while true {
-                    try? await Task.sleep(nanoseconds: 1_000_000_000)
-                }
+                await parkForever()
             }
             XCTFail("expected timeout error, but call succeeded")
         } catch let error as MockTimeout {
@@ -146,9 +144,7 @@ final class TranscriptionTimeoutTests: XCTestCase {
                 seconds: 60.0,
                 throwing: { SpeechError.timedOut }
             ) {
-                while true {
-                    try? await Task.sleep(nanoseconds: 1_000_000_000)
-                }
+                await parkForever()
             }
         }
 

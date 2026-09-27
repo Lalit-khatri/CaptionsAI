@@ -54,9 +54,14 @@ final class FakeTranscriber: Transcribing {
             await waitForCancellation()
             return segments
         case .hangIndefinitely:
-            while true {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-            }
+            // Park, like a recognizer whose callback never fires. A
+            // `while true { try? await Task.sleep }` loop spins at 100% CPU
+            // once withDeadline cancels it — cancelled sleeps return
+            // immediately and `try?` swallows the error — and each leaked
+            // task then holds a cooperative-pool thread for the rest of
+            // the run.
+            await parkForever()
+            throw CancellationError()
         }
     }
 
@@ -68,6 +73,12 @@ final class FakeTranscriber: Transcribing {
         }
         sawCancellation = true
     }
+}
+
+/// Suspends forever without holding a thread: the continuation is never
+/// resumed, and the unsafe variant does not log a leak.
+func parkForever() async {
+    await withUnsafeContinuation { (_: UnsafeContinuation<Void, Never>) in }
 }
 
 // MARK: - Polling
