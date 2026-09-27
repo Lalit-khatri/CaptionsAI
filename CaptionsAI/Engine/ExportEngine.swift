@@ -42,6 +42,11 @@ final class ExportEngine {
     private var exportSession: AVAssetExportSession?
     private var progressTimer: Timer?
 
+    /// Set by ``cancelExport()``. The session only exists for the encode, so
+    /// a Stop during setup had nothing to cancel and the export carried on —
+    /// then saved to Photos — after the screen said it had stopped.
+    private var cancelRequested = false
+
     /// Whether an AVAssetExportSession is currently active or retained.
     var hasActiveExportSession: Bool {
         exportSession != nil
@@ -73,6 +78,7 @@ final class ExportEngine {
         progress = 0
         error = nil
         savedToPhotoLibrary = false
+        cancelRequested = false
 
         defer {
             isExporting = false
@@ -82,6 +88,7 @@ final class ExportEngine {
         let asset = AVURLAsset(url: videoURL)
 
         let renderSize = try await self.renderSize(for: asset, settings: settings, preset: preset)
+        try throwIfCancelled()
 
         // Build an AVMutableComposition to get full control
         let mutableComposition = AVMutableComposition()
@@ -92,6 +99,7 @@ final class ExportEngine {
 
         let duration = try await asset.load(.duration)
         let timeRange = CMTimeRange(start: .zero, duration: duration)
+        try throwIfCancelled()
 
         // Add video track
         guard let compositionVideoTrack = mutableComposition.addMutableTrack(
@@ -140,6 +148,7 @@ final class ExportEngine {
             settings: settings,
             asset: mutableComposition
         )
+        try throwIfCancelled()
 
         guard let session = AVAssetExportSession(
             asset: mutableComposition,
@@ -167,8 +176,12 @@ final class ExportEngine {
         // Start Timer-based progress polling (FrameForge pattern)
         startProgressPolling(session: session)
 
-        // Export
-        await session.export()
+        // Export. A cancelled task used to leave the encode running to the end.
+        await withTaskCancellationHandler {
+            await session.export()
+        } onCancel: {
+            session.cancelExport()
+        }
 
         // Stop timer
         progressTimer?.invalidate()
@@ -260,11 +273,21 @@ final class ExportEngine {
     // MARK: - Cancel
 
     func cancelExport() {
+        cancelRequested = true
         progressTimer?.invalidate()
         progressTimer = nil
         exportSession?.cancelExport()
         exportSession = nil
         isExporting = false
+    }
+
+    /// Throws ``ExportError/cancelled`` if Stop was pressed or the calling
+    /// task was cancelled. Called between setup steps, before the session
+    /// that ``cancelExport()`` can reach exists.
+    private func throwIfCancelled() throws {
+        if cancelRequested || Task.isCancelled {
+            throw ExportError.cancelled
+        }
     }
 
     // MARK: - Helpers
@@ -369,6 +392,9 @@ final class ExportEngine {
 
     /// Polls `session.progress` every 100ms via a RunLoop timer (FrameForge pattern).
     private func startProgressPolling(session: AVAssetExportSession) {
+        // A timer left from an earlier export would keep writing its stale
+        // session's progress into the bar.
+        progressTimer?.invalidate()
         let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self, weak session] _ in
             guard let s = session else { return }
             DispatchQueue.main.async {

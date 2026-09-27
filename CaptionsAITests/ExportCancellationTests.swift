@@ -56,6 +56,39 @@ final class ExportCancellationTests: XCTestCase {
         XCTAssertFalse(viewModel.isExporting)
     }
 
+    /// Stop used to flip the screen back to settings at once, while the
+    /// render was still unwinding, so Export could be tapped again on top of
+    /// it. The exporting screen now stays until the export has returned.
+    func testStopKeepsTheExportingScreenUntilTheExportReturns() async {
+        let exporter = FakeExporter()
+        exporter.outcome = .fail(ExportError.cancelled)
+        let viewModel = ExportViewModel(exportEngine: exporter)
+        var exportingRightAfterStop: Bool?
+        exporter.whileExporting = {
+            viewModel.cancelExport()
+            exportingRightAfterStop = viewModel.isExporting
+        }
+
+        await startExport(viewModel)
+
+        XCTAssertEqual(exportingRightAfterStop, true)
+        XCTAssertFalse(viewModel.isExporting)
+        XCTAssertEqual(exporter.cancelCount, 1)
+    }
+
+    func testASecondTapWhileExportingDoesNotStartAnotherExport() async {
+        let exporter = FakeExporter()
+        let viewModel = ExportViewModel(exportEngine: exporter)
+        exporter.whileExporting = { [unowned self] in
+            exporter.whileExporting = nil
+            await self.startExport(viewModel)
+        }
+
+        await startExport(viewModel)
+
+        XCTAssertEqual(exporter.exportCount, 1)
+    }
+
     // MARK: - Real failures are still reported
 
     func testAFailedExportIsStillReported() async {

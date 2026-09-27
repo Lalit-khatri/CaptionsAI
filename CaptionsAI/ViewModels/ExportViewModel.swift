@@ -34,6 +34,10 @@ final class ExportViewModel {
         captionYPosition: Double,
         isPro: Bool
     ) async {
+        // One export at a time. A second tap used to start a second render
+        // over the first, both writing progress into the same screen.
+        guard !isExporting else { return }
+
         guard checkExportQuota(isPro: isPro) else {
             error = "Daily export limit reached. Upgrade to Pro for unlimited exports."
             return
@@ -90,8 +94,11 @@ final class ExportViewModel {
     // MARK: - Cancel
 
     func cancelExport() {
+        // `isExporting` is left alone on purpose. The export is still
+        // unwinding; `startExport` clears the flag when it has returned. Clearing
+        // it here showed the settings screen with a render still running, and
+        // a second tap on Export started another one on top.
         exportEngine.cancelExport()
-        isExporting = false
     }
 
     // MARK: - File Size Estimation

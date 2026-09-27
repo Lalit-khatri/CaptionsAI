@@ -13,6 +13,11 @@ final class FakeExporter: VideoExporting {
     var progress: Double = 0
     var savedToPhotoLibrary = true
     private(set) var cancelCount = 0
+    private(set) var exportCount = 0
+
+    /// Awaited inside `export` before the outcome, so a test can hold an
+    /// export open and look at the screen while it runs.
+    var whileExporting: (@MainActor () async -> Void)?
 
     @MainActor
     func export(
@@ -24,6 +29,8 @@ final class FakeExporter: VideoExporting {
         captionYPosition _: Double,
         addWatermark _: Bool
     ) async throws -> URL {
+        exportCount += 1
+        await whileExporting?()
         switch outcome {
         case let .succeed(url): return url
         case let .fail(error): throw error
