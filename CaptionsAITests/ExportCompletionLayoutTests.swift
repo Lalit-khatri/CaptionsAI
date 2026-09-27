@@ -48,6 +48,38 @@ final class ExportCompletionLayoutTests: XCTestCase {
         ExportSummaryRow(format: "Reel", duration: "0:15", style: style)
     }
 
+    // MARK: - What the summary card says
+
+    /// Quality is not something the user picks any more, so the card no
+    /// longer spends a column restating the fixed default.
+    func testTheSummaryCardShowsFormatDurationAndStyleOnly() {
+        let columns = summary(style: "Beast").columns
+
+        XCTAssertEqual(columns.map(\.title), ["Format", "Duration", "Style"])
+        XCTAssertEqual(columns.map(\.value), ["Reel", "0:15", "Beast"])
+    }
+
+    // MARK: - What every export now uses
+
+    /// The Quality picker and the Include Audio toggle are gone from the
+    /// export screen, so these defaults are what every export gets. Muting by
+    /// default or dropping to Medium would ship silently.
+    func testEveryExportIsHighQualityWithAudio() {
+        let settings = ExportViewModel().settings
+
+        XCTAssertEqual(settings.quality, .high)
+        XCTAssertTrue(settings.includeAudio)
+    }
+
+    /// The quoted size is what the user reads before exporting; it must
+    /// include the audio track the export will actually carry.
+    ///
+    /// Ten minutes at 1080p H.264 High: 5 Mbps video + 0.128 Mbps audio
+    /// = 384.6 MB. Without the audio it would read "~375 MB".
+    func testTheSizeQuoteIncludesTheAudioEveryExportCarries() {
+        XCTAssertEqual(ExportViewModel().estimatedFileSize(videoDuration: 600), "~385 MB")
+    }
+
     // MARK: - The hero
 
     /// The owner's actual complaint was about a big phone: a 210pt thumbnail

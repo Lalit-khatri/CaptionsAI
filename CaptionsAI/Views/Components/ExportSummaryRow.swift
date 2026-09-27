@@ -16,13 +16,30 @@ struct ExportSummaryRow: View {
     static let columnSpacing: CGFloat = 16
     static let dividerHeight: CGFloat = 28
 
+    struct Column: Equatable {
+        let title: String
+        let value: String
+    }
+
+    /// The columns, left to right, as data so a test can state what the card
+    /// says without drawing it. Titles are unique, which makes them the
+    /// `ForEach` identity.
+    var columns: [Column] {
+        [
+            Column(title: "Format", value: format),
+            Column(title: "Duration", value: duration),
+            Column(title: "Style", value: style),
+        ]
+    }
+
     var body: some View {
         HStack(spacing: Self.columnSpacing) {
-            detail(title: "Format", value: format)
-            Divider().frame(height: Self.dividerHeight)
-            detail(title: "Duration", value: duration)
-            Divider().frame(height: Self.dividerHeight)
-            detail(title: "Style", value: style)
+            ForEach(columns, id: \.title) { column in
+                if column.title != columns.first?.title {
+                    Divider().frame(height: Self.dividerHeight)
+                }
+                detail(title: column.title, value: column.value)
+            }
         }
         .padding(.vertical, 14)
         .padding(.horizontal, 16)
