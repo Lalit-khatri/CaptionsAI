@@ -150,6 +150,19 @@ final class FeedbackMailTests: XCTestCase {
         XCTAssertTrue(text.contains("batch export"))
     }
 
+    func testEachMailAppGetsAPrefilledDraftItCanParse() throws {
+        let body = FeedbackMail.body(kind: .feedback, message: "styles & fonts", diagnostics: diagnostics)
+
+        for app in MailApp.allCases {
+            let url = try XCTUnwrap(app.composeURL(kind: .feedback, body: body), "\(app) URL would not parse")
+            let string = url.absoluteString
+
+            XCTAssertEqual(url.scheme, app.scheme)
+            XCTAssertTrue(string.contains("lk.khatri558%40gmail.com"), "\(app) draft has no recipient")
+            XCTAssertTrue(string.contains("styles%20%26%20fonts"), "\(app) draft would be cut at the ampersand")
+        }
+    }
+
     // MARK: - Telling the truth afterwards
 
     /// The one piece of copy in this feature that can lie. `.saved` means the

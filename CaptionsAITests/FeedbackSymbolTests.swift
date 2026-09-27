@@ -33,6 +33,7 @@ final class FeedbackSymbolTests: XCTestCase {
         for name in [
             FeedbackMail.copySymbol, FeedbackMail.copiedSymbol,
             FeedbackMail.shareSymbol, FeedbackMail.defaultMailSymbol,
+            FeedbackMail.mailAppSymbol,
         ] {
             assertResolves(name)
         }

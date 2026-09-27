@@ -42,6 +42,57 @@ enum FeedbackKind: String, CaseIterable, Identifiable {
     }
 }
 
+/// Third-party mail apps the contact sheet can open with a pre-filled draft.
+///
+/// Their compose URLs are not documented by the vendors and may change, so
+/// each is a best effort next to the share sheet and the copy button, never
+/// the only way out. Every `scheme` must also be listed under
+/// `LSApplicationQueriesSchemes` in Info.plist, or `canOpenURL` answers false
+/// and the row never appears.
+enum MailApp: String, CaseIterable, Identifiable {
+    case gmail
+    case outlook
+    case spark
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .gmail: return "Gmail"
+        case .outlook: return "Outlook"
+        case .spark: return "Spark"
+        }
+    }
+
+    var scheme: String {
+        switch self {
+        case .gmail: return "googlegmail"
+        case .outlook: return "ms-outlook"
+        case .spark: return "readdle-spark"
+        }
+    }
+
+    var menuTitle: String { "Open in \(displayName)" }
+
+    /// Asked of `canOpenURL` to decide whether the row is shown.
+    var probeURL: URL? { URL(string: "\(scheme)://") }
+
+    func composeURL(kind: FeedbackKind, body: String) -> URL? {
+        let to = FeedbackMail.encode(FeedbackMail.address)
+        let subject = FeedbackMail.encode(kind.subject)
+        let body = FeedbackMail.encode(body)
+
+        switch self {
+        case .gmail:
+            return URL(string: "googlegmail:///co?to=\(to)&subject=\(subject)&body=\(body)")
+        case .outlook:
+            return URL(string: "ms-outlook://compose?to=\(to)&subject=\(subject)&body=\(body)")
+        case .spark:
+            return URL(string: "readdle-spark://compose?recipient=\(to)&subject=\(subject)&body=\(body)")
+        }
+    }
+}
+
 /// Everything the feedback feature says and sends, as plain values.
 ///
 /// The app has no backend and is not getting one: it is sold on the promise
@@ -183,6 +234,7 @@ enum FeedbackMail {
     static let copiedSymbol = "checkmark"
     static let shareSymbol = "square.and.arrow.up"
     static let defaultMailSymbol = "envelope"
+    static let mailAppSymbol = "paperplane"
 
     /// What the share sheet carries. Most apps it reaches — Messages,
     /// WhatsApp, Notes — have no recipient field, so the address and subject

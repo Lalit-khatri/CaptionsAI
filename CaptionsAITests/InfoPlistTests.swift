@@ -32,4 +32,18 @@ final class InfoPlistTests: XCTestCase {
         let major = try XCTUnwrap(minimum.split(separator: ".").first.flatMap { Int($0) })
         XCTAssertGreaterThanOrEqual(major, 17, "the app uses SwiftData and @Observable")
     }
+
+    /// `canOpenURL` answers false for any scheme not declared here, even when
+    /// the app is installed, so a missing entry silently hides that row of
+    /// the feedback contact sheet.
+    func testEveryMailAppSchemeIsQueryable() throws {
+        let declared = try XCTUnwrap(
+            appBundle.object(forInfoDictionaryKey: "LSApplicationQueriesSchemes") as? [String],
+            "LSApplicationQueriesSchemes missing from the built app"
+        )
+
+        for app in MailApp.allCases {
+            XCTAssertTrue(declared.contains(app.scheme), "\(app.scheme) is not declared; \(app.displayName) will never be offered")
+        }
+    }
 }

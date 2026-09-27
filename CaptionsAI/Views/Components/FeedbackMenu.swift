@@ -51,8 +51,9 @@ struct MailComposer: UIViewControllerRepresentable {
 /// 1. The in-app composer, whenever Apple Mail has an account. It is also the
 ///    one that satisfies Apple's optional-disclosure exception, because the
 ///    diagnostics are visible in a body the user can edit before sending.
-/// 2. Otherwise, `FeedbackContactSheet`: the address with a copy button, the
-///    share sheet, and the default mail app as an explicit choice.
+/// 2. Otherwise, `FeedbackContactSheet`: the address with a copy button,
+///    a pre-filled draft in each installed `MailApp`, the share sheet, and
+///    the default mail app as an explicit choice.
 ///
 /// Route 2 used to be a `mailto:` opened straight away. When Apple Mail is
 /// the default and has no account, `open` reports **success** and Mail shows
@@ -223,6 +224,7 @@ struct FeedbackContactSheet: View {
 
     @State private var copied = false
     @State private var failure: String?
+    @State private var installedApps: [MailApp] = []
 
     static let detents: Set<PresentationDetent> = [.medium, .large]
     static let copiedResetDelay: Duration = .seconds(2)
@@ -249,6 +251,14 @@ struct FeedbackContactSheet: View {
                 }
 
                 Section {
+                    ForEach(installedApps) { app in
+                        Button {
+                            open(app.composeURL(kind: kind, body: mailBody))
+                        } label: {
+                            Label(app.menuTitle, systemImage: FeedbackMail.mailAppSymbol)
+                        }
+                    }
+
                     ShareLink(
                         item: FeedbackMail.shareText(kind: kind, body: mailBody),
                         subject: Text(kind.subject)
@@ -257,7 +267,7 @@ struct FeedbackContactSheet: View {
                     }
 
                     Button {
-                        openDefaultMail()
+                        open(FeedbackMail.url(kind: kind, body: mailBody))
                     } label: {
                         Label(FeedbackMail.defaultMailTitle, systemImage: FeedbackMail.defaultMailSymbol)
                     }
@@ -274,6 +284,11 @@ struct FeedbackContactSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .task {
+                installedApps = MailApp.allCases.filter { app in
+                    app.probeURL.map { UIApplication.shared.canOpenURL($0) } ?? false
+                }
+            }
             .task(id: copied) {
                 guard copied else { return }
                 try? await Task.sleep(for: Self.copiedResetDelay)
@@ -288,10 +303,11 @@ struct FeedbackContactSheet: View {
         copied = true
     }
 
-    /// Still offered, but now as a named choice: for someone whose default
-    /// mail app is not in any list we could make, it is the right answer.
-    private func openDefaultMail() {
-        guard let url = FeedbackMail.url(kind: kind, body: mailBody) else {
+    /// Opens a draft in whichever app the user picked. The default mail app
+    /// is still offered this way, as a named choice: for someone whose mail
+    /// app is not in `MailApp`, it is the right answer.
+    private func open(_ url: URL?) {
+        guard let url else {
             failure = "Could not build a mail draft. \(FeedbackMail.writeDirectlyHint)"
             return
         }
