@@ -275,8 +275,41 @@ final class FeedbackMailTests: XCTestCase {
     /// `.sheet(item:)` keys on `id`. If the composer and the contact sheet for
     /// the same kind shared one, switching between them would not re-present.
     func testEverySheetHasADistinctIdentity() {
-        let sheets = FeedbackKind.allCases.flatMap { [FeedbackSheet.compose($0), .contact($0)] }
+        let sheets = FeedbackKind.allCases.flatMap { [FeedbackSheet.compose($0), .contact($0)] } + [.paywall]
         XCTAssertEqual(Set(sheets.map(\.id)).count, sheets.count)
+    }
+
+    func testThePaywallSheetIsKeyedPaywall() {
+        XCTAssertEqual(FeedbackSheet.paywall.id, "paywall")
+    }
+
+    /// Mail routing never lands on the paywall, whatever Mail can do.
+    func testNoFeedbackKindRoutesToThePaywall() {
+        for kind in FeedbackKind.allCases {
+            for canSendMail in [true, false] {
+                XCTAssertNotEqual(FeedbackSheet.route(for: kind, canSendMail: canSendMail), .paywall)
+            }
+        }
+    }
+
+    // MARK: - The Pro row
+
+    func testAFreeUserSeesAnOfferThatOpensThePaywall() {
+        let row = ProMenuRow(isPro: false)
+
+        XCTAssertEqual(row, .upgrade)
+        XCTAssertEqual(row.title, "CaptionsAI Pro")
+        XCTAssertEqual(row.symbol, "crown")
+        XCTAssertTrue(row.opensPaywall)
+    }
+
+    func testASubscriberSeesAReadOnlyYoureProRow() {
+        let row = ProMenuRow(isPro: true)
+
+        XCTAssertEqual(row, .active)
+        XCTAssertEqual(row.title, "You're Pro")
+        XCTAssertEqual(row.symbol, "checkmark.seal.fill")
+        XCTAssertFalse(row.opensPaywall)
     }
 
     // MARK: - The share text and fallback copy

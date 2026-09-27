@@ -67,6 +67,7 @@ struct MailComposer: UIViewControllerRepresentable {
 /// `Menu`'s content closure never presents at all.
 struct FeedbackMenuModifier: ViewModifier {
     @Environment(\.openURL) private var openURL
+    @Environment(StoreKitManager.self) private var storeKit
 
     @State private var presented: FeedbackSheet?
     @State private var banner: String?
@@ -82,6 +83,20 @@ struct FeedbackMenuModifier: ViewModifier {
                             } label: {
                                 Label(kind.menuTitle, systemImage: kind.menuIcon)
                             }
+                        }
+
+                        // The paywall was reachable only by running out of
+                        // exports, so nobody could subscribe before hitting
+                        // the limit. A subscriber sees a disabled "You're
+                        // Pro" row instead of an offer they already took.
+                        Section {
+                            let row = ProMenuRow(isPro: storeKit.isPro)
+                            Button {
+                                presented = .paywall
+                            } label: {
+                                Label(row.title, systemImage: row.symbol)
+                            }
+                            .disabled(!row.opensPaywall)
                         }
 
                         // What App Review and a US privacy request both
@@ -117,6 +132,11 @@ struct FeedbackMenuModifier: ViewModifier {
                     .ignoresSafeArea()
                 case .contact(let kind):
                     FeedbackContactSheet(kind: kind, mailBody: mailBody(for: kind))
+                case .paywall:
+                    // Passed on explicitly: one of the screens carrying this
+                    // menu is itself a sheet.
+                    PaywallView(trigger: .menu)
+                        .environment(storeKit)
                 }
             }
             .overlay(alignment: .bottom) {
@@ -202,6 +222,7 @@ extension View {
 enum FeedbackSheet: Identifiable, Equatable {
     case compose(FeedbackKind)
     case contact(FeedbackKind)
+    case paywall
 
     /// Apple's composer only when Apple Mail can send; otherwise the contact
     /// sheet. Never a `mailto:` opened without asking — see
@@ -214,7 +235,42 @@ enum FeedbackSheet: Identifiable, Equatable {
         switch self {
         case .compose(let kind): return "compose-\(kind.id)"
         case .contact(let kind): return "contact-\(kind.id)"
+        case .paywall: return "paywall"
         }
+    }
+}
+
+/// The menu row that leads to Pro, or says the user already has it.
+enum ProMenuRow: Equatable {
+    case upgrade
+    case active
+
+    static let upgradeTitle = "CaptionsAI Pro"
+    static let activeTitle = "You're Pro"
+    static let upgradeSymbol = "crown"
+    static let activeSymbol = "checkmark.seal.fill"
+
+    init(isPro: Bool) {
+        self = isPro ? .active : .upgrade
+    }
+
+    var title: String {
+        switch self {
+        case .upgrade: return Self.upgradeTitle
+        case .active: return Self.activeTitle
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .upgrade: return Self.upgradeSymbol
+        case .active: return Self.activeSymbol
+        }
+    }
+
+    /// A subscriber has nothing to buy; their row is read-only.
+    var opensPaywall: Bool {
+        self == .upgrade
     }
 }
 

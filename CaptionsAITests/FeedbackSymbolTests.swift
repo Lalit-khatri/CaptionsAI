@@ -29,6 +29,11 @@ final class FeedbackSymbolTests: XCTestCase {
         assertResolves(FeedbackMail.versionSymbol)
     }
 
+    func testBothProRowsHaveIcons() {
+        assertResolves(ProMenuRow.upgrade.symbol)
+        assertResolves(ProMenuRow.active.symbol)
+    }
+
     func testTheContactSheetRowsHaveIcons() {
         for name in [
             FeedbackMail.copySymbol, FeedbackMail.copiedSymbol,

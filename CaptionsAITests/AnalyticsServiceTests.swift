@@ -89,6 +89,15 @@ final class AnalyticsServiceTests: XCTestCase {
         )
     }
 
+    func testPaywallShownFromTheMenuLogsMenu() {
+        AnalyticsService.paywallShown(.menu)
+
+        XCTAssertEqual(
+            mockProvider.recordedEvents,
+            [.init(name: "paywall_shown", parameters: ["trigger": "menu"])]
+        )
+    }
+
     func testPaywallShownManuallyLogsManual() {
         AnalyticsService.paywallShown(.manual)
 
@@ -100,7 +109,7 @@ final class AnalyticsServiceTests: XCTestCase {
 
     /// Dashboards group on these strings, so they are pinned on purpose.
     func testPaywallTriggerRawValuesAreTheOnesDashboardsGroupOn() {
-        XCTAssertEqual(PaywallTrigger.allCases.map(\.rawValue), ["manual", "export_limit"])
+        XCTAssertEqual(PaywallTrigger.allCases.map(\.rawValue), ["manual", "export_limit", "menu"])
     }
 
     @MainActor

@@ -29,6 +29,8 @@ enum PaywallTrigger: String, CaseIterable {
     case manual
     /// Raised because a free user ran out of exports for the day.
     case exportLimit = "export_limit"
+    /// Opened from the "CaptionsAI Pro" row in the top-right menu.
+    case menu
 }
 
 // MARK: - AnalyticsService
