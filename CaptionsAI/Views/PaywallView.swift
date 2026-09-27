@@ -348,6 +348,9 @@ struct PaywallView: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.gray)
                     }
+                    // Icon-only, so VoiceOver would otherwise read the
+                    // symbol name.
+                    .accessibilityLabel(Self.closeLabel)
                 }
             }
         }
@@ -395,6 +398,7 @@ struct PaywallView: View {
     }
 
     static let retryTitle = "Try Again"
+    static let closeLabel = "Close"
 
     private var unavailableMessage: String? {
         if case let .unavailable(message) = ctaState { return message }
