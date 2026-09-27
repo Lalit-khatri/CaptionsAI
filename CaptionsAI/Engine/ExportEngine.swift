@@ -140,7 +140,8 @@ final class ExportEngine {
             outputSize: renderSize,
             captionYPosition: captionYPosition,
             preferredOrientation: preferredOrientation,
-            addWatermark: addWatermark
+            addWatermark: addWatermark,
+            frameRateSource: sourceVideoTrack
         )
 
         // Select export preset based on codec and quality

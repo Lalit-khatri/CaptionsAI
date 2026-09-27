@@ -85,4 +85,39 @@ final class FrameRateTests: XCTestCase {
             "a 24 fps source exported at \(1 / composition.frameDuration.seconds) fps"
         )
     }
+
+    func testAnAbsurdlyShortFrameDurationIsClamped() {
+        let result = duration(min: CMTime(value: 1, timescale: 100_000), nominal: 0)
+
+        XCTAssertEqual(result, CMTime(value: 1, timescale: 240))
+    }
+
+    /// The export never hands the renderer the file itself. It builds an
+    /// AVMutableComposition over it, and passes the file's track for the rate.
+    func testAnExportShapedCompositionTakesItsRateFromTheSourceFile() async throws {
+        let url = try await TestSupport.makeTestVideo(
+            seconds: 0.5, size: CGSize(width: 320, height: 240), fps: 24
+        )
+        defer { TestSupport.remove(url) }
+
+        let asset = AVURLAsset(url: url)
+        let source = try XCTUnwrap(try await asset.loadTracks(withMediaType: .video).first)
+        let mutable = AVMutableComposition()
+        let track = try XCTUnwrap(
+            mutable.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
+        )
+        let duration = try await asset.load(.duration)
+        try track.insertTimeRange(CMTimeRange(start: .zero, duration: duration), of: source, at: .zero)
+
+        let composition = try await CaptionRenderer().buildVideoComposition(
+            for: mutable,
+            segments: [],
+            style: .hormozi,
+            outputSize: CGSize(width: 320, height: 240),
+            captionYPosition: 0.8,
+            frameRateSource: source
+        )
+
+        XCTAssertEqual(composition.frameDuration.seconds, 1.0 / 24, accuracy: 1e-6)
+    }
 }

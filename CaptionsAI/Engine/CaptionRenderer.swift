@@ -41,7 +41,8 @@ final class CaptionRenderer {
         outputSize: CGSize,
         captionYPosition: Double,
         preferredOrientation: CGImagePropertyOrientation = .up,
-        addWatermark: Bool = false
+        addWatermark: Bool = false,
+        frameRateSource: AVAssetTrack? = nil
     ) async throws -> AVMutableVideoComposition {
         let composition = AVMutableVideoComposition()
         composition.renderSize = outputSize
@@ -54,8 +55,11 @@ final class CaptionRenderer {
 
         // The output used to be pinned to 30 fps whatever came in: a 60 fps
         // clip lost every other frame, and 24 fps film was resampled into
-        // judder. Take the source's own rate instead.
-        composition.frameDuration = try await Self.frameDuration(of: videoTrack)
+        // judder. Take the source's own rate instead. The export passes the
+        // original file's track: the AVMutableComposition track it builds
+        // from often reports neither a frame duration nor a nominal rate, so
+        // reading it silently fell back to 30 again.
+        composition.frameDuration = try await Self.frameDuration(of: frameRateSource ?? videoTrack)
 
         // Create instruction covering the full duration
         let instruction = CaptionCompositionInstruction(
@@ -102,8 +106,11 @@ final class CaptionRenderer {
     /// if it went through the nominal rate as a float. Both are optional in
     /// practice — plenty of files report neither — hence the fallback.
     static func frameDuration(minFrameDuration: CMTime, nominalFrameRate: Float) -> CMTime {
+        let shortest = CMTime(value: 1, timescale: CMTimeScale(maximumFrameRate))
         if minFrameDuration.isValid, !minFrameDuration.isIndefinite, minFrameDuration.seconds > 0 {
-            return minFrameDuration
+            // Variable-frame-rate files can report a burst's spacing here,
+            // far below any real frame; the cap applies to this path too.
+            return minFrameDuration.seconds < shortest.seconds ? shortest : minFrameDuration
         }
         guard nominalFrameRate.isFinite, nominalFrameRate > 0 else {
             return CMTime(value: 1, timescale: fallbackFrameRate)
