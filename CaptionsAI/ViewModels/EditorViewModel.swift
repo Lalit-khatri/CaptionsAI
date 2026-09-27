@@ -294,6 +294,9 @@ final class EditorViewModel {
     /// looks inside the segment's own range and finds nothing there.
     func updateSegment(_ segment: CaptionSegment, text: String, start: Double, end: Double) {
         let (validStart, validEnd) = validatedTiming(start: start, end: end)
+        // Carry the measured timings to the new range first, so that a text
+        // edit with the same number of words can keep them.
+        rescaleWordTimings(in: segment, toStart: validStart, end: validEnd)
         segment.startTime = validStart
         segment.endTime = validEnd
         applyText(text, to: segment)
@@ -345,8 +348,40 @@ final class EditorViewModel {
 
     private func applyText(_ text: String, to segment: CaptionSegment) {
         segment.text = text
-        let words = text.split(separator: " ").map(String.init)
-        segment.words = Self.evenlySpaced(words, from: segment.startTime, to: segment.endTime)
+        segment.words = Self.wordTimings(
+            for: text,
+            keeping: segment.words,
+            from: segment.startTime,
+            to: segment.endTime
+        )
+    }
+
+    /// Word timings for `text` across `start...end`.
+    ///
+    /// When the word count is unchanged — fixing a misheard word, correcting
+    /// case or punctuation, the common edit — the existing timings are kept
+    /// and only the words swapped. They are the recogniser's measurements of
+    /// real speech; every edit used to flatten them to an even spread, so
+    /// correcting one typo put the highlight out of step with the voice for
+    /// the whole caption. A different count leaves no way to say which word
+    /// went where, so those are spread evenly.
+    ///
+    /// Words are split on any whitespace. Splitting on spaces alone turned a
+    /// line break typed in the editor into part of a "word", so two words
+    /// either side of it highlighted as one.
+    static func wordTimings(
+        for text: String,
+        keeping existing: [WordTiming],
+        from start: Double,
+        to end: Double
+    ) -> [WordTiming] {
+        let words = text.split(whereSeparator: \.isWhitespace).map(String.init)
+        guard !words.isEmpty, words.count == existing.count else {
+            return evenlySpaced(words, from: start, to: end)
+        }
+        return zip(existing, words).map { timing, word in
+            WordTiming(word: word, startTime: timing.startTime, endTime: timing.endTime)
+        }
     }
 
     private func rescaleWordTimings(in segment: CaptionSegment, toStart start: Double, end: Double) {
