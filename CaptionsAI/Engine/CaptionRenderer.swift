@@ -518,14 +518,15 @@ final class CaptionCompositor: NSObject, AVVideoCompositing {
 
         let trackID = CMPersistentTrackID(trackIDNumber.int32Value)
 
-        guard let sourceBuffer = request.sourceFrame(byTrackID: trackID) else {
-            request.finish(with: NSError(domain: "CaptionCompositor", code: -1))
-            return
-        }
-
-        let sourceImage = CIImage(cvPixelBuffer: sourceBuffer)
-        let currentTime = CMTimeGetSeconds(request.compositionTime)
         let renderSize = instruction.renderSize
+        let currentTime = CMTimeGetSeconds(request.compositionTime)
+
+        // AVFoundation can hand back no frame for a composition time that
+        // falls in a gap or past a short track's last sample. Failing the
+        // request there aborted the entire export with an opaque error; a
+        // black frame (still captioned) is what the viewer would expect.
+        let sourceImage = request.sourceFrame(byTrackID: trackID).map { CIImage(cvPixelBuffer: $0) }
+            ?? getBlackBackground(for: renderSize)
 
         // 1. Turn the frame the way the source file asks. This is the only
         // rotation applied to the pixels.
