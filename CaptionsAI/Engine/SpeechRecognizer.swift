@@ -59,7 +59,7 @@ enum RecognitionOutcome<Result> {
 /// called again after it has delivered a final result or an error. A plain
 /// `var` was used for this before; the lock makes the claim safe whichever
 /// queue the handler happens to run on.
-final class ResumeOnce: @unchecked Sendable {
+final class OneShotClaim: @unchecked Sendable {
     private let lock = NSLock()
     private var isClaimed = false
 
@@ -195,7 +195,7 @@ final class SpeechRecognizer {
         let gate = CancellationGate()
         let result: SFSpeechRecognitionResult = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
-                let once = ResumeOnce()
+                let once = OneShotClaim()
                 let task = recognizer.recognitionTask(with: request) { [weak self] result, recognitionError in
                     if let self, let result {
                         // Update partial results on main thread

@@ -72,17 +72,17 @@ final class RecognitionCallbackTests: XCTestCase {
         XCTAssertEqual(read("", isFinal: true, error: nil), .finished(""))
     }
 
-    // MARK: - Resume once
+    // MARK: - One-shot claim
 
     func testOnlyTheFirstClaimSucceeds() {
-        let once = ResumeOnce()
+        let once = OneShotClaim()
 
         XCTAssertEqual([once.claim(), once.claim(), once.claim()], [true, false, false])
     }
 
     func testEachGateIsIndependent() {
-        let first = ResumeOnce()
-        let second = ResumeOnce()
+        let first = OneShotClaim()
+        let second = OneShotClaim()
 
         XCTAssertTrue(first.claim())
         XCTAssertTrue(second.claim())
@@ -91,7 +91,7 @@ final class RecognitionCallbackTests: XCTestCase {
     /// The handler can run on any queue. Exactly one of many racing claims
     /// may win, or the continuation is resumed twice and the app crashes.
     func testExactlyOneOfManyConcurrentClaimsSucceeds() {
-        let once = ResumeOnce()
+        let once = OneShotClaim()
         let lock = NSLock()
         var wins = 0
 
