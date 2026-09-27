@@ -1,6 +1,21 @@
 import StoreKit
 import SwiftUI
 
+// MARK: - StoreClient
+
+/// The App Store calls `StoreKitManager` makes, as values.
+///
+/// `Product` has no public initialiser, so a test cannot fabricate one — but
+/// it can make a load fail, or come back empty, which are exactly the paths
+/// that went wrong.
+struct StoreClient {
+    var products: (Set<String>) async throws -> [Product]
+
+    static let live = StoreClient(
+        products: { try await Product.products(for: $0) }
+    )
+}
+
 // MARK: - StoreKitManager
 
 /// Manages in-app purchases and subscription status using StoreKit 2.
@@ -33,11 +48,18 @@ final class StoreKitManager {
 
     // MARK: - Private
 
+    private let client: StoreClient
     private var transactionListener: Task<Void, Never>?
 
     // MARK: - Init
 
-    init() {
+    /// - Parameters:
+    ///   - client: The App Store calls. Tests pass fakes.
+    ///   - startImmediately: Whether to begin loading and listening now.
+    ///     Tests pass `false` so nothing touches the real store behind them.
+    init(client: StoreClient = .live, startImmediately: Bool = true) {
+        self.client = client
+        guard startImmediately else { return }
         transactionListener = listenForTransactions()
         Task { await loadProducts() }
         Task { await restorePurchases() }
@@ -49,12 +71,24 @@ final class StoreKitManager {
 
     // MARK: - Load Products
 
+    /// Whether the paywall should ask the store again when it opens.
+    ///
+    /// Products used to be fetched once, at launch. A launch in airplane mode
+    /// left the paywall saying "unavailable" until the app was killed, however
+    /// good the connection was by the time the user got there.
+    var needsProducts: Bool {
+        products.isEmpty && !isLoading
+    }
+
     @MainActor
     func loadProducts() async {
+        guard !isLoading else { return }
         isLoading = true
+        // A retry that succeeds must not keep showing the last failure.
+        error = nil
 
         do {
-            let storeProducts = try await Product.products(for: Self.productIDs)
+            let storeProducts = try await client.products(Self.productIDs)
             // Sort: yearly first (better value)
             products = storeProducts.sorted { $0.id == Self.yearlyID && $1.id != Self.yearlyID }
         } catch {

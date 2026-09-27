@@ -300,6 +300,13 @@ struct PaywallView: View {
         .onAppear {
             AnalyticsService.paywallShown(trigger: "manual")
         }
+        // The launch-time fetch may have failed offline; opening the paywall
+        // is the moment the user needs the products, so ask again.
+        .task {
+            if storeKit.needsProducts {
+                await storeKit.loadProducts()
+            }
+        }
         // Keyed on the product id so this also runs on the nil-to-loaded
         // transition, not just when the user switches plan.
         .task(id: selectedProduct?.id) {
@@ -324,7 +331,16 @@ struct PaywallView: View {
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 24)
         }
+
+        if unavailableMessage != nil {
+            Button(Self.retryTitle) {
+                Task { await storeKit.loadProducts() }
+            }
+            .font(.subheadline.bold())
+        }
     }
+
+    static let retryTitle = "Try Again"
 
     private var unavailableMessage: String? {
         if case let .unavailable(message) = ctaState { return message }
