@@ -26,10 +26,6 @@
 	<true/>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>CaptionsAI needs speech recognition to generate captions from your video&apos;s audio.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>CaptionsAI needs microphone access for speech recognition.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>CaptionsAI needs access to your photos to import videos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>CaptionsAI needs permission to save exported videos to your photo library.</string>
 	<key>UIApplicationSceneManifest</key>

@@ -44,11 +44,11 @@ before relying on the app for sensitive material.
 
 ## Permissions the app asks for
 
-- **Photo library** — to let you choose a video to caption, and to save the
-  video you export. The app reads only the video you pick.
-- **Speech recognition** and **microphone** — required by Apple's Speech
-  framework to turn your video's audio into captions. The app does not record
-  from your microphone.
+- **Photo library (add only)** — to save the video you export. Choosing a
+  video uses the system photo picker, which needs no permission: the app
+  receives only the video you pick.
+- **Speech recognition** — required by Apple's Speech framework to turn your
+  video's audio into captions. The app never uses your microphone.
 
 ## Subscriptions
 

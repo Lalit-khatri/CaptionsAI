@@ -49,13 +49,16 @@ targets:
       base:
         INFOPLIST_FILE: CaptionsAI/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.lalitkhatri.CaptionsAI
+        # Must be set here, not only under the project-level settings above:
+        # XcodeGen's iOS preset writes TARGETED_DEVICE_FAMILY "1,2" at target
+        # level, and target settings win. Left alone, the app ships as
+        # Universal while Info.plist only allows portrait, which App Store
+        # Connect rejects for iPad multitasking.
+        TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown"
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "CaptionsAI needs speech recognition to generate captions from your video's audio."
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "CaptionsAI needs microphone access for speech recognition."
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "CaptionsAI needs access to your photos to import videos."
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "CaptionsAI needs permission to save exported videos to your photo library."
       configs:
         Debug:
@@ -97,11 +100,13 @@ schemes:
         CaptionsAITests: [test]
     run:
       config: Debug
+      storeKitConfiguration: CaptionsAI/Configuration.storekit
       commandLineArguments:
         "-com.apple.CoreData.ConcurrencyDebug 1": true
     test:
       config: Debug
       gatherCoverageData: true
+      storeKitConfiguration: CaptionsAI/Configuration.storekit
       targets:
         - CaptionsAITests
     profile:
