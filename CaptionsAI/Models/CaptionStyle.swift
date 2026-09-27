@@ -299,26 +299,63 @@ extension CaptionStyle {
 
 // MARK: - Color Extensions
 
+/// The channels of a `#RRGGBB` or `#AARRGGBB` string, 0...255 each.
+struct HexChannels: Equatable {
+    var alpha: UInt8
+    var red: UInt8
+    var green: UInt8
+    var blue: UInt8
+
+    /// What anything unparseable draws as, as it always has.
+    static let fallback = HexChannels(alpha: 255, red: 255, green: 255, blue: 255)
+
+    /// Parses `hex`, with or without a leading `#` and surrounding spaces.
+    ///
+    /// Works on a `Substring` and `UInt64(_:radix:)`. `Color(hex:)` runs in
+    /// SwiftUI bodies, so for every coloured word of every caption on every
+    /// frame, and it used to build a trimmed `String`, a `CharacterSet` and a
+    /// `Scanner` each time. Scanner also stopped silently at the first bad
+    /// digit, so "#GG0000" parsed as black; now anything that is not all hex
+    /// digits is the fallback, like a wrong length always was.
+    init(hex: String) {
+        var digits = Substring(hex).drop { $0 == " " }
+        if digits.first == "#" { digits = digits.dropFirst() }
+        while digits.last == " " { digits = digits.dropLast() }
+
+        guard digits.count == 6 || digits.count == 8,
+              digits.allSatisfy(\.isHexDigit),
+              let value = UInt64(digits, radix: 16)
+        else {
+            self = .fallback
+            return
+        }
+
+        func byte(_ shift: UInt64) -> UInt8 { UInt8(truncatingIfNeeded: value >> shift) }
+        self.init(
+            alpha: digits.count == 8 ? byte(24) : 255,
+            red: byte(16),
+            green: byte(8),
+            blue: byte(0)
+        )
+    }
+
+    init(alpha: UInt8, red: UInt8, green: UInt8, blue: UInt8) {
+        self.alpha = alpha
+        self.red = red
+        self.green = green
+        self.blue = blue
+    }
+}
+
 extension Color {
     init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 6:
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8:
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (255, 255, 255, 255)
-        }
+        let channels = HexChannels(hex: hex)
         self.init(
             .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue: Double(b) / 255,
-            opacity: Double(a) / 255
+            red: Double(channels.red) / 255,
+            green: Double(channels.green) / 255,
+            blue: Double(channels.blue) / 255,
+            opacity: Double(channels.alpha) / 255
         )
     }
 
