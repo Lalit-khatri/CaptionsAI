@@ -389,17 +389,46 @@ final class EditorViewModel {
         segments = project.sortedSegments
     }
 
-    func addSegment(at time: Double, text: String = "New caption") {
-        let (validStart, validEnd) = validatedTiming(start: time, end: time + 2.0)
+    /// What a caption added by hand says until the user types over it.
+    static let newCaptionText = "New caption"
+    /// How long a caption added by hand lasts, where the video allows.
+    static let newCaptionDuration: Double = 2
+
+    /// Where a caption added at `time` goes.
+    ///
+    /// Pulled back from the end of the video rather than clipped by it: added
+    /// at the last second, a clipped caption was zero seconds long and could
+    /// never be seen. A video shorter than the default gets one caption over
+    /// all of it. A duration of 0 means unknown, and nothing is clipped.
+    static func newCaptionRange(at time: Double, videoDuration: Double) -> (start: Double, end: Double) {
+        let start = max(0, time)
+        guard videoDuration > 0 else { return (start, start + newCaptionDuration) }
+
+        let latestStart = max(0, videoDuration - newCaptionDuration)
+        let clampedStart = min(start, latestStart)
+        return (clampedStart, min(clampedStart + newCaptionDuration, videoDuration))
+    }
+
+    /// Adds a caption at `time` and returns it, so the caller can open it
+    /// for editing.
+    ///
+    /// Given evenly spaced word timings like any edited caption; with none,
+    /// word-by-word styles showed it with nothing highlighted until the user
+    /// happened to edit it.
+    @discardableResult
+    func addSegment(at time: Double, text: String = EditorViewModel.newCaptionText) -> CaptionSegment {
+        let range = Self.newCaptionRange(at: time, videoDuration: project.videoDuration)
         let segment = CaptionSegment(
-            startTime: validStart,
-            endTime: validEnd,
+            startTime: range.start,
+            endTime: range.end,
             text: text,
             sortOrder: segments.count
         )
+        applyText(text, to: segment)
         project.addSegment(segment)
         reorderSegments()
-        segments = project.sortedSegments
+        finishSegmentEdit()
+        return segment
     }
 
     func deleteSegment(_ segment: CaptionSegment) {

@@ -12,8 +12,16 @@ struct TranscriptSheetView: View {
     let onSeek: (Double) -> Void
     let onSave: (CaptionSegment, String, Double, Double) -> Void
     let onDelete: (CaptionSegment) -> Void
+    /// Adds a caption at the playhead and returns it.
+    let onAdd: () -> CaptionSegment
 
     @State private var editingSegment: CaptionSegment?
+
+    static let addTitle = "Add Caption"
+    static let addSymbol = "plus"
+    static let emptyTitle = "No Captions"
+    static let emptySymbol = "captions.bubble"
+    static let emptyMessage = "Add a caption at the current point in the video."
 
     var body: some View {
         NavigationStack {
@@ -43,6 +51,28 @@ struct TranscriptSheetView: View {
                 }
             }
             .listStyle(.plain)
+            // Delete every caption, or transcribe a clip with no speech, and
+            // this sheet used to be an empty list with no way to add one.
+            .overlay {
+                if segments.isEmpty {
+                    ContentUnavailableView {
+                        Label(Self.emptyTitle, systemImage: Self.emptySymbol)
+                    } description: {
+                        Text(Self.emptyMessage)
+                    } actions: {
+                        Button(Self.addTitle) { addCaption() }
+                            .buttonStyle(.borderedProminent)
+                    }
+                }
+            }
+            .toolbar {
+                // Leading: the trailing corner holds the feedback menu.
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { addCaption() } label: {
+                        Label(Self.addTitle, systemImage: Self.addSymbol)
+                    }
+                }
+            }
             .navigationTitle("Transcript")
             .feedbackMenu()
             .navigationBarTitleDisplayMode(.inline)
@@ -60,6 +90,12 @@ struct TranscriptSheetView: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .presentationBackground(.ultraThinMaterial)
+    }
+
+    /// Adds the caption and opens it straight away, since the placeholder
+    /// text is never what the user wants it to say.
+    private func addCaption() {
+        editingSegment = onAdd()
     }
 }
 

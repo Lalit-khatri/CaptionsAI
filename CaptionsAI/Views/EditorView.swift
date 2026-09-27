@@ -81,6 +81,9 @@ struct EditorView: View {
                 },
                 onDelete: { segment in
                     viewModel.deleteSegment(segment)
+                },
+                onAdd: {
+                    viewModel.addSegment(at: viewModel.currentPlaybackTime)
                 }
             )
         }
