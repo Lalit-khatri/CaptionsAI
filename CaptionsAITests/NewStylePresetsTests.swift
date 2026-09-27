@@ -91,14 +91,14 @@ final class NewStylePresetsTests: XCTestCase {
 
     // MARK: - Every preset is within the sizes the app allows
 
-    /// The Text Size slider runs 16…48 and overwrites the preset's own size,
-    /// so a preset outside that range cannot be restored once a user touches
-    /// the slider.
+    /// The Text Size slider overwrites the preset's own size, so a preset
+    /// outside its range cannot be restored once a user touches the slider.
     func testEveryPresetSizeIsReachableWithTheSlider() {
+        let range = StyleSheetView.fontSizeRange
         for style in CaptionStyle.presets {
             XCTAssertTrue(
-                (16...48).contains(style.fontSize),
-                "\(style.name) is \(style.fontSize)pt, outside the 16…48 the slider offers"
+                range.contains(style.fontSize),
+                "\(style.name) is \(style.fontSize)pt, outside the \(range) the slider offers"
             )
         }
     }

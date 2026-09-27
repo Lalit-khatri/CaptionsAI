@@ -20,6 +20,12 @@ struct StyleSheetView: View {
     /// make text bigger.
     static let detents: Set<PresentationDetent> = [.height(restingHeight), .large]
 
+    /// What the Text Size slider offers. The floor used to be 16pt, which
+    /// was too large for long lines on a small or busy frame; 4pt lets a user
+    /// tuck captions into a corner.
+    static let fontSizeRange: ClosedRange<CGFloat> = 4 ... 48
+    static let fontSizeStep: CGFloat = 2
+
     var body: some View {
         VStack(spacing: 16) {
             // Title
@@ -66,7 +72,7 @@ struct StyleSheetView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    Slider(value: $fontSize, in: 16 ... 48, step: 2)
+                    Slider(value: $fontSize, in: Self.fontSizeRange, step: Self.fontSizeStep)
                         .tint(Color(hex: "#7C3AED"))
 
                     Image(systemName: "textformat.size.larger")

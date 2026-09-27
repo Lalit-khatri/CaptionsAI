@@ -120,14 +120,24 @@ final class CaptionSizeReadoutTests: XCTestCase {
     }
 
     func testTheReadoutIsWithinTheRangeTheSliderOffers() throws {
-        // `StyleSheetView`'s slider is `16 ... 48`. A preset outside that range
-        // would be clamped by the control, and the readout would disagree with
-        // the captions the moment the sheet opened.
+        // A preset outside the slider's range would be clamped by the
+        // control, and the readout would disagree with the captions the
+        // moment the sheet opened.
+        let range = StyleSheetView.fontSizeRange
         for style in CaptionStyle.presets {
             XCTAssertTrue(
-                (16 ... 48).contains(style.fontSize),
-                "\(style.name) is \(style.fontSize)pt, outside the slider's 16–48pt range"
+                range.contains(style.fontSize),
+                "\(style.name) is \(style.fontSize)pt, outside the slider's \(range)pt range"
             )
         }
+    }
+
+    func testASizeBelowTheOldFloorReachesTheProject() throws {
+        let (viewModel, project) = try makeViewModel()
+        XCTAssertTrue(StyleSheetView.fontSizeRange.contains(4), "the slider cannot reach 4pt")
+
+        viewModel.captionFontSize = 4
+
+        XCTAssertEqual(project.selectedStyle.fontSize, 4)
     }
 }
