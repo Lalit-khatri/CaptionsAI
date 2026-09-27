@@ -12,6 +12,9 @@ struct StoreClient {
     var products: (Set<String>) async throws -> [Product]
     /// The verified transactions the App Store currently says the user holds.
     var entitlements: () async -> [Entitlement]
+    /// Asks the App Store to re-send this Apple ID's transactions. May show a
+    /// sign-in prompt, so only ever called from an explicit Restore tap.
+    var sync: () async throws -> Void
 
     static let live = StoreClient(
         products: { try await Product.products(for: $0) },
@@ -23,8 +26,20 @@ struct StoreClient {
                 found.append(Entitlement(transaction))
             }
             return found
-        }
+        },
+        sync: { try await AppStore.sync() }
     )
+}
+
+// MARK: - RestoreOutcome
+
+/// What a Restore Purchases tap achieved, so the paywall can say so.
+enum RestoreOutcome: Equatable {
+    case restored
+    case nothingToRestore
+    /// The user dismissed the App Store sign-in. Not an error worth a message.
+    case cancelled
+    case failed(String)
 }
 
 // MARK: - Entitlement
@@ -170,9 +185,28 @@ final class StoreKitManager {
 
     // MARK: - Restore
 
+    /// Restore used to read local entitlements only — no `AppStore.sync()`,
+    /// so a purchase made on another device, or before a reinstall, often
+    /// was not there to find — and returned nothing, so the button looked
+    /// dead whether or not it worked.
     @MainActor
-    func restorePurchases() async {
+    func restorePurchases() async -> RestoreOutcome {
+        var syncError: Error?
+        do {
+            try await client.sync()
+        } catch StoreKitError.userCancelled {
+            return .cancelled
+        } catch {
+            syncError = error
+        }
+
+        // Rebuild even when the sync failed: whatever is already on the
+        // device is still the best answer available.
         await refreshEntitlements()
+
+        if isPro { return .restored }
+        if let syncError { return .failed(syncError.localizedDescription) }
+        return .nothingToRestore
     }
 
     // MARK: - Entitlements

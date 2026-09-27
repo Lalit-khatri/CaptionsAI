@@ -31,6 +31,8 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPlan: String = StoreKitManager.yearlyID
     @State private var purchaseError: String?
+    @State private var isRestoring = false
+    @State private var restoreMessage: String?
     /// Whether StoreKit says this user may still take the introductory offer.
     /// Assumed false until asked, so we never promise a trial we cannot give.
     @State private var isEligibleForIntroOffer = false
@@ -89,6 +91,19 @@ struct PaywallView: View {
         let percent = Int((fraction as NSDecimalNumber).doubleValue * 100)
         guard percent > 0 else { return nil }
         return "SAVE \(percent)%"
+    }
+
+    /// What to tell the user after Restore Purchases. `nil` for a restore that
+    /// worked (the paywall closes) or that the user cancelled.
+    static func restoreMessage(for outcome: RestoreOutcome) -> String? {
+        switch outcome {
+        case .restored, .cancelled:
+            return nil
+        case .nothingToRestore:
+            return "No active subscription was found for this Apple ID."
+        case let .failed(reason):
+            return "Could not restore purchases. \(reason)"
+        }
     }
 
     /// The words on the primary button.
@@ -324,7 +339,7 @@ struct PaywallView: View {
     /// result in a purchase. Both used to be recorded and never shown.
     @ViewBuilder
     private var statusMessage: some View {
-        if let message = purchaseError ?? unavailableMessage {
+        if let message = purchaseError ?? restoreMessage ?? unavailableMessage {
             Text(message)
                 .font(.footnote)
                 .multilineTextAlignment(.center)
@@ -450,6 +465,7 @@ struct PaywallView: View {
             guard let product = selectedProduct else { return }
             Task {
                 purchaseError = nil
+                restoreMessage = nil
                 do {
                     _ = try await storeKit.purchase(product)
                     if storeKit.isPro {
@@ -492,9 +508,16 @@ struct PaywallView: View {
 
     private var footerLinks: some View {
         VStack(spacing: 12) {
-            Button("Restore Purchases") {
-                Task { await storeKit.restorePurchases() }
+            Button {
+                Task { await restore() }
+            } label: {
+                if isRestoring {
+                    ProgressView()
+                } else {
+                    Text("Restore Purchases")
+                }
             }
+            .disabled(isRestoring)
             .font(.subheadline)
             .foregroundColor(.secondary)
 
@@ -507,6 +530,24 @@ struct PaywallView: View {
             .foregroundColor(.secondary)
         }
         .padding(.bottom, 32)
+    }
+}
+
+// MARK: - Restore
+
+private extension PaywallView {
+    func restore() async {
+        isRestoring = true
+        restoreMessage = nil
+        purchaseError = nil
+        let outcome = await storeKit.restorePurchases()
+        isRestoring = false
+
+        if outcome == .restored {
+            dismiss()
+        } else {
+            restoreMessage = Self.restoreMessage(for: outcome)
+        }
     }
 }
 

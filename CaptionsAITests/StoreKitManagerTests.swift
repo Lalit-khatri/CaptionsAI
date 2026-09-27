@@ -16,10 +16,11 @@ final class StoreKitManagerTests: XCTestCase {
 
     private func manager(
         products: @escaping (Set<String>) async throws -> [Product] = { _ in [] },
-        entitlements: @escaping () async -> [Entitlement] = { [] }
+        entitlements: @escaping () async -> [Entitlement] = { [] },
+        sync: @escaping () async throws -> Void = {}
     ) -> StoreKitManager {
         StoreKitManager(
-            client: StoreClient(products: products, entitlements: entitlements),
+            client: StoreClient(products: products, entitlements: entitlements, sync: sync),
             startImmediately: false
         )
     }
@@ -204,11 +205,102 @@ final class StoreKitManagerTests: XCTestCase {
         XCTAssertFalse(store.isPro)
     }
 
-    func testRestoreRebuildsFromTheStore() async {
-        let store = manager(entitlements: { [Entitlement(productID: StoreKitManager.yearlyID)] })
+    // MARK: - Restore Purchases
 
-        await store.restorePurchases()
+    /// Restore has to ask the App Store to re-send transactions; reading the
+    /// local cache alone misses purchases from another device or before a
+    /// reinstall.
+    func testRestoreSyncsWithTheAppStoreOnce() async {
+        var syncs = 0
+        let store = manager(sync: { syncs += 1 })
 
+        _ = await store.restorePurchases()
+
+        XCTAssertEqual(syncs, 1)
+    }
+
+    /// The sync must come before the rebuild, or the rebuild reads the old
+    /// cache.
+    func testRestoreRebuildsAfterTheSyncNotBefore() async {
+        var synced = false
+        let store = manager(
+            entitlements: { synced ? [Entitlement(productID: StoreKitManager.yearlyID)] : [] },
+            sync: { synced = true }
+        )
+
+        let outcome = await store.restorePurchases()
+
+        XCTAssertEqual(outcome, .restored)
         XCTAssertTrue(store.isPro)
+    }
+
+    func testRestoreWithNothingToFindSaysSo() async {
+        let store = manager()
+
+        let outcome = await store.restorePurchases()
+
+        XCTAssertEqual(outcome, .nothingToRestore)
+        XCTAssertFalse(store.isPro)
+    }
+
+    func testAFailedSyncWithNothingOnTheDeviceReportsTheReason() async {
+        let store = manager(sync: { throw Offline() })
+
+        let outcome = await store.restorePurchases()
+
+        XCTAssertEqual(outcome, .failed("The Internet connection appears to be offline."))
+    }
+
+    /// A failed sync is not the last word if the device already knows about
+    /// an active subscription.
+    func testAFailedSyncStillRestoresWhatTheDeviceAlreadyHas() async {
+        let store = manager(
+            entitlements: { [Entitlement(productID: StoreKitManager.monthlyID)] },
+            sync: { throw Offline() }
+        )
+
+        let outcome = await store.restorePurchases()
+
+        XCTAssertEqual(outcome, .restored)
+        XCTAssertTrue(store.isPro)
+    }
+
+    /// Dismissing the App Store sign-in is the user's choice, not a failure,
+    /// and must not wipe Pro by rebuilding from a half-finished sync.
+    func testCancellingTheSignInIsNotAFailureAndChangesNothing() async {
+        var rebuilt = false
+        let store = manager(
+            entitlements: {
+                rebuilt = true
+                return []
+            },
+            sync: { throw StoreKitError.userCancelled }
+        )
+
+        let outcome = await store.restorePurchases()
+
+        XCTAssertEqual(outcome, .cancelled)
+        XCTAssertFalse(rebuilt)
+    }
+
+    // MARK: - What the paywall says after Restore
+
+    func testASuccessfulOrCancelledRestoreShowsNoMessage() {
+        XCTAssertNil(PaywallView.restoreMessage(for: .restored))
+        XCTAssertNil(PaywallView.restoreMessage(for: .cancelled))
+    }
+
+    func testNothingToRestoreIsSaidPlainly() {
+        XCTAssertEqual(
+            PaywallView.restoreMessage(for: .nothingToRestore),
+            "No active subscription was found for this Apple ID."
+        )
+    }
+
+    func testAFailedRestoreCarriesTheReason() {
+        XCTAssertEqual(
+            PaywallView.restoreMessage(for: .failed("Network down.")),
+            "Could not restore purchases. Network down."
+        )
     }
 }
