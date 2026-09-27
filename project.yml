@@ -92,12 +92,27 @@ targets:
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CaptionsAI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CaptionsAI"
         BUNDLE_LOADER: "$(TEST_HOST)"
 
+  # Drives the real app through XCUITest. Each test launches it against an
+  # in-memory, optionally seeded library; see CaptionsAI/App/UITestLaunch.swift.
+  CaptionsAIUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: CaptionsAIUITests
+    dependencies:
+      - target: CaptionsAI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lalitkhatri.CaptionsAIUITests
+        TEST_TARGET_NAME: CaptionsAI
+
 schemes:
   CaptionsAI:
     build:
       targets:
         CaptionsAI: all
         CaptionsAITests: [test]
+        CaptionsAIUITests: [test]
     run:
       config: Debug
       storeKitConfiguration: CaptionsAI/Configuration.storekit
@@ -109,6 +124,7 @@ schemes:
       storeKitConfiguration: CaptionsAI/Configuration.storekit
       targets:
         - CaptionsAITests
+        - CaptionsAIUITests
     profile:
       config: Release
     analyze:
