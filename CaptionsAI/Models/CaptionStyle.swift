@@ -323,10 +323,14 @@ extension Color {
     }
 
     func toHex() -> String? {
-        guard let components = UIColor(self).cgColor.components else { return nil }
-        let r = Int(components[0] * 255)
-        let g = Int(components[1] * 255)
-        let b = Int(components[2] * 255)
-        return String(format: "#%02X%02X%02X", r, g, b)
+        // `cgColor.components` has two entries (white, alpha) for a grayscale
+        // colour, so indexing [2] traps on platforms that back Color.white and
+        // Color.black that way. getRed converts from any compatible space.
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        guard UIColor(self).getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return nil }
+        func byte(_ component: CGFloat) -> Int {
+            Int((min(max(component, 0), 1) * 255).rounded())
+        }
+        return String(format: "#%02X%02X%02X", byte(red), byte(green), byte(blue))
     }
 }
