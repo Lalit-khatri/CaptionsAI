@@ -14,7 +14,7 @@ private let kProgressStrokeWidth: CGFloat = 8
 
 // MARK: - ExportView
 
-/// Export screen with format/quality/codec selection, live progress, and auto-save.
+/// Export screen with format/resolution selection, live progress, and auto-save.
 struct ExportView: View {
     let project: Project
     @Environment(\.dismiss) private var dismiss
@@ -96,14 +96,8 @@ struct ExportView: View {
                 // Resolution
                 resolutionSection
 
-                // Quality
-                qualitySection
-
                 // Codec
 //                codecSection
-
-                // Include Audio
-                audioToggle
 
                 // Export summary with file size
                 exportSummary
@@ -153,22 +147,6 @@ struct ExportView: View {
         }
     }
 
-    // MARK: - Quality Section
-
-    private var qualitySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Quality", icon: "star")
-
-            Picker("Quality", selection: $viewModel.settings.quality) {
-                ForEach(ExportQuality.allCases) { quality in
-                    Text(quality.rawValue).tag(quality)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, kSectionPadding)
-        }
-    }
-
     // MARK: - Codec Section
 
     private var codecSection: some View {
@@ -183,22 +161,6 @@ struct ExportView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, kSectionPadding)
         }
-    }
-
-    // MARK: - Audio Toggle
-
-    private var audioToggle: some View {
-        HStack {
-            Label("Include Audio", systemImage: "speaker.wave.2")
-                .font(.headline)
-                .foregroundColor(.white)
-
-            Spacer()
-
-            Toggle("", isOn: $viewModel.settings.includeAudio)
-                .labelsHidden()
-        }
-        .padding(.horizontal, kSectionPadding)
     }
 
     // MARK: - Export Summary
