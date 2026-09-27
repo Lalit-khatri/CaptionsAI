@@ -5,9 +5,10 @@ import XCTest
 /// What the store manager does when the App Store misbehaves.
 ///
 /// `Product` cannot be constructed in a test, so the fakes here fail or come
-/// back empty — which are the paths that went wrong. The one test that needs
-/// real products uses the scheme's `Configuration.storekit`, which Xcode
-/// serves locally during test runs.
+/// back empty — which are the paths that went wrong. Nothing here talks to
+/// StoreKit: SKTestSession cannot start under `xcodebuild test` on the build
+/// loop (SKInternalErrorDomain 3), so a live-products test only ever failed
+/// there. The paywall order is tested through `yearlyFirst(_:id:)` instead.
 @MainActor
 final class StoreKitManagerTests: XCTestCase {
     private struct Offline: LocalizedError {
@@ -107,17 +108,39 @@ final class StoreKitManagerTests: XCTestCase {
         XCTAssertFalse(store.isPro)
     }
 
-    /// Against the local StoreKit configuration: both plans load, yearly
-    /// first. If this fails with no products, check the test scheme still
-    /// names `Configuration.storekit`.
-    func testTheLiveClientLoadsBothPlansYearlyFirst() async {
-        let store = StoreKitManager(client: .live, startImmediately: false)
+    // MARK: - Plan order
 
-        await store.loadProducts()
+    private func order(_ ids: [String]) -> [String] {
+        StoreKitManager.yearlyFirst(ids, id: { $0 })
+    }
 
-        XCTAssertNil(store.error)
-        XCTAssertEqual(store.products.map(\.id), ["com.captionsai.pro.yearly", "com.captionsai.pro.monthly"])
-        XCTAssertFalse(store.needsProducts)
+    func testYearlyIsListedBeforeMonthly() {
+        XCTAssertEqual(
+            order(["com.captionsai.pro.monthly", "com.captionsai.pro.yearly"]),
+            ["com.captionsai.pro.yearly", "com.captionsai.pro.monthly"]
+        )
+    }
+
+    func testAnAlreadyYearlyFirstListIsUnchanged() {
+        XCTAssertEqual(
+            order(["com.captionsai.pro.yearly", "com.captionsai.pro.monthly"]),
+            ["com.captionsai.pro.yearly", "com.captionsai.pro.monthly"]
+        )
+    }
+
+    func testWithoutYearlyTheStoreOrderIsKept() {
+        XCTAssertEqual(order(["b", "com.captionsai.pro.monthly", "a"]), ["b", "com.captionsai.pro.monthly", "a"])
+    }
+
+    func testOnlyYearlyMovesTheOthersKeepTheirOrder() {
+        XCTAssertEqual(
+            order(["c", "com.captionsai.pro.monthly", "com.captionsai.pro.yearly", "a"]),
+            ["com.captionsai.pro.yearly", "c", "com.captionsai.pro.monthly", "a"]
+        )
+    }
+
+    func testNoPlansStayNoPlans() {
+        XCTAssertEqual(order([]), [])
     }
 
     // MARK: - Which transactions unlock Pro

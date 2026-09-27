@@ -149,6 +149,18 @@ final class StoreKitManager {
         products.isEmpty && !isLoading
     }
 
+    /// The plans in the order the paywall lists them: yearly first, as the
+    /// better value, then the rest in the order the store gave them.
+    ///
+    /// Generic over the element so the order can be tested without a
+    /// `Product`, which a test cannot construct. A stable partition rather
+    /// than `sorted(by:)` with a yearly-first predicate, which is not a strict
+    /// weak ordering for the other elements and so promises nothing about
+    /// their order.
+    static func yearlyFirst<Item>(_ items: [Item], id: (Item) -> String) -> [Item] {
+        items.filter { id($0) == yearlyID } + items.filter { id($0) != yearlyID }
+    }
+
     @MainActor
     func loadProducts() async {
         guard !isLoading else { return }
@@ -158,8 +170,7 @@ final class StoreKitManager {
 
         do {
             let storeProducts = try await client.products(Self.productIDs)
-            // Sort: yearly first (better value)
-            products = storeProducts.sorted { $0.id == Self.yearlyID && $1.id != Self.yearlyID }
+            products = Self.yearlyFirst(storeProducts, id: \.id)
         } catch {
             self.error = "Failed to load products: \(error.localizedDescription)"
         }
