@@ -4,7 +4,7 @@ import SwiftData
 // MARK: - WordTiming
 
 /// Represents the timing for a single word within a caption segment.
-struct WordTiming: Codable, Hashable, Identifiable {
+struct WordTiming: Codable, Hashable, Identifiable, Sendable {
     var id: String {
         "\(word)-\(startTime)"
     }
@@ -117,5 +117,45 @@ final class CaptionSegment {
         let mins = Int(seconds) / 60
         let secs = Int(seconds) % 60
         return String(format: "%d:%02d", mins, secs)
+    }
+}
+
+// MARK: - CaptionSnapshot
+
+/// An immutable copy of a ``CaptionSegment`` taken on the main actor.
+///
+/// The export compositor renders every frame on its own dispatch queue.
+/// `CaptionSegment` is a SwiftData model: reading it off the queue that owns
+/// its context is a data race, and `words` even writes a cache as it is read.
+/// The export therefore copies what it needs up front and never sees a model.
+struct CaptionSnapshot: Sendable, Equatable {
+    let id: UUID
+    let startTime: Double
+    let endTime: Double
+    let text: String
+    let words: [WordTiming]
+
+    init(id: UUID = UUID(), startTime: Double, endTime: Double, text: String, words: [WordTiming] = []) {
+        self.id = id
+        self.startTime = startTime
+        self.endTime = endTime
+        self.text = text
+        self.words = words
+    }
+
+    init(_ segment: CaptionSegment) {
+        self.init(
+            id: segment.id,
+            startTime: segment.startTime,
+            endTime: segment.endTime,
+            text: segment.text,
+            words: segment.words
+        )
+    }
+
+    /// Whether this caption is on screen at `time`. Same rule as
+    /// ``CaptionSegment/isActive(at:)``.
+    func isActive(at time: Double) -> Bool {
+        time >= startTime && time < endTime
     }
 }

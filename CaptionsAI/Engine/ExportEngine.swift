@@ -64,6 +64,11 @@ final class ExportEngine {
         captionYPosition: Double,
         addWatermark: Bool
     ) async throws -> URL {
+        // Copied here, on the main actor and before the first suspension. The
+        // compositor reads captions on its own queue for every frame, and
+        // `CaptionSegment` is a SwiftData model that must stay on this one.
+        let captions = segments.map(CaptionSnapshot.init)
+
         isExporting = true
         progress = 0
         error = nil
@@ -122,7 +127,7 @@ final class ExportEngine {
         let renderer = CaptionRenderer()
         let videoComposition = try await renderer.buildVideoComposition(
             for: mutableComposition,
-            segments: segments,
+            segments: captions,
             style: style,
             outputSize: renderSize,
             captionYPosition: captionYPosition,

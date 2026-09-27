@@ -36,7 +36,7 @@ final class CaptionRenderer {
     /// Builds an AVVideoComposition that overlays captions onto video frames.
     func buildVideoComposition(
         for asset: AVAsset,
-        segments: [CaptionSegment],
+        segments: [CaptionSnapshot],
         style: CaptionStyle,
         outputSize: CGSize,
         captionYPosition: Double,
@@ -117,7 +117,7 @@ final class CaptionRenderer {
     /// Renders a caption onto a source image at the given time.
     static func renderCaption(
         on image: CIImage,
-        segment: CaptionSegment,
+        segment: CaptionSnapshot,
         style: CaptionStyle,
         currentTime: Double,
         renderSize: CGSize,
@@ -221,6 +221,24 @@ final class CaptionRenderer {
     /// leaking the Y-flip transform into the output coordinate space.
     static func renderCaptionOverlay(
         segment: CaptionSegment,
+        style: CaptionStyle,
+        currentTime: Double,
+        renderSize: CGSize,
+        captionYPosition: Double
+    ) -> CIImage? {
+        renderCaptionOverlay(
+            segment: CaptionSnapshot(segment),
+            style: style,
+            currentTime: currentTime,
+            renderSize: renderSize,
+            captionYPosition: captionYPosition
+        )
+    }
+
+    /// The overlay for a snapshot. This is the one the compositor calls, from
+    /// its own queue.
+    static func renderCaptionOverlay(
+        segment: CaptionSnapshot,
         style: CaptionStyle,
         currentTime: Double,
         renderSize: CGSize,
@@ -407,7 +425,7 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
     var requiredSourceTrackIDs: [NSValue]?
     var passthroughTrackID: CMPersistentTrackID = kCMPersistentTrackID_Invalid
 
-    let segments: [CaptionSegment]
+    let segments: [CaptionSnapshot]
     let style: CaptionStyle
     let renderSize: CGSize
     let captionYPosition: Double
@@ -422,7 +440,7 @@ final class CaptionCompositionInstruction: NSObject, AVVideoCompositionInstructi
 
     init(
         timeRange: CMTimeRange,
-        segments: [CaptionSegment],
+        segments: [CaptionSnapshot],
         style: CaptionStyle,
         renderSize: CGSize,
         captionYPosition: Double,
