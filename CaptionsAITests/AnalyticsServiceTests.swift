@@ -80,6 +80,39 @@ final class AnalyticsServiceTests: XCTestCase {
         XCTAssertEqual(event?.parameters?["trigger"], "watermark_removal")
     }
 
+    func testPaywallShownForTheExportLimitLogsExportLimit() {
+        AnalyticsService.paywallShown(.exportLimit)
+
+        XCTAssertEqual(
+            mockProvider.recordedEvents,
+            [.init(name: "paywall_shown", parameters: ["trigger": "export_limit"])]
+        )
+    }
+
+    func testPaywallShownManuallyLogsManual() {
+        AnalyticsService.paywallShown(.manual)
+
+        XCTAssertEqual(
+            mockProvider.recordedEvents,
+            [.init(name: "paywall_shown", parameters: ["trigger": "manual"])]
+        )
+    }
+
+    /// Dashboards group on these strings, so they are pinned on purpose.
+    func testPaywallTriggerRawValuesAreTheOnesDashboardsGroupOn() {
+        XCTAssertEqual(PaywallTrigger.allCases.map(\.rawValue), ["manual", "export_limit"])
+    }
+
+    @MainActor
+    func testAPaywallWithNoTriggerIsManual() {
+        XCTAssertEqual(PaywallView().trigger, .manual)
+    }
+
+    @MainActor
+    func testAPaywallKeepsTheTriggerItWasGiven() {
+        XCTAssertEqual(PaywallView(trigger: .exportLimit).trigger, .exportLimit)
+    }
+
     func testPurchaseCompletedLogsProductID() {
         AnalyticsService.purchaseCompleted(productID: "com.lalitkhatri.CaptionsAI.yearly")
 

@@ -61,7 +61,7 @@ struct ExportView: View {
             Text("Your export progress will be lost.")
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(trigger: .exportLimit)
         }
         .sheet(isPresented: $showShareSheet) {
             if let url = viewModel.exportedFileURL {
@@ -208,8 +208,9 @@ struct ExportView: View {
             // The only path that raises the paywall. While this was commented
             // out the screen was unreachable, along with everything on it.
             if !viewModel.checkExportQuota(isPro: storeKit.isPro) {
+                // PaywallView logs paywall_shown when it appears; logging
+                // here as well counted every limit hit twice.
                 showPaywall = true
-                AnalyticsService.paywallShown(trigger: "export_limit")
             } else {
                 guard let videoURL = project.videoURL else { return }
                 Task {

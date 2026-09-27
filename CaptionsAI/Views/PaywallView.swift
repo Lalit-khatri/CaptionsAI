@@ -32,6 +32,9 @@ enum PaywallCTAState: Equatable {
 struct PaywallView: View {
     @Environment(StoreKitManager.self) private var storeKit
     @Environment(\.dismiss) private var dismiss
+    /// Why this paywall is up. The paywall logs `paywall_shown` itself, once,
+    /// so callers pass the reason instead of logging it a second time.
+    let trigger: PaywallTrigger
     @State private var selectedPlan: String = StoreKitManager.yearlyID
     @State private var purchaseError: String?
     @State private var isRestoring = false
@@ -40,6 +43,10 @@ struct PaywallView: View {
     /// Whether StoreKit says this user may still take the introductory offer.
     /// Assumed false until asked, so we never promise a trial we cannot give.
     @State private var isEligibleForIntroOffer = false
+
+    init(trigger: PaywallTrigger = .manual) {
+        self.trigger = trigger
+    }
 
     /// Shown when the store could not say why it has nothing to sell.
     static let genericUnavailableMessage =
@@ -345,7 +352,7 @@ struct PaywallView: View {
             }
         }
         .onAppear {
-            AnalyticsService.paywallShown(trigger: "manual")
+            AnalyticsService.paywallShown(trigger)
         }
         // The launch-time fetch may have failed offline; opening the paywall
         // is the moment the user needs the products, so ask again.
