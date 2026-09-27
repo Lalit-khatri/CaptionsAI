@@ -25,6 +25,9 @@ final class ImportUITests: XCTestCase {
         #if targetEnvironment(simulator)
         throw XCTSkip("Choose Video needs a real photo library; run on a device.")
         #else
+        // The phone lies face up on a desk while this runs. Each rotation
+        // event made the picker re-lay itself out mid-query; pin it.
+        XCUIDevice.shared.orientation = .portrait
         let app = AppLauncher.launch()
         let choose = app.button(containing: "Choose Video")
         XCTAssertTrue(choose.waitForExistence(timeout: uiTimeout))
@@ -92,12 +95,19 @@ final class ImportUITests: XCTestCase {
             tree.name = "Picker element tree"
             tree.lifetime = .keepAlways
             add(tree)
+            print(app.debugDescription)
             XCTFail("No video in the Photos picker (element tree attached)", file: file, line: line)
             return
         }
 
-        let hittable = videos.allElementsBoundByIndex.filter(\.isHittable)
-        (hittable.last ?? videos.firstMatch).tap()
+        // Resolve one cell and tap it straight away. Walking every cell to
+        // ask which is hittable took long enough on a device for the
+        // picker's out-of-process hierarchy to go stale, after which no cell
+        // could be found at all.
+        let count = videos.count
+        print("Photos picker: \(count) video cells")
+        let newest = videos.element(boundBy: max(count - 1, 0))
+        (newest.isHittable ? newest : videos.firstMatch).tap()
 
         // Single selection picks on tap; with an Add button, confirm.
         let add = app.buttons["Add"]
