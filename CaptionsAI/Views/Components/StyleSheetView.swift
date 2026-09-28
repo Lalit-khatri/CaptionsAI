@@ -32,6 +32,10 @@ struct StyleSheetView: View {
     /// grabber and read as touching it.
     static let titleTopPadding: CGFloat = 20
 
+    /// Space between the sheet's edges and the tabs, the first and last chip,
+    /// and the slider. One value, so the three line up down the left edge.
+    static let edgeInset: CGFloat = 20
+
     var body: some View {
         VStack(spacing: 16) {
             // Title
@@ -60,7 +64,7 @@ struct StyleSheetView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, Self.edgeInset)
                 }
                 .onAppear { scroll(proxy) }
                 .onChange(of: category) { scroll(proxy) }
@@ -93,7 +97,7 @@ struct StyleSheetView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Self.edgeInset)
 
             Spacer()
         }
@@ -104,16 +108,12 @@ struct StyleSheetView: View {
 
     // MARK: - Scrolling to the Selection
 
-    /// Where the chip row should sit: centred on the selected style when the
-    /// showing tab has it, otherwise at the start of the tab.
-    struct ScrollTarget: Equatable {
-        let name: String
-        let anchor: UnitPoint
-    }
-
     /// The styles in the showing tab.
     private var visibleStyles: [CaptionStyle] { StyleCategory.styles(in: category) }
 
+    /// The chip the row should centre on: the selected style when the showing
+    /// tab has it, otherwise the tab's first chip.
+    ///
     /// A pure function of the selection and the list, so the rule can be
     /// pinned without a scroll view. Without it the sheet always opened at
     /// Hormozi, and anyone using a style past the second chip had to hunt
@@ -121,17 +121,20 @@ struct StyleSheetView: View {
     ///
     /// Falling back to the first chip matters on a tab change: the row keeps
     /// its old offset otherwise, which in the new tab lands on whichever chip
-    /// happens to be there.
-    static func scrollTarget(selected: String, among styles: [CaptionStyle]) -> ScrollTarget? {
+    /// happens to be there. That one is centred too, not leading-aligned:
+    /// the row cannot scroll before its start, so centring the first chip
+    /// comes to rest at the start with the edge inset intact, where a
+    /// leading anchor pulled the chip flush against the sheet's edge.
+    static func scrollTarget(selected: String, among styles: [CaptionStyle]) -> String? {
         if styles.contains(where: { $0.name == selected }) {
-            return ScrollTarget(name: selected, anchor: .center)
+            return selected
         }
-        return styles.first.map { ScrollTarget(name: $0.name, anchor: .leading) }
+        return styles.first?.name
     }
 
     private func scroll(_ proxy: ScrollViewProxy) {
         guard let target = Self.scrollTarget(selected: selectedStyle.name, among: visibleStyles) else { return }
-        proxy.scrollTo(target.name, anchor: target.anchor)
+        proxy.scrollTo(target, anchor: .center)
     }
 
     // MARK: - Category Tabs
@@ -148,7 +151,7 @@ struct StyleSheetView: View {
                     tab(category.title, for: category)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, Self.edgeInset)
         }
     }
 

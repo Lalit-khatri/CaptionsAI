@@ -156,6 +156,33 @@ final class EditorUITests: XCTestCase {
     }
 
     @MainActor
+    func testSwitchingTabsKeepsTheFirstChipOffTheSheetEdge() {
+        let app = openEditor()
+        openStyleSheet(app)
+
+        // Hormozi is selected and Fun does not have it, so the row lands on
+        // Fun's first chip.
+        app.buttons["Fun"].tap()
+        let first = app.staticTexts["Vox Box"]
+        XCTAssertTrue(first.waitForExistence(timeout: uiTimeout))
+        // The name is centred under a 150pt chip, so its centre sits half a
+        // chip plus the edge inset in from the sheet. Flush against the
+        // sheet edge it measured about 82pt from the window edge.
+        let halfChip: CGFloat = 75
+        let minimumInset: CGFloat = 16
+        let window = app.windows.firstMatch.frame
+        // The tab change animates the row; read it once it has settled.
+        let settled = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in first.frame.midX - window.minX >= halfChip + minimumInset },
+            object: nil
+        )
+        XCTAssertEqual(
+            XCTWaiter().wait(for: [settled], timeout: disappearanceTimeout), .completed,
+            "first chip is flush with the sheet edge: \(first.frame)"
+        )
+    }
+
+    @MainActor
     func testAtRestTheTallerChipsStillLeaveTheSliderOnScreen() {
         let app = openEditor()
         openStyleSheet(app)
