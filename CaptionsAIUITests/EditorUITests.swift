@@ -156,6 +156,24 @@ final class EditorUITests: XCTestCase {
     }
 
     @MainActor
+    func testAtRestTheTallerChipsStillLeaveTheSliderOnScreen() {
+        let app = openEditor()
+        openStyleSheet(app)
+
+        let window = app.windows.firstMatch.frame
+        let slider = app.sliders.firstMatch
+        let chipName = app.staticTexts["Hormozi"]
+        XCTAssertTrue(slider.waitForExistence(timeout: uiTimeout))
+        XCTAssertTrue(chipName.exists)
+        XCTAssertLessThan(chipName.frame.maxY, slider.frame.minY, "chips overlap the slider")
+        XCTAssertLessThanOrEqual(slider.frame.maxY, window.maxY, "slider pushed off screen: \(slider.frame)")
+        XCTAssertTrue(slider.isHittable)
+
+        slider.adjust(toNormalizedSliderPosition: 0)
+        XCTAssertTrue(app.staticTexts["4pt"].waitForExistence(timeout: uiTimeout))
+    }
+
+    @MainActor
     func testReopeningTheStyleSheetShowsTheSelectedStyle() {
         let app = openEditor()
         openStyleSheet(app)

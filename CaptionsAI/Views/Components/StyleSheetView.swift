@@ -193,7 +193,12 @@ struct StylePreviewCard: View {
     /// 150 is chosen so two chips and a peek of a third fit a 375pt phone. The
     /// peek is what tells the user the row scrolls.
     static let plateWidth: CGFloat = 150
-    static let plateHeight: CGFloat = 104
+
+    /// At 104 the resting sheet left a band of about 120pt empty under the
+    /// Text Size slider. 160 spends most of it on the one thing in the sheet
+    /// worth looking at, and still leaves the slider clear of the sheet's
+    /// bottom edge at the resting height.
+    static let plateHeight: CGFloat = 160
 
     /// Breathing room between the sample and the edge of the plate.
     private static let textInset: CGFloat = 10
@@ -296,8 +301,9 @@ struct StylePreviewCard: View {
                 .foregroundColor(isSelected ? Color(hex: "#A78BFA") : .secondary)
         }
         // The chip is a swatch, not body copy, and it has to keep the height
-        // of the row it scrolls in. Measured with this line removed, the card
-        // grows from 124pt to 158pt at accessibility5 — for every preset, not
+        // of the row it scrolls in. Measured with this line removed (and the
+        // plate 104pt tall), the card grew from 124pt to 158pt at
+        // accessibility5 — for every preset, not
         // only the six that name a real typeface, because the style-name label
         // scales too. (Inside the plate there is a second, smaller effect:
         // `Font.custom(_:size:)` scales with the text size and
