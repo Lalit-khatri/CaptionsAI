@@ -133,6 +133,28 @@ final class EditorUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["48pt"].waitForExistence(timeout: uiTimeout))
     }
 
+    @MainActor
+    func testAStyleTabShowsOnlyItsStylesAndAllBringsTheRestBack() {
+        let app = openEditor()
+        app.button(containing: "Style").tap()
+        XCTAssertTrue(app.staticTexts["Caption Style"].waitForExistence(timeout: uiTimeout))
+        // The chip row is an HStack, not lazy, so every chip in the tab is in
+        // the tree whether or not it has been scrolled into view.
+        XCTAssertTrue(app.staticTexts["Hormozi"].exists)
+        XCTAssertTrue(app.staticTexts["Candy"].exists)
+
+        app.buttons["Fun"].tap()
+        XCTAssertTrue(app.staticTexts["Hormozi"].waitForDisappearance())
+        XCTAssertTrue(app.staticTexts["Candy"].exists)
+        XCTAssertTrue(app.staticTexts["Vox Box"].exists)
+        XCTAssertFalse(app.staticTexts["Cinema"].exists)
+
+        app.buttons["All"].tap()
+        XCTAssertTrue(app.staticTexts["Hormozi"].waitForExistence(timeout: uiTimeout))
+        XCTAssertTrue(app.staticTexts["Cinema"].exists)
+        XCTAssertTrue(app.staticTexts["Candy"].exists)
+    }
+
     // MARK: - Steps
 
     /// Launches with `seed` and opens its project in the editor.

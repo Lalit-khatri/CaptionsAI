@@ -8,6 +8,8 @@ struct StyleSheetView: View {
     @Binding var fontSize: CGFloat
     let previewText: String
     @Environment(\.dismiss) private var dismiss
+    /// The tab showing. `nil` is All, which is where the sheet opens.
+    @State private var category: StyleCategory?
 
     /// Where the sheet sits before anyone drags it. Tall enough for the chip
     /// row and the Text Size slider together.
@@ -34,10 +36,12 @@ struct StyleSheetView: View {
                 .foregroundColor(.white)
                 .padding(.top, 8)
 
+            categoryTabs
+
             // Style cards - horizontal scroll
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(CaptionStyle.presets) { style in
+                    ForEach(StyleCategory.styles(in: category)) { style in
                         StylePreviewCard(
                             style: style,
                             isSelected: selectedStyle.name == style.name,
@@ -87,6 +91,42 @@ struct StyleSheetView: View {
         .presentationDetents(Self.detents)
         .presentationBackground(.ultraThinMaterial)
         .presentationDragIndicator(.visible)
+    }
+
+    // MARK: - Category Tabs
+
+    static let allTitle = "All"
+
+    /// All, then one tab per category. Thirty styles in one row is a lot
+    /// of scrolling to find the kind of look you are after.
+    private var categoryTabs: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                tab(Self.allTitle, for: nil)
+                ForEach(StyleCategory.allCases) { category in
+                    tab(category.title, for: category)
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func tab(_ title: String, for tabCategory: StyleCategory?) -> some View {
+        let isSelected = category == tabCategory
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) { category = tabCategory }
+        } label: {
+            Text(title)
+                .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                .foregroundColor(isSelected ? .white : .secondary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule().fill(isSelected ? Color(hex: "#7C3AED") : Color.white.opacity(0.08))
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
