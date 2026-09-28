@@ -4,8 +4,8 @@ import XCTest
 /// into the app, transcription, and the export screen it unlocks.
 ///
 /// Device only. The simulator's picker cannot be driven reliably, so there
-/// the test skips rather than pretends. On a device it picks the most recent
-/// video in the library, which should be a short clip with speech in it:
+/// the test skips rather than pretends. On a device it picks one of the most
+/// recent videos in the library, which should be a short clip with speech in it:
 /// with no speech there are no captions, and the test says so.
 ///
 /// It stops at the export settings. Exporting would save a video into the
@@ -76,11 +76,11 @@ final class ImportUITests: XCTestCase {
 
     // MARK: - Steps
 
-    /// Taps the newest video in the system Photos picker.
+    /// Taps a recent video in the system Photos picker.
     ///
     /// The picker runs out of process, but its grid is reachable through the
     /// app. Cells are labelled like "Video, 0:12, <date>"; the grid opens
-    /// scrolled to the newest, which is the last cell in element order. If no
+    /// scrolled to the newest, so the first cell it exposes is a recent one. If no
     /// cell is found the element tree is attached, since the picker's layout
     /// is the part of this test most likely to change between iOS versions.
     @MainActor
@@ -100,14 +100,22 @@ final class ImportUITests: XCTestCase {
             return
         }
 
-        // Resolve one cell and tap it straight away. Walking every cell to
-        // ask which is hittable took long enough on a device for the
-        // picker's out-of-process hierarchy to go stale, after which no cell
-        // could be found at all.
-        let count = videos.count
-        print("Photos picker: \(count) video cells")
-        let newest = videos.element(boundBy: max(count - 1, 0))
-        (newest.isHittable ? newest : videos.firstMatch).tap()
+        // Tap by coordinate, from a frame read the moment the cell appears.
+        // The picker's hierarchy lives in another process and does not hold
+        // still: on the device a cell that had just been found could not be
+        // found again a few hundred milliseconds later, so any query that has
+        // to re-resolve it — count, index, isHittable, tap — was a coin toss.
+        // A coordinate tap never looks the cell up again.
+        let frame = videos.firstMatch.frame
+        print("Photos picker: tapping the first video cell at \(frame)")
+        print(app.debugDescription)
+        guard !frame.isEmpty else {
+            XCTFail("Picker cell vanished before its frame could be read", file: file, line: line)
+            return
+        }
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX, dy: frame.midY))
+            .tap()
 
         // Single selection picks on tap; with an Add button, confirm.
         let add = app.buttons["Add"]
