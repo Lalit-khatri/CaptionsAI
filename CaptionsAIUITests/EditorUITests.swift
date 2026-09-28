@@ -155,7 +155,71 @@ final class EditorUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Candy"].exists)
     }
 
+    @MainActor
+    func testReopeningTheStyleSheetShowsTheSelectedStyle() {
+        let app = openEditor()
+        openStyleSheet(app)
+
+        // Nordic Mint is the last preset, so on All it starts well off the
+        // right edge. Clean is shorter; walk its row until the chip is there.
+        app.buttons["Clean"].tap()
+        let nordicMint = app.staticTexts["Nordic Mint"]
+        XCTAssertTrue(nordicMint.waitForExistence(timeout: uiTimeout))
+        for _ in 0 ..< Self.maximumRowSwipes where !isOnScreen(nordicMint, in: app) {
+            swipeRowLeft(at: nordicMint.frame.midY, in: app)
+        }
+        XCTAssertTrue(isOnScreen(nordicMint, in: app), "Could not scroll to Nordic Mint")
+        nordicMint.tap()
+
+        dismissStyleSheet(app)
+        openStyleSheet(app)
+
+        // Opens on All, where Nordic Mint is thirtieth.
+        XCTAssertTrue(app.buttons["All"].isSelected)
+        let reopened = app.staticTexts["Nordic Mint"]
+        XCTAssertTrue(reopened.waitForExistence(timeout: uiTimeout))
+        XCTAssertTrue(isOnScreen(reopened, in: app), "Selected style is off screen: \(reopened.frame)")
+        XCTAssertFalse(isOnScreen(app.staticTexts["Hormozi"], in: app), "Row did not move off its start")
+    }
+
     // MARK: - Steps
+
+    /// Enough drags to cross a tab of eight chips on the narrowest phone.
+    private static let maximumRowSwipes = 6
+
+    @MainActor
+    private func openStyleSheet(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        app.button(containing: "Style").tap()
+        XCTAssertTrue(app.staticTexts["Caption Style"].waitForExistence(timeout: uiTimeout), "Style sheet did not open", file: file, line: line)
+    }
+
+    /// Drags the sheet down by its title. `swipeDown` is too quick for a
+    /// sheet with a taller detent above it on a real device.
+    @MainActor
+    private func dismissStyleSheet(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let title = app.staticTexts["Caption Style"]
+        let start = title.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
+        start.press(forDuration: 0.1, thenDragTo: end)
+        XCTAssertTrue(title.waitForDisappearance(), "Style sheet did not close", file: file, line: line)
+    }
+
+    /// Whether the element's centre is inside the window horizontally. Chips
+    /// scrolled out of a horizontal row keep existing, just off the edge.
+    @MainActor
+    private func isOnScreen(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+        let window = app.windows.firstMatch.frame
+        return element.exists && window.minX ... window.maxX ~= element.frame.midX
+    }
+
+    @MainActor
+    private func swipeRowLeft(at y: CGFloat, in app: XCUIApplication) {
+        let window = app.windows.firstMatch.frame
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let start = origin.withOffset(CGVector(dx: window.width * 0.85, dy: y))
+        let end = origin.withOffset(CGVector(dx: window.width * 0.15, dy: y))
+        start.press(forDuration: 0.05, thenDragTo: end)
+    }
 
     /// Launches with `seed` and opens its project in the editor.
     @MainActor

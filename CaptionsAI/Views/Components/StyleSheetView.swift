@@ -39,22 +39,27 @@ struct StyleSheetView: View {
             categoryTabs
 
             // Style cards - horizontal scroll
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(StyleCategory.styles(in: category)) { style in
-                        StylePreviewCard(
-                            style: style,
-                            isSelected: selectedStyle.name == style.name,
-                            previewText: previewText
-                        )
-                        .onTapGesture {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                selectedStyle = style
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(visibleStyles) { style in
+                            StylePreviewCard(
+                                style: style,
+                                isSelected: selectedStyle.name == style.name,
+                                previewText: previewText
+                            )
+                            .id(style.name)
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedStyle = style
+                                }
                             }
                         }
                     }
+                    .padding(.horizontal, 16)
                 }
-                .padding(.horizontal, 16)
+                .onAppear { scroll(proxy) }
+                .onChange(of: category) { scroll(proxy) }
             }
 
             // Text Size Slider
@@ -91,6 +96,38 @@ struct StyleSheetView: View {
         .presentationDetents(Self.detents)
         .presentationBackground(.ultraThinMaterial)
         .presentationDragIndicator(.visible)
+    }
+
+    // MARK: - Scrolling to the Selection
+
+    /// Where the chip row should sit: centred on the selected style when the
+    /// showing tab has it, otherwise at the start of the tab.
+    struct ScrollTarget: Equatable {
+        let name: String
+        let anchor: UnitPoint
+    }
+
+    /// The styles in the showing tab.
+    private var visibleStyles: [CaptionStyle] { StyleCategory.styles(in: category) }
+
+    /// A pure function of the selection and the list, so the rule can be
+    /// pinned without a scroll view. Without it the sheet always opened at
+    /// Hormozi, and anyone using a style past the second chip had to hunt
+    /// for it to see which one was on.
+    ///
+    /// Falling back to the first chip matters on a tab change: the row keeps
+    /// its old offset otherwise, which in the new tab lands on whichever chip
+    /// happens to be there.
+    static func scrollTarget(selected: String, among styles: [CaptionStyle]) -> ScrollTarget? {
+        if styles.contains(where: { $0.name == selected }) {
+            return ScrollTarget(name: selected, anchor: .center)
+        }
+        return styles.first.map { ScrollTarget(name: $0.name, anchor: .leading) }
+    }
+
+    private func scroll(_ proxy: ScrollViewProxy) {
+        guard let target = Self.scrollTarget(selected: selectedStyle.name, among: visibleStyles) else { return }
+        proxy.scrollTo(target.name, anchor: target.anchor)
     }
 
     // MARK: - Category Tabs
