@@ -85,41 +85,72 @@ final class ImportUITests: XCTestCase {
     /// is the part of this test most likely to change between iOS versions.
     @MainActor
     private func pickMostRecentVideo(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
-        let videos = app.elements(labelMatching: "label BEGINSWITH[c] %@", "Video")
-            .matching(NSPredicate(format: "elementType == %d OR elementType == %d OR elementType == %d",
-                                  XCUIElement.ElementType.image.rawValue,
-                                  XCUIElement.ElementType.cell.rawValue,
-                                  XCUIElement.ElementType.button.rawValue))
-        guard videos.firstMatch.waitForExistence(timeout: uiTimeout) else {
-            let tree = XCTAttachment(string: app.debugDescription)
-            tree.name = "Picker element tree"
-            tree.lifetime = .keepAlways
-            add(tree)
-            print(app.debugDescription)
-            XCTFail("No video in the Photos picker (element tree attached)", file: file, line: line)
-            return
+        // Work from snapshots, not queries. The picker's hierarchy lives in
+        // another process and does not hold still: on the device a query
+        // that had just matched a cell failed to match it again a moment
+        // later, so anything that re-resolved it — count, index, frame, tap —
+        // failed. A snapshot is one consistent copy of the tree; find the
+        // cell in it and tap its centre by coordinate.
+        let deadline = Date().addingTimeInterval(uiTimeout)
+        var lastSnapshot: XCUIElementSnapshot?
+        while Date() < deadline {
+            if let snapshot = try? app.snapshot() {
+                lastSnapshot = snapshot
+                if let frame = Self.firstVideoFrame(in: snapshot) {
+                    print("Photos picker: tapping a video cell at \(frame)")
+                    app.coordinate(withNormalizedOffset: .zero)
+                        .withOffset(CGVector(dx: frame.midX, dy: frame.midY))
+                        .tap()
+
+                    // Single selection picks on tap; with an Add button, confirm.
+                    let add = app.buttons["Add"]
+                    if add.waitForExistence(timeout: 2) { add.tap() }
+                    return
+                }
+            }
+            Thread.sleep(forTimeInterval: Self.snapshotRetryInterval)
         }
 
-        // Tap by coordinate, from a frame read the moment the cell appears.
-        // The picker's hierarchy lives in another process and does not hold
-        // still: on the device a cell that had just been found could not be
-        // found again a few hundred milliseconds later, so any query that has
-        // to re-resolve it — count, index, isHittable, tap — was a coin toss.
-        // A coordinate tap never looks the cell up again.
-        let frame = videos.firstMatch.frame
-        print("Photos picker: tapping the first video cell at \(frame)")
-        print(app.debugDescription)
-        guard !frame.isEmpty else {
-            XCTFail("Picker cell vanished before its frame could be read", file: file, line: line)
-            return
-        }
-        app.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: frame.midX, dy: frame.midY))
-            .tap()
+        let tree = lastSnapshot.map { Self.outline($0) } ?? "no snapshot"
+        print("Photos picker tree:\n\(tree)")
+        let attachment = XCTAttachment(string: tree)
+        attachment.name = "Picker element tree"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        XCTFail("No video cell in the Photos picker (tree printed above)", file: file, line: line)
+    }
 
-        // Single selection picks on tap; with an Add button, confirm.
-        let add = app.buttons["Add"]
-        if add.waitForExistence(timeout: 2) { add.tap() }
+    /// How long to wait before taking another snapshot of a picker that is
+    /// still appearing.
+    static let snapshotRetryInterval: TimeInterval = 0.5
+
+    /// The picker labels video cells "Video, <duration>, <date>".
+    static func firstVideoFrame(in snapshot: XCUIElementSnapshot) -> CGRect? {
+        let types: [XCUIElement.ElementType] = [.image, .cell, .button, .other]
+        if types.contains(snapshot.elementType),
+           snapshot.label.lowercased().hasPrefix("video"),
+           !snapshot.frame.isEmpty {
+            return snapshot.frame
+        }
+        for child in snapshot.children {
+            if let frame = firstVideoFrame(in: child) { return frame }
+        }
+        return nil
+    }
+
+    /// Every labelled element, indented by depth: enough to see what the
+    /// picker calls its cells without the full debug description.
+    static func outline(_ snapshot: XCUIElementSnapshot, depth: Int = 0) -> String {
+        var lines: [String] = []
+        if !snapshot.label.isEmpty || !snapshot.identifier.isEmpty {
+            let indent = String(repeating: "  ", count: depth)
+            lines.append("\(indent)\(snapshot.elementType.rawValue) '\(snapshot.label)' id='\(snapshot.identifier)' \(snapshot.frame)")
+        }
+        for child in snapshot.children {
+            let text = outline(child, depth: depth + 1)
+            if !text.isEmpty { lines.append(text) }
+        }
+        return lines.joined(separator: "\n")
     }
 
     /// Accepts the one-time speech permission prompt, which belongs to
