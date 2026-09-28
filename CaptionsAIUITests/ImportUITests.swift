@@ -48,15 +48,24 @@ final class ImportUITests: XCTestCase {
         XCTAssertFalse(app.alerts["Error"].exists, "Editor reported: \(app.alerts["Error"].staticTexts.allElementsBoundByIndex.map(\.label))")
         XCTAssertFalse(app.staticTexts["Video unavailable"].exists)
 
-        // Captions came out of it.
+        // Captions came out of it: at least one row, rather than merely no
+        // empty state, which is also what a sheet that never loaded shows.
         app.button(containing: "Transcript").tap()
-        XCTAssertTrue(app.navigationBars["Transcript"].waitForExistence(timeout: uiTimeout))
-        XCTAssertFalse(
-            app.staticTexts["No Captions"].waitForExistence(timeout: disappearanceTimeout),
+        let transcript = app.navigationBars["Transcript"]
+        XCTAssertTrue(transcript.waitForExistence(timeout: uiTimeout))
+        let firstRow = app.cells.firstMatch
+        XCTAssertTrue(
+            firstRow.waitForExistence(timeout: uiTimeout),
             "No captions — is the most recent video a clip with speech?"
         )
-        app.navigationBars["Transcript"].swipeDown(velocity: .fast)
-        XCTAssertTrue(app.navigationBars["Transcript"].waitForDisappearance())
+        XCTAssertFalse(app.staticTexts["No Captions"].exists)
+        print("First caption row: \(firstRow.label)")
+
+        // A fast swipe on the bar did not dismiss the sheet on the device;
+        // drag it the whole way down instead.
+        transcript.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
+        XCTAssertTrue(transcript.waitForDisappearance(), "Transcript sheet did not dismiss")
 
         // With a real video, Export is live and leads to the settings.
         let export = app.button(containing: "Export")
