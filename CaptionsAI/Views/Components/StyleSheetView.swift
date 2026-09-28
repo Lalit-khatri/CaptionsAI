@@ -28,13 +28,17 @@ struct StyleSheetView: View {
     static let fontSizeRange: ClosedRange<CGFloat> = 4 ... 48
     static let fontSizeStep: CGFloat = 2
 
+    /// Space above the title. At 8pt the title sat about 3pt under the
+    /// grabber and read as touching it.
+    static let titleTopPadding: CGFloat = 20
+
     var body: some View {
         VStack(spacing: 16) {
             // Title
             Text("Caption Style")
-                .font(.headline)
+                .font(.title3.weight(.bold))
                 .foregroundColor(.white)
-                .padding(.top, 8)
+                .padding(.top, Self.titleTopPadding)
 
             categoryTabs
 
