@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 
 // MARK: - StyleSheetView
@@ -7,7 +8,15 @@ struct StyleSheetView: View {
     @Binding var selectedStyle: CaptionStyle
     @Binding var fontSize: CGFloat
     let previewText: String
+    /// The project's video. Its frame at ``frameTime`` goes behind every chip,
+    /// so each style is judged over the user's own footage rather than a
+    /// black plate. `nil`, or a file that will not decode, keeps the plate.
+    var videoURL: URL?
+    /// Where the editor's playhead is, in seconds.
+    var frameTime: Double = 0
     @Environment(\.dismiss) private var dismiss
+    /// The frame behind the chips, once it has been read.
+    @State private var backdrop: UIImage?
     /// The tab showing. `nil` is All, which is where the sheet opens.
     @State private var category: StyleCategory?
 
@@ -54,7 +63,8 @@ struct StyleSheetView: View {
                             StylePreviewCard(
                                 style: style,
                                 isSelected: selectedStyle.name == style.name,
-                                previewText: previewText
+                                previewText: previewText,
+                                backdrop: backdrop
                             )
                             .id(style.name)
                             .onTapGesture {
@@ -101,6 +111,7 @@ struct StyleSheetView: View {
 
             Spacer()
         }
+        .task { backdrop = await Self.backdropFrame(from: videoURL, at: frameTime) }
         .presentationDetents(Self.detents)
         .presentationBackground(.ultraThinMaterial)
         .presentationDragIndicator(.visible)
@@ -135,6 +146,29 @@ struct StyleSheetView: View {
     private func scroll(_ proxy: ScrollViewProxy) {
         guard let target = Self.scrollTarget(selected: selectedStyle.name, among: visibleStyles) else { return }
         proxy.scrollTo(target, anchor: .center)
+    }
+
+    // MARK: - Backdrop
+
+    /// Big enough to stay sharp on a 3x screen at the chip's size, and no
+    /// bigger: the frame is decoded once and shared by all thirty chips.
+    static let backdropMaximumSize = CGSize(width: 480, height: 480)
+
+    /// One frame of the video, upright, at `seconds` — or the first frame if
+    /// that time cannot be read (past the end, say). `nil` when there is no
+    /// video or it will not decode, which leaves the chips on their plate.
+    static func backdropFrame(from url: URL?, at seconds: Double) async -> UIImage? {
+        guard let url else { return nil }
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = backdropMaximumSize
+        let requested = CMTime(seconds: max(seconds, 0), preferredTimescale: 600)
+        for time in [requested, .zero] {
+            if let (image, _) = try? await generator.image(at: time) {
+                return UIImage(cgImage: image)
+            }
+        }
+        return nil
     }
 
     // MARK: - Category Tabs
@@ -183,6 +217,13 @@ struct StylePreviewCard: View {
     let style: CaptionStyle
     let isSelected: Bool
     let previewText: String
+    /// A frame of the user's video to draw the sample over. `nil` keeps the
+    /// plain plate.
+    var backdrop: UIImage?
+
+    /// Darkens the backdrop so a white or pale style still reads on a bright
+    /// frame. Light enough that the footage is still recognisable.
+    static let backdropDim: Double = 0.35
 
     /// The chip is exactly this size, whatever it is asked to draw.
     ///
@@ -260,6 +301,18 @@ struct StylePreviewCard: View {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color(hex: "#111118"))
                     .frame(width: Self.plateWidth, height: Self.plateHeight)
+
+                if let backdrop {
+                    // Fill, then clip: a portrait frame must crop to the chip,
+                    // not stretch it.
+                    Image(uiImage: backdrop)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: Self.plateWidth, height: Self.plateHeight)
+                        .clipped()
+                        .overlay(Color.black.opacity(Self.backdropDim))
+                        .accessibilityHidden(true)
+                }
 
                 sample
                     .multilineTextAlignment(.center)

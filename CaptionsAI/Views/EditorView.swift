@@ -64,7 +64,9 @@ struct EditorView: View {
                     get: { viewModel.captionFontSize },
                     set: { viewModel.captionFontSize = $0 }
                 ),
-                previewText: previewTextForStyle
+                previewText: previewTextForStyle,
+                videoURL: project.videoURL,
+                frameTime: viewModel.currentPlaybackTime
             )
         }
         // Transcript bottom sheet
