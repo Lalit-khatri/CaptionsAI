@@ -248,7 +248,7 @@ final class SpeechRecognizer {
             throw err
         }
 
-        let captionSegments = groupIntoSegments(transcriptionSegments)
+        let captionSegments = CaptionGrouping.segments(from: Self.wordTimings(from: transcriptionSegments))
         progress = 1.0
 
         return captionSegments
@@ -474,47 +474,10 @@ final class SpeechRecognizer {
 
     // MARK: - Segment Grouping
 
-    /// Groups individual word timings into caption segments.
-    /// Rules: max 8 words per segment, max 4 seconds duration.
-    private func groupIntoSegments(_ transcriptionSegments: [SFTranscriptionSegment]) -> [CaptionSegment] {
-        var segments: [CaptionSegment] = []
-        var currentWords: [WordTiming] = []
-        var segmentStartTime: Double = 0
-        let maxWordsPerSegment = 8
-        let maxDuration = 4.0
-
-        for (index, tSegment) in transcriptionSegments.enumerated() {
-            let wordTiming = WordTiming(
-                word: tSegment.substring,
-                startTime: tSegment.timestamp,
-                endTime: tSegment.timestamp + tSegment.duration
-            )
-
-            if currentWords.isEmpty {
-                segmentStartTime = tSegment.timestamp
-            }
-
-            currentWords.append(wordTiming)
-
-            let duration = tSegment.timestamp + tSegment.duration - segmentStartTime
-            let isLastWord = index == transcriptionSegments.count - 1
-
-            if currentWords.count >= maxWordsPerSegment || duration >= maxDuration || isLastWord {
-                let text = currentWords.map(\.word).joined(separator: " ")
-                let endTime = tSegment.timestamp + tSegment.duration
-
-                let segment = CaptionSegment(
-                    startTime: segmentStartTime,
-                    endTime: endTime,
-                    text: text,
-                    sortOrder: segments.count,
-                    words: currentWords
-                )
-                segments.append(segment)
-                currentWords = []
-            }
+    /// The recogniser's words as the timings `CaptionGrouping` splits.
+    static func wordTimings(from transcriptionSegments: [SFTranscriptionSegment]) -> [WordTiming] {
+        transcriptionSegments.map {
+            WordTiming(word: $0.substring, startTime: $0.timestamp, endTime: $0.timestamp + $0.duration)
         }
-
-        return segments
     }
 }
