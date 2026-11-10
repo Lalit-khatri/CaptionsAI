@@ -6,6 +6,11 @@ import SwiftUI
 struct ProcessingView: View {
     let progress: Double
     let words: [String]
+    /// Set while the recogniser gets its model ready, before any speech is
+    /// analysed. A first Kannada video spends most of its wait here, and a
+    /// screen that said "Analyzing Speech" at 0% through a 466 MB download
+    /// would look stuck.
+    var preparation: TranscriptionPreparation? = nil
     let onCancel: () -> Void
 
     @State private var animatingBars = false
@@ -20,7 +25,7 @@ struct ProcessingView: View {
                 Spacer()
 
                 // Title
-                Text("Analyzing Speech...")
+                Text(Self.title(for: preparation))
                     .font(.title2.bold())
                     .foregroundColor(.white)
 
@@ -31,7 +36,7 @@ struct ProcessingView: View {
 
                 // Progress bar
                 VStack(spacing: 8) {
-                    ProgressView(value: progress)
+                    progressBar
                         .tint(
                             LinearGradient(
                                 colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
@@ -41,7 +46,7 @@ struct ProcessingView: View {
                         )
                         .padding(.horizontal, 40)
 
-                    Text("Processing \(Int(progress * 100))%")
+                    Text(Self.status(progress: progress, preparation: preparation))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -72,6 +77,42 @@ struct ProcessingView: View {
             }
         }
         .onAppear { animatingBars = true }
+    }
+
+    // MARK: - Copy
+
+    static func title(for preparation: TranscriptionPreparation?) -> String {
+        switch preparation {
+        case .downloading: return "Downloading Speech Model..."
+        case .loading: return "Preparing Speech Model..."
+        case nil: return "Analyzing Speech..."
+        }
+    }
+
+    static func status(progress: Double, preparation: TranscriptionPreparation?) -> String {
+        switch preparation {
+        case let .downloading(fraction): return "Downloading \(Int(fraction * 100))%"
+        case .loading: return "Only slow the first time"
+        case nil: return "Processing \(Int(progress * 100))%"
+        }
+    }
+
+    // MARK: - Progress Bar
+
+    /// Download progress while downloading, an indeterminate bar while the
+    /// model loads (Core ML gives no progress for that), and the
+    /// recogniser's own progress after.
+    @ViewBuilder
+    private var progressBar: some View {
+        switch preparation {
+        case let .downloading(fraction):
+            ProgressView(value: fraction)
+        case .loading:
+            ProgressView(value: nil as Double?)
+                .progressViewStyle(.linear)
+        case nil:
+            ProgressView(value: progress)
+        }
     }
 
     // MARK: - Waveform

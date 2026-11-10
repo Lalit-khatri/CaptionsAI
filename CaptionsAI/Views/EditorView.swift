@@ -32,6 +32,7 @@ struct EditorView: View {
                 ProcessingView(
                     progress: viewModel.speechRecognizer.progress,
                     words: viewModel.speechRecognizer.partialResults,
+                    preparation: viewModel.speechRecognizer.preparation,
                     onCancel: { viewModel.cancelTranscription() }
                 )
             }
