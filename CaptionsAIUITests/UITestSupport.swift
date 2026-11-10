@@ -19,11 +19,21 @@ enum AppLauncher {
     static let inMemoryStoreArgument = "-uiTestInMemoryStore"
     static let seedArgument = "-uiTestSeed"
     static let onboardingArgument = "-hasCompletedOnboarding"
+    /// Mirrors `LanguagePreference.key`.
+    static let languageArgument = "-transcriptionLanguage"
 
     /// Launches a fresh copy of the app.
-    static func launch(onboarded: Bool = true, seed: Seed? = nil) -> XCUIApplication {
+    ///
+    /// The language is always passed, English unless a test says otherwise.
+    /// Left to the simulator's stored choice, a seeded empty project could
+    /// open the editor in Kannada and start a 466 MB model download.
+    static func launch(onboarded: Bool = true, seed: Seed? = nil, language: String = "en") -> XCUIApplication {
         let app = XCUIApplication()
-        var arguments = [onboardingArgument, onboarded ? "YES" : "NO", inMemoryStoreArgument]
+        var arguments = [
+            onboardingArgument, onboarded ? "YES" : "NO",
+            languageArgument, language,
+            inMemoryStoreArgument,
+        ]
         if let seed {
             arguments += [seedArgument, seed.rawValue]
         }

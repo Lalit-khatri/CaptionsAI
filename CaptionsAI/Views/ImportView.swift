@@ -11,6 +11,9 @@ struct ImportView: View {
     @State private var viewModel = ImportViewModel()
     @State private var selectedItem: PhotosPickerItem?
     @State private var pendingDeletion: Project?
+    @State private var language = LanguagePreference().language
+    @State private var showLanguagePicker = false
+    private let modelStore = WhisperModelStore.shared
 
     var body: some View {
         ScrollView {
@@ -160,6 +163,23 @@ struct ImportView: View {
             }
             .disabled(viewModel.isLoading)
             .padding(.horizontal, 24)
+
+            LanguageButton(language: language, modelState: modelStore.state) {
+                showLanguagePicker = true
+            }
+            .padding(.horizontal, 24)
+        }
+        .sheet(isPresented: $showLanguagePicker) {
+            LanguagePickerView(
+                selection: Binding(
+                    get: { language },
+                    set: { newValue in
+                        language = newValue
+                        LanguagePreference().language = newValue
+                    }
+                ),
+                store: modelStore
+            )
         }
     }
 

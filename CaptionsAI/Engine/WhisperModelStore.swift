@@ -58,8 +58,18 @@ final class WhisperModelStore {
 
     static let shared = WhisperModelStore(
         variant: WhisperKitDownloader.recommendedVariant(),
-        downloader: WhisperKitDownloader()
+        downloader: WhisperKitDownloader(),
+        baseDirectory: UITestLaunch(arguments: ProcessInfo.processInfo.arguments).usesInMemoryStore
+            ? uiTestBaseDirectory
+            : defaultBaseDirectory
     )
+
+    /// An empty folder per UI-test launch, so a model downloaded by hand on
+    /// the same simulator cannot change what the tests see.
+    private static var uiTestBaseDirectory: URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("UITestWhisperModels-\(UUID().uuidString)", isDirectory: true)
+    }
 
     let variant: String
     private(set) var state: State = .notDownloaded
