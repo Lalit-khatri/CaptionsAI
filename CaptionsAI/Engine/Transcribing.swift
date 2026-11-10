@@ -25,7 +25,32 @@ protocol Transcribing: AnyObject {
     /// authorization guard without reaching the code under test.
     func requestAuthorization() async -> Bool
 
+    /// What the recogniser is getting ready, while it does; nil otherwise.
+    var preparation: TranscriptionPreparation? { get }
+
+    /// One-off work that has to happen before the first recognition, such as
+    /// downloading a speech model.
+    ///
+    /// Separate from `recognizeSpeech` because the editor bounds recognition
+    /// by a deadline scaled to the clip's length. A model download depends on
+    /// the network, not the clip, and a 466 MB download cut off at ninety
+    /// seconds would fail every time on a slow connection.
+    func prepare() async throws
+
     func recognizeSpeech(from videoURL: URL) async throws -> [CaptionSegment]
+}
+
+/// The stages a recogniser can be in before it starts listening.
+enum TranscriptionPreparation: Equatable {
+    /// Downloading the speech model; `fraction` is 0...1.
+    case downloading(fraction: Double)
+    /// Loading the downloaded model into memory. Not measurable.
+    case loading
+}
+
+extension Transcribing {
+    var preparation: TranscriptionPreparation? { nil }
+    func prepare() async throws {}
 }
 
 extension SpeechRecognizer: Transcribing {

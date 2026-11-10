@@ -14,6 +14,9 @@ enum SpeechError: Error, LocalizedError {
     /// The recogniser neither finished nor failed within the time the editor
     /// was willing to give it.
     case timedOut
+    /// The speech model for the chosen language could not be downloaded or
+    /// loaded.
+    case modelUnavailable(Error)
 
     var errorDescription: String? {
         switch self {
@@ -29,6 +32,8 @@ enum SpeechError: Error, LocalizedError {
             return "Speech recognition failed: \(error.localizedDescription)"
         case .timedOut:
             return "Transcription took too long and was stopped. Check your connection and try again."
+        case .modelUnavailable:
+            return "Couldn't get the speech model for this language. Check your connection and try again."
         }
     }
 }

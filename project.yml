@@ -9,6 +9,14 @@ options:
   createIntermediateGroups: true
   defaultConfig: Debug
 
+packages:
+  # On-device Whisper for every language except English; see
+  # CaptionsAI/Engine/WhisperKitPipeline.swift. Pinned exactly: Package.resolved
+  # is gitignored, so this line is the only record of the version built.
+  WhisperKit:
+    url: https://github.com/argmaxinc/WhisperKit
+    exactVersion: 1.1.1
+
 settings:
   base:
     MARKETING_VERSION: "1.0.0"
@@ -81,6 +89,9 @@ targets:
           PRODUCT_NAME: "CaptionsAI"
     entitlements:
       path: CaptionsAI/CaptionsAI.entitlements
+    dependencies:
+      - package: WhisperKit
+        product: WhisperKit
 
   CaptionsAITests:
     type: bundle.unit-test

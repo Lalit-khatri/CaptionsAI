@@ -35,9 +35,23 @@ final class FakeTranscriber: Transcribing {
     private(set) var authorizationCallCount = 0
     private(set) var sawCancellation = false
 
+    /// How long `prepare()` takes, standing in for a model download.
+    var prepareDuration: TimeInterval = 0
+    /// Thrown by `prepare()` once `prepareDuration` has passed.
+    var prepareError: Error?
+    private(set) var prepareCallCount = 0
+
     func requestAuthorization() async -> Bool {
         authorizationCallCount += 1
         return isAuthorized
+    }
+
+    func prepare() async throws {
+        prepareCallCount += 1
+        if prepareDuration > 0 {
+            try await Task.sleep(nanoseconds: UInt64(prepareDuration * 1_000_000_000))
+        }
+        if let prepareError { throw prepareError }
     }
 
     func recognizeSpeech(from _: URL) async throws -> [CaptionSegment] {

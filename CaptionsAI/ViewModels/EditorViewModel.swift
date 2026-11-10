@@ -87,6 +87,15 @@ final class EditorViewModel {
             ?? Self.transcriptionBudget(forClipOf: project.videoDuration)
     }
 
+    /// The recogniser for `language`: Apple's for English, Whisper for the
+    /// rest, whatever the iOS version.
+    static func makeTranscriber(for language: TranscriptionLanguage) -> any Transcribing {
+        switch language.engine {
+        case .apple: return SpeechRecognizer()
+        case .whisper: return WhisperTranscriber(language: language)
+        }
+    }
+
     /// The time budget for a clip of `duration` seconds.
     static func transcriptionBudget(forClipOf duration: Double) -> TimeInterval {
         max(kMinimumTranscriptionBudget, duration * kTranscriptionBudgetFactor)
@@ -96,7 +105,7 @@ final class EditorViewModel {
 
     init(
         project: Project,
-        speechRecognizer: any Transcribing = SpeechRecognizer(),
+        speechRecognizer: any Transcribing = EditorViewModel.makeTranscriber(for: LanguagePreference().language),
         playbackClock: (any PeriodicTimeObserving)? = nil,
         audioSession: any AudioSessionControlling = AVAudioSession.sharedInstance(),
         transcriptionBudget: TimeInterval? = nil
@@ -232,6 +241,11 @@ final class EditorViewModel {
                 isProcessing = false
                 return
             }
+
+            // Outside the deadline: a model download takes as long as the
+            // network does, not as long as the clip.
+            try await speechRecognizer.prepare()
+            guard !Task.isCancelled else { return }
 
             let budget = transcriptionBudget
             let newSegments = try await withDeadline(
