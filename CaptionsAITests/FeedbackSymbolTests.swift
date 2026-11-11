@@ -27,6 +27,7 @@ final class FeedbackSymbolTests: XCTestCase {
     func testThePrivacyAndVersionRowsHaveIcons() {
         assertResolves(FeedbackMail.privacySymbol)
         assertResolves(FeedbackMail.versionSymbol)
+        assertResolves(FeedbackMail.acknowledgementsSymbol)
     }
 
     func testBothProRowsHaveIcons() {

@@ -126,6 +126,7 @@ enum FeedbackMail {
     static let versionSymbol = "info.circle"
 
     static let privacyTitle = "Privacy Policy"
+    static let acknowledgementsSymbol = "doc.text"
 
     /// The read-only "Version 1.0 (7)" row at the bottom of the menu.
     ///

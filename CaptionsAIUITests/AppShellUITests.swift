@@ -90,12 +90,29 @@ final class AppShellUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Request a feature"].exists)
         XCTAssertTrue(app.buttons["CaptionsAI Pro"].exists)
         XCTAssertTrue(app.buttons["Privacy Policy"].exists)
+        XCTAssertTrue(app.buttons["Acknowledgements"].exists)
 
         // "Version 1.0.0 (1)" today. Matched by shape so a version bump does
         // not fail it, while "Version unknown (unknown)" — the fallback when
         // the bundle keys are missing — still does.
         let version = app.elements(labelMatching: "label MATCHES %@", #"^Version [0-9]+(\.[0-9]+)* \([0-9]+\)$"#)
         XCTAssertEqual(version.count, 1)
+    }
+
+    @MainActor
+    func testAcknowledgementsShowWhisperKitsLicence() {
+        let app = AppLauncher.launch()
+        app.openFeedbackMenu()
+        let row = app.buttons["Acknowledgements"]
+        XCTAssertTrue(row.waitForExistence(timeout: uiTimeout))
+        row.tap()
+
+        let whisperKit = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "WhisperKit")).firstMatch
+        XCTAssertTrue(whisperKit.waitForExistence(timeout: uiTimeout))
+        whisperKit.tap()
+
+        let notice = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Copyright (c) 2024 argmax, inc.")).firstMatch
+        XCTAssertTrue(notice.waitForExistence(timeout: uiTimeout), "WhisperKit's copyright notice is not shown")
     }
 
     @MainActor

@@ -109,6 +109,14 @@ struct FeedbackMenuModifier: ViewModifier {
                                 Label(FeedbackMail.privacyTitle, systemImage: FeedbackMail.privacySymbol)
                             }
 
+                            // The open-source notices the app's licences
+                            // require it to carry.
+                            Button {
+                                presented = .acknowledgements
+                            } label: {
+                                Label(AcknowledgementsView.title, systemImage: FeedbackMail.acknowledgementsSymbol)
+                            }
+
                             // Read-only. A row in a menu that is not a
                             // button renders disabled, which is what a
                             // version is.
@@ -137,6 +145,8 @@ struct FeedbackMenuModifier: ViewModifier {
                     // menu is itself a sheet.
                     PaywallView(trigger: .menu)
                         .environment(storeKit)
+                case .acknowledgements:
+                    AcknowledgementsView()
                 }
             }
             .overlay(alignment: .bottom) {
@@ -223,6 +233,7 @@ enum FeedbackSheet: Identifiable, Equatable {
     case compose(FeedbackKind)
     case contact(FeedbackKind)
     case paywall
+    case acknowledgements
 
     /// Apple's composer only when Apple Mail can send; otherwise the contact
     /// sheet. Never a `mailto:` opened without asking — see
@@ -236,6 +247,7 @@ enum FeedbackSheet: Identifiable, Equatable {
         case .compose(let kind): return "compose-\(kind.id)"
         case .contact(let kind): return "contact-\(kind.id)"
         case .paywall: return "paywall"
+        case .acknowledgements: return "acknowledgements"
         }
     }
 }
