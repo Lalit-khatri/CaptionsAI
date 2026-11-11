@@ -52,6 +52,10 @@ final class EditorViewModel {
     /// opened. Decided once, in `init`, and not revisited — see the comment
     /// there for why a view must not ask the filesystem this question.
     private(set) var videoIsMissing = false
+
+    /// The clip's upright display size, once read from the file. Lets the
+    /// caption overlay sit on the picture rather than on the whole player.
+    private(set) var videoDisplaySize: CGSize?
     private var timeObserver: Any?
     private var endObserver: NSObjectProtocol?
 
@@ -111,6 +115,18 @@ final class EditorViewModel {
         }
     }
 
+    /// The first video track's size as it is shown: natural size with the
+    /// track's rotation applied, so a portrait phone clip stored sideways
+    /// reads as portrait. Nil if the file has no readable video track.
+    static func displaySize(of url: URL) async -> CGSize? {
+        guard let track = try? await AVURLAsset(url: url).loadTracks(withMediaType: .video).first,
+              let loaded = try? await track.load(.naturalSize, .preferredTransform)
+        else { return nil }
+        let rotated = loaded.0.applying(loaded.1)
+        let size = CGSize(width: abs(rotated.width), height: abs(rotated.height))
+        return size.width > 0 && size.height > 0 ? size : nil
+    }
+
     /// The time budget for a clip of `duration` seconds.
     static func transcriptionBudget(forClipOf duration: Double) -> TimeInterval {
         max(kMinimumTranscriptionBudget, duration * kTranscriptionBudgetFactor)
@@ -142,6 +158,10 @@ final class EditorViewModel {
         if let url = project.videoURL {
             player = AVPlayer(url: url)
             observePlaybackEnd()
+            Task { @MainActor [weak self] in
+                let size = await Self.displaySize(of: url)
+                self?.videoDisplaySize = size
+            }
         } else {
             // Recorded here, once, rather than asked of the view. `videoURL`
             // is not a stored property — it calls VideoLibrary.resolve, which

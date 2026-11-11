@@ -227,7 +227,8 @@ struct EditorView: View {
                                 ),
                                 onPositionChanged: { newY in
                                     viewModel.captionYPosition = newY
-                                }
+                                },
+                                videoSize: viewModel.videoDisplaySize
                             )
                         }
                         .contentShape(Rectangle())

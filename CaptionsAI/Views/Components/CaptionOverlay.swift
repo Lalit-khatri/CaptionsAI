@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 
 // MARK: - Position Constants
@@ -55,6 +56,25 @@ struct CaptionOverlay: View {
     let currentTime: Double
     @Binding var yPosition: Double
     let onPositionChanged: (Double) -> Void
+    /// The clip's upright display size. The overlay covers the whole player,
+    /// but the picture is fitted inside it with bars, so captions are placed
+    /// and scaled against the picture's own rect; nil uses the whole overlay.
+    var videoSize: CGSize? = nil
+
+    /// Where the picture sits inside a player of `container` size.
+    ///
+    /// The export places a caption at a fraction of the video frame's height
+    /// and scales its font by the frame's width. The preview used the whole
+    /// player for both, so a 16:9 clip's caption at 0.85 was drawn in the
+    /// black bar below the picture, and a 9:16 clip's caption was drawn about
+    /// 10% larger than it came out in the file.
+    static func videoRect(in container: CGSize, videoSize: CGSize?) -> CGRect {
+        let bounds = CGRect(origin: .zero, size: container)
+        guard let videoSize, videoSize.width > 0, videoSize.height > 0,
+              container.width > 0, container.height > 0
+        else { return bounds }
+        return AVMakeRect(aspectRatio: videoSize, insideRect: bounds)
+    }
 
     @State private var dragY: Double?
     @State private var isDragging = false
@@ -64,6 +84,7 @@ struct CaptionOverlay: View {
     var body: some View {
         GeometryReader { geo in
             let effectiveY = dragY ?? yPosition
+            let picture = Self.videoRect(in: geo.size, videoSize: videoSize)
             if let activeSegment = viewModel.segments.first(where: { $0.isActive(at: currentTime) }) {
                 ZStack {
                     // Guide line visible during drag
@@ -71,15 +92,16 @@ struct CaptionOverlay: View {
                         Rectangle()
                             .fill(Color.white.opacity(0.3))
                             .frame(height: 1)
-                            .position(x: geo.size.width / 2, y: geo.size.height * effectiveY)
+                            .frame(width: picture.width)
+                            .position(x: picture.midX, y: picture.minY + picture.height * effectiveY)
                     }
 
-                    let effectiveX = geo.size.width * (0.5 + viewModel.selectedStyle.horizontalOffsetFraction)
-                    captionText(for: activeSegment, in: geo.size)
+                    let effectiveX = picture.minX + picture.width * (0.5 + viewModel.selectedStyle.horizontalOffsetFraction)
+                    captionText(for: activeSegment, in: picture.size)
                         .offset(y: bounceOffset)
                         .position(
                             x: effectiveX,
-                            y: geo.size.height * effectiveY
+                            y: picture.minY + picture.height * effectiveY
                         )
                         .gesture(
                             DragGesture(minimumDistance: kDragMinimumDistance)
@@ -88,12 +110,12 @@ struct CaptionOverlay: View {
                                         dismissHint()
                                     }
                                     isDragging = true
-                                    let newY = Double(value.location.y / geo.size.height)
+                                    let newY = Double((value.location.y - picture.minY) / picture.height)
                                     dragY = Self.clampYPosition(newY)
                                 }
                                 .onEnded { value in
                                     isDragging = false
-                                    let finalY = Double(value.location.y / geo.size.height)
+                                    let finalY = Double((value.location.y - picture.minY) / picture.height)
                                     let clamped = Self.clampYPosition(finalY)
                                     dragY = nil
                                     yPosition = clamped
@@ -105,8 +127,8 @@ struct CaptionOverlay: View {
                     if showDragHint {
                         CaptionDragHintView()
                             .position(
-                                x: geo.size.width / 2,
-                                y: geo.size.height * effectiveY + (effectiveY >= kHintFlipThreshold
+                                x: picture.midX,
+                                y: picture.minY + picture.height * effectiveY + (effectiveY >= kHintFlipThreshold
                                     ? -kDragHintVerticalOffset
                                     : kDragHintVerticalOffset)
                             )
