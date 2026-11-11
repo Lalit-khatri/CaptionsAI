@@ -14,6 +14,8 @@ struct TranscriptSheetView: View {
     let onDelete: (CaptionSegment) -> Void
     /// Adds a caption at the playhead and returns it.
     let onAdd: () -> CaptionSegment
+    /// Runs transcription again. Nil when it cannot work (no video).
+    var onTranscribe: (() -> Void)? = nil
 
     @State private var editingSegment: CaptionSegment?
     /// The caption Add Caption just created, until its editor is saved.
@@ -24,6 +26,7 @@ struct TranscriptSheetView: View {
     static let emptyTitle = "No Captions"
     static let emptySymbol = "captions.bubble"
     static let emptyMessage = "Add a caption at the current point in the video."
+    static let transcribeTitle = "Generate Captions"
 
     var body: some View {
         NavigationStack {
@@ -62,8 +65,15 @@ struct TranscriptSheetView: View {
                     } description: {
                         Text(Self.emptyMessage)
                     } actions: {
+                        // After a failed or cancelled run this was the only
+                        // screen with no captions, and nothing on it could
+                        // start another run short of leaving the project.
+                        if let onTranscribe {
+                            Button(Self.transcribeTitle) { onTranscribe() }
+                                .buttonStyle(.borderedProminent)
+                        }
                         Button(Self.addTitle) { addCaption() }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.bordered)
                     }
                 }
             }

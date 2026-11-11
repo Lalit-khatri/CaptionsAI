@@ -101,6 +101,10 @@ struct EditorView: View {
                 },
                 onAdd: {
                     viewModel.addSegment(at: viewModel.currentPlaybackTime)
+                },
+                onTranscribe: viewModel.videoIsMissing ? nil : {
+                    showTranscriptSheet = false
+                    viewModel.startTranscription()
                 }
             )
         }
