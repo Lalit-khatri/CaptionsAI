@@ -70,7 +70,7 @@ final class EditorUITests: XCTestCase {
     }
 
     @MainActor
-    func testAddCaptionOpensItForEditingAndKeepsItAfterCancel() {
+    func testAddCaptionOpensItForEditingAndCancelTakesItAwayAgain() {
         let app = openEditor()
         openTranscript(app)
 
@@ -81,10 +81,24 @@ final class EditorUITests: XCTestCase {
 
         app.navigationBars["Edit Caption"].buttons["Cancel"].tap()
 
-        // Added before it was opened, so cancelling the edit keeps the row.
-        XCTAssertTrue(app.staticTexts[Copy.newCaption].waitForExistence(timeout: uiTimeout))
+        // A placeholder nobody saved would otherwise go out in the export.
+        XCTAssertTrue(app.navigationBars["Edit Caption"].waitForDisappearance())
+        XCTAssertTrue(app.staticTexts[Copy.newCaption].waitForDisappearance(), "the unsaved placeholder stayed")
         XCTAssertTrue(app.staticTexts[Copy.firstCaption].exists)
         XCTAssertTrue(app.staticTexts[Copy.secondCaption].exists)
+    }
+
+    @MainActor
+    func testAnAddedCaptionThatIsSavedStays() {
+        let app = openEditor()
+        openTranscript(app)
+
+        app.navigationBars["Transcript"].buttons["Add Caption"].tap()
+        XCTAssertTrue(app.navigationBars["Edit Caption"].waitForExistence(timeout: uiTimeout))
+        replaceText(in: app.textViews.firstMatch, with: "Freshly added")
+        saveButton(app).tap()
+
+        XCTAssertTrue(app.staticTexts["Freshly added"].waitForExistence(timeout: uiTimeout))
     }
 
     @MainActor

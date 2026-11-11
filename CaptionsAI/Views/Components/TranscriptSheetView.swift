@@ -16,6 +16,8 @@ struct TranscriptSheetView: View {
     let onAdd: () -> CaptionSegment
 
     @State private var editingSegment: CaptionSegment?
+    /// The caption Add Caption just created, until its editor is saved.
+    @State private var unsavedNewSegment: CaptionSegment?
 
     static let addTitle = "Add Caption"
     static let addSymbol = "plus"
@@ -77,11 +79,12 @@ struct TranscriptSheetView: View {
             .feedbackMenu()
             .navigationBarTitleDisplayMode(.inline)
             // Segment editor presented from within this sheet
-            .sheet(item: $editingSegment) { segment in
+            .sheet(item: $editingSegment, onDismiss: discardUnsavedNewSegment) { segment in
                 SegmentEditorSheet(
                     segment: segment,
                     videoDuration: videoDuration,
                     onSave: { text, start, end in
+                        if unsavedNewSegment === segment { unsavedNewSegment = nil }
                         onSave(segment, text, start, end)
                     }
                 )
@@ -95,7 +98,19 @@ struct TranscriptSheetView: View {
     /// Adds the caption and opens it straight away, since the placeholder
     /// text is never what the user wants it to say.
     private func addCaption() {
-        editingSegment = onAdd()
+        let segment = onAdd()
+        unsavedNewSegment = segment
+        editingSegment = segment
+    }
+
+    /// Add Caption followed by Cancel (or a swipe down) used to leave a
+    /// "New caption" placeholder in the transcript, which then went out in
+    /// the export. A new caption nobody saved is removed again.
+    private func discardUnsavedNewSegment() {
+        if let segment = unsavedNewSegment {
+            unsavedNewSegment = nil
+            onDelete(segment)
+        }
     }
 }
 
