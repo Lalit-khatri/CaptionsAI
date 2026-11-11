@@ -26,6 +26,16 @@ final class StoreKitManagerTests: XCTestCase {
         )
     }
 
+    // MARK: - Waiting for the launch check
+
+    func testWaitingForEntitlementsDoesNotHangWhenNothingWasStarted() async {
+        // Export awaits this before every decision; with no launch check in
+        // flight (tests, previews) it must return straight away.
+        let store = manager()
+        await store.waitForInitialEntitlements()
+        XCTAssertFalse(store.isPro)
+    }
+
     // MARK: - Loading products
 
     func testAFailedLoadSaysWhyAndIsNotStillLoading() async {

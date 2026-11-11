@@ -119,6 +119,9 @@ final class StoreKitManager {
 
     private let client: StoreClient
     private var transactionListener: Task<Void, Never>?
+    /// The entitlement check started at launch, kept so that a decision
+    /// that depends on `isPro` can wait for it.
+    private var initialEntitlementCheck: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -131,7 +134,16 @@ final class StoreKitManager {
         guard startImmediately else { return }
         transactionListener = listenForTransactions()
         Task { await loadProducts() }
-        Task { await refreshEntitlements() }
+        initialEntitlementCheck = Task { await refreshEntitlements() }
+    }
+
+    /// Returns once the launch-time entitlement check has finished.
+    ///
+    /// `isPro` reads false until then, so a subscriber who went straight to
+    /// Export after a cold launch could get a watermark burned in, or the
+    /// daily-limit paywall. Export waits on this before deciding.
+    func waitForInitialEntitlements() async {
+        await initialEntitlementCheck?.value
     }
 
     deinit {

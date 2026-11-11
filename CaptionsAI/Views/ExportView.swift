@@ -217,15 +217,19 @@ struct ExportView: View {
 
     private var exportButton: some View {
         Button {
-            // The only path that raises the paywall. While this was commented
-            // out the screen was unreachable, along with everything on it.
-            if !viewModel.checkExportQuota(isPro: storeKit.isPro) {
-                // PaywallView logs paywall_shown when it appears; logging
-                // here as well counted every limit hit twice.
-                showPaywall = true
-            } else {
-                guard let videoURL = project.videoURL else { return }
-                Task {
+            Task {
+                // Pro status must be known before deciding on the paywall
+                // and the watermark; see waitForInitialEntitlements.
+                await storeKit.waitForInitialEntitlements()
+                // The only path that raises the paywall. While this was
+                // commented out the screen was unreachable, along with
+                // everything on it.
+                if !viewModel.checkExportQuota(isPro: storeKit.isPro) {
+                    // PaywallView logs paywall_shown when it appears; logging
+                    // here as well counted every limit hit twice.
+                    showPaywall = true
+                } else {
+                    guard let videoURL = project.videoURL else { return }
                     await viewModel.startExport(
                         videoURL: videoURL,
                         segments: project.sortedSegments,
