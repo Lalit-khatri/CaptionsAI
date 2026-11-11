@@ -25,6 +25,7 @@ struct ExportView: View {
     @State private var showCancelAlert = false
     @State private var videoDuration: Double = 0
     @State private var thumbnailImage: UIImage?
+    @State private var didChooseInitialPreset = false
 
     var body: some View {
         ZStack {
@@ -82,6 +83,21 @@ struct ExportView: View {
         }
         .onAppear {
             loadVideoInfo()
+            if !didChooseInitialPreset {
+                didChooseInitialPreset = true
+                let thumbnailSize = project.thumbnailData.flatMap(UIImage.init(data:))?.size
+                viewModel.selectedPreset = ExportViewModel.initialPreset(
+                    lastUsed: project.lastExportPreset,
+                    sourceSize: thumbnailSize
+                )
+            }
+        }
+        // Remembered only once an export has worked: a format picked and
+        // then abandoned says nothing about what the user wants next time.
+        .onChange(of: viewModel.exportedFileURL) { _, url in
+            if url != nil {
+                project.lastExportPreset = viewModel.selectedPreset.rawValue
+            }
         }
     }
 
@@ -194,11 +210,7 @@ struct ExportView: View {
     }
 
     private var resolutionLabel: String {
-        let preset = viewModel.selectedPreset
-        if preset == .original {
-            return viewModel.settings.resolution.displayName
-        }
-        return "\(Int(preset.resolution.width))×\(Int(preset.resolution.height))"
+        ExportViewModel.resolutionLabel(preset: viewModel.selectedPreset, settings: viewModel.settings)
     }
 
     // MARK: - Export Button

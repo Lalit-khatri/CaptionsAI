@@ -20,8 +20,46 @@ final class ExportViewModel {
 
     let exportEngine: any VideoExporting
 
-    init(exportEngine: any VideoExporting = ExportEngine()) {
+    /// Turns auto-lock off (true) and back on (false) around an export.
+    /// Injected so tests can see it without touching `UIApplication`.
+    private let keepScreenAwake: (Bool) -> Void
+
+    init(
+        exportEngine: any VideoExporting = ExportEngine(),
+        keepScreenAwake: @escaping (Bool) -> Void = { UIApplication.shared.isIdleTimerDisabled = $0 }
+    ) {
         self.exportEngine = exportEngine
+        self.keepScreenAwake = keepScreenAwake
+    }
+
+    // MARK: - Format
+
+    /// The format the export screen opens on.
+    ///
+    /// It used to be Reels 9:16 every time, so a landscape clip exported
+    /// without a second look came out 1080×1920 with the picture shrunk into
+    /// the middle and two thirds of the frame black. Now: the format last
+    /// exported for this project if the user ever changed it from the
+    /// default, otherwise the one that matches the clip's shape (judged from
+    /// its thumbnail, which is drawn upright).
+    static func initialPreset(lastUsed: String, sourceSize: CGSize?) -> ExportPreset {
+        if let remembered = ExportPreset(rawValue: lastUsed), remembered != .instagramReels {
+            return remembered
+        }
+        if let size = sourceSize, size.width > size.height {
+            return .youtube
+        }
+        return .instagramReels
+    }
+
+    /// The size that will actually be rendered, for the summary card.
+    ///
+    /// The card used to print the preset's base canvas (1080×1920) whatever
+    /// Resolution was set to, so 4K and 720p both claimed to be 1080p.
+    static func resolutionLabel(preset: ExportPreset, settings: ExportSettings) -> String {
+        guard preset != .original else { return settings.resolution.displayName }
+        let size = settings.resolution.outputSize(for: preset.resolution)
+        return "\(Int(size.width))×\(Int(size.height))"
     }
 
     // MARK: - Export
@@ -47,6 +85,11 @@ final class ExportViewModel {
         exportProgress = 0
         error = nil
         exportedFileURL = nil
+
+        // Auto-lock mid-render suspends the app and the export fails with
+        // nothing to show for it. Keep the screen on while it runs.
+        keepScreenAwake(true)
+        defer { keepScreenAwake(false) }
 
         let addWatermark = !isPro
 
