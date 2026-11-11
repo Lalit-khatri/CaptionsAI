@@ -79,8 +79,34 @@ final class TranscriptionLanguageTests: XCTestCase {
     }
 
     func testAnEmptyOrBlankSearchShowsEverything() {
-        XCTAssertEqual(TranscriptionLanguage.matching(""), TranscriptionLanguage.all)
-        XCTAssertEqual(TranscriptionLanguage.matching("   "), TranscriptionLanguage.all)
+        XCTAssertEqual(TranscriptionLanguage.matching(""), TranscriptionLanguage.pickerOptions)
+        XCTAssertEqual(TranscriptionLanguage.matching("   "), TranscriptionLanguage.pickerOptions)
+    }
+
+    // MARK: - Auto-detect
+
+    func testThePickerOffersAutoDetectFirstThenEveryLanguage() {
+        XCTAssertEqual(TranscriptionLanguage.pickerOptions.first, .autoDetect)
+        XCTAssertEqual(Array(TranscriptionLanguage.pickerOptions.dropFirst()), TranscriptionLanguage.all)
+    }
+
+    func testAutoDetectIsNotALanguageWhisperIsAskedFor() {
+        XCTAssertFalse(TranscriptionLanguage.all.contains(.autoDetect))
+        XCTAssertTrue(TranscriptionLanguage.autoDetect.isAutoDetect)
+        XCTAssertFalse(TranscriptionLanguage.english.isAutoDetect)
+    }
+
+    func testAutoDetectNeedsTheWhisperModel() {
+        XCTAssertEqual(TranscriptionLanguage.autoDetect.engine, .whisper)
+    }
+
+    func testAutoDetectHasNoNativeName() {
+        XCTAssertNil(TranscriptionLanguage.autoDetect.nativeName)
+    }
+
+    func testSearchFindsAutoDetect() {
+        XCTAssertEqual(TranscriptionLanguage.matching("auto").map(\.code), ["auto"])
+        XCTAssertEqual(TranscriptionLanguage.matching("detect").map(\.code), ["auto"])
     }
 
     // MARK: - Preference
@@ -106,6 +132,11 @@ final class TranscriptionLanguageTests: XCTestCase {
     func testAChosenLanguageIsRemembered() {
         LanguagePreference(defaults: defaults).language = TranscriptionLanguage.with(code: "kn")!
         XCTAssertEqual(LanguagePreference(defaults: defaults).language.code, "kn")
+    }
+
+    func testAutoDetectIsRemembered() {
+        LanguagePreference(defaults: defaults).language = .autoDetect
+        XCTAssertEqual(LanguagePreference(defaults: defaults).language, .autoDetect)
     }
 
     func testAStoredCodeThisBuildDoesNotKnowReadsAsEnglish() {

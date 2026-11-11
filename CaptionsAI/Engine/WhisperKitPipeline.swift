@@ -103,4 +103,11 @@ final class WhisperKitPipeline: WhisperPipeline, @unchecked Sendable {
             .flatMap { $0.words ?? [] }
             .map { WordTiming(word: $0.word, startTime: Double($0.start), endTime: Double($0.end)) }
     }
+
+    func detectLanguage(audioPath: String) async throws -> (code: String, confidence: Double) {
+        let result = try await kit.detectLanguage(audioPath: audioPath)
+        // WhisperKit reports the log probability of the language it picked.
+        let logProbability = result.langProbs[result.language] ?? -.infinity
+        return (result.language, Double(exp(logProbability)))
+    }
 }

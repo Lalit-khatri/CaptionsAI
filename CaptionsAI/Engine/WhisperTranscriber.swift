@@ -23,6 +23,10 @@ protocol WhisperPipeline: AnyObject, Sendable {
         shouldContinue: @escaping @Sendable () -> Bool,
         onSegment: @escaping @Sendable (_ endSeconds: Double, _ text: String) -> Void
     ) async throws -> [WordTiming]
+
+    /// Which language the speech at `audioPath` is in, judged from its first
+    /// 30 seconds, as a Whisper language code and a 0...1 confidence.
+    func detectLanguage(audioPath: String) async throws -> (code: String, confidence: Double)
 }
 
 /// Loads a downloaded model into memory.
@@ -42,7 +46,10 @@ protocol WhisperPipelineLoading: Sendable {
 final class WhisperTranscriber: Transcribing {
     var progress: Double = 0
     var partialResults: [String] = []
+    private(set) var detection: LanguageDetection?
 
+    /// The language asked for. May be `.autoDetect`, in which case each run
+    /// works out the real one first and records it in `detection`.
     let language: TranscriptionLanguage
 
     private let store: WhisperModelStore
@@ -119,6 +126,7 @@ final class WhisperTranscriber: Transcribing {
     func recognizeSpeech(from videoURL: URL) async throws -> [CaptionSegment] {
         progress = 0
         partialResults = []
+        detection = nil
 
         if pipeline == nil { try await prepare() }
         guard let pipeline else { throw SpeechError.notAvailable }
@@ -141,6 +149,16 @@ final class WhisperTranscriber: Transcribing {
         let duration = await clipDuration(videoURL)
         try Task.checkCancellation()
 
+        let spoken: TranscriptionLanguage
+        if language.isAutoDetect {
+            let detected = try await Self.detect(with: pipeline, audioPath: audioURL.path)
+            try Task.checkCancellation()
+            detection = detected
+            spoken = detected.language
+        } else {
+            spoken = language
+        }
+
         let gate = CancellationGate()
         let feed = LiveFeed()
         let run = UUID()
@@ -152,7 +170,7 @@ final class WhisperTranscriber: Transcribing {
             words = try await withTaskCancellationHandler {
                 try await pipeline.transcribe(
                     audioPath: audioURL.path,
-                    language: language.code,
+                    language: spoken.code,
                     shouldContinue: { !gate.isCancelled },
                     onSegment: { [weak self] endSeconds, text in
                         feed.add(Self.words(in: text), heardUpTo: endSeconds)
@@ -187,6 +205,30 @@ final class WhisperTranscriber: Transcribing {
         let segments = CaptionGrouping.segments(from: cleaned)
         progress = 1
         return segments
+    }
+
+    // MARK: - Detection
+
+    /// Asks Whisper which language the clip is in.
+    ///
+    /// A code outside the picker's list (Cantonese, from a model that knows
+    /// it) reads as English, the app's default, rather than as a language
+    /// the user could not pick again from the "Change" button.
+    private static func detect(with pipeline: any WhisperPipeline, audioPath: String) async throws -> LanguageDetection {
+        let result: (code: String, confidence: Double)
+        do {
+            result = try await pipeline.detectLanguage(audioPath: audioPath)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw SpeechError.recognitionFailed(error)
+        }
+        return detection(fromCode: result.code, confidence: result.confidence)
+    }
+
+    static func detection(fromCode code: String, confidence: Double) -> LanguageDetection {
+        let language = TranscriptionLanguage.all.first { $0.code == code } ?? .english
+        return LanguageDetection(language: language, confidence: min(max(confidence, 0), 1))
     }
 
     // MARK: - Cleaning

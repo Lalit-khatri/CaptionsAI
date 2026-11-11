@@ -86,9 +86,14 @@ struct LanguagePickerView: View {
     static let downloadTitle = "Download speech model?"
 
     static func downloadMessage(for language: TranscriptionLanguage, megabytes: Int) -> String {
-        "Captions in \(language.name) use a \(megabytes) MB speech model that runs on your iPhone. "
+        let subject = language.isAutoDetect
+            ? "Auto-detect uses"
+            : "Captions in \(language.name) use"
+        return "\(subject) a \(megabytes) MB speech model that runs on your iPhone. "
             + "It downloads once and works for every language except English. Wi-Fi is recommended."
     }
+
+    static let autoDetectSubtitle = "Works out the language from the first 30 seconds"
 
     // MARK: - Row
 
@@ -97,7 +102,7 @@ struct LanguagePickerView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(language.name)
                     .foregroundColor(.primary)
-                if let native = language.nativeName {
+                if let native = language.isAutoDetect ? Self.autoDetectSubtitle : language.nativeName {
                     Text(native)
                         .font(.caption)
                         .foregroundColor(.secondary)

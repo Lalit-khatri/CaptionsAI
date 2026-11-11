@@ -26,6 +26,19 @@ final class LanguagePickerTests: XCTestCase {
         )
     }
 
+    func testAutoDetectAsksFirstToo() {
+        XCTAssertTrue(LanguagePickerView.needsDownloadConfirmation(for: .autoDetect, modelDownloaded: false))
+        XCTAssertFalse(LanguagePickerView.needsDownloadConfirmation(for: .autoDetect, modelDownloaded: true))
+    }
+
+    func testTheAutoDetectConfirmationReadsAsASentence() {
+        XCTAssertEqual(
+            LanguagePickerView.downloadMessage(for: .autoDetect, megabytes: 466),
+            "Auto-detect uses a 466 MB speech model that runs on your iPhone. "
+                + "It downloads once and works for every language except English. Wi-Fi is recommended."
+        )
+    }
+
     // MARK: - Home screen row
 
     func testEnglishShowsNoModelStatus() {

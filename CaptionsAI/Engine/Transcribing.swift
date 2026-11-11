@@ -28,6 +28,10 @@ protocol Transcribing: AnyObject {
     /// What the recogniser is getting ready, while it does; nil otherwise.
     var preparation: TranscriptionPreparation? { get }
 
+    /// The language the last run decided the clip was in, when it was asked
+    /// to work that out rather than told; nil otherwise.
+    var detection: LanguageDetection? { get }
+
     /// One-off work that has to happen before the first recognition, such as
     /// downloading a speech model.
     ///
@@ -48,8 +52,16 @@ enum TranscriptionPreparation: Equatable {
     case loading
 }
 
+/// The language a recogniser heard, and how sure it was.
+struct LanguageDetection: Equatable {
+    let language: TranscriptionLanguage
+    /// 0...1. Whisper's probability for the language it picked.
+    let confidence: Double
+}
+
 extension Transcribing {
     var preparation: TranscriptionPreparation? { nil }
+    var detection: LanguageDetection? { nil }
     func prepare() async throws {}
 }
 

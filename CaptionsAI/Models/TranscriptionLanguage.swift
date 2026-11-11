@@ -37,15 +37,28 @@ struct TranscriptionLanguage: Hashable, Identifiable, Sendable {
         code == Self.english.code ? .apple : .whisper
     }
 
+    /// Not a language: "let Whisper work out which language it is".
+    var isAutoDetect: Bool { code == Self.autoDetect.code }
+
     /// The language's name for itself — "ಕನ್ನಡ", "हिन्दी" — when the system
     /// knows it, and nil when that would only repeat `name`.
     var nativeName: String? {
+        guard !isAutoDetect else { return nil }
         let native = Locale(identifier: code).localizedString(forLanguageCode: code)
         guard let native, native.compare(name, options: .caseInsensitive) != .orderedSame else { return nil }
         return native
     }
 
     static let english = TranscriptionLanguage(code: "en", name: "English")
+
+    /// Whisper listens to the first 30 seconds and picks the language.
+    /// Needs the Whisper model, like any language other than English; a
+    /// clip it decides is English is then transcribed by Whisper too, since
+    /// the model is already loaded by then.
+    static let autoDetect = TranscriptionLanguage(code: "auto", name: "Auto-detect")
+
+    /// What the picker lists: Auto-detect, then every language.
+    static let pickerOptions: [TranscriptionLanguage] = [autoDetect] + all
 
     /// Every language the multilingual Whisper `small` and `base` models know,
     /// English first and the rest alphabetically.
@@ -61,14 +74,15 @@ struct TranscriptionLanguage: Hashable, Identifiable, Sendable {
         return [english] + others
     }()
 
-    /// The language with `code`, if Whisper knows it.
+    /// The picker option with `code`: a language Whisper knows, or
+    /// Auto-detect.
     static func with(code: String) -> TranscriptionLanguage? {
-        all.first { $0.code == code }
+        pickerOptions.first { $0.code == code }
     }
 
     /// `languages` whose English name, native name or code starts a word with
     /// `query`. An empty query matches everything.
-    static func matching(_ query: String, in languages: [TranscriptionLanguage] = all) -> [TranscriptionLanguage] {
+    static func matching(_ query: String, in languages: [TranscriptionLanguage] = pickerOptions) -> [TranscriptionLanguage] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else { return languages }
         return languages.filter { language in

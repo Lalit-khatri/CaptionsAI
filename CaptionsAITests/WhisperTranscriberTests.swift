@@ -16,12 +16,27 @@ final class FakeWhisperPipeline: WhisperPipeline, @unchecked Sendable {
     private let lock = NSLock()
     private var _languages: [String] = []
     private var _sawStop = false
+    private var _detectCallCount = 0
     let behaviour: Behaviour
     let segmentsToReport: [(Double, String)]
+    /// What `detectLanguage` answers, or throws.
+    let detected: Result<(code: String, confidence: Double), Error>
 
-    init(_ behaviour: Behaviour, reporting segments: [(Double, String)] = []) {
+    init(
+        _ behaviour: Behaviour,
+        reporting segments: [(Double, String)] = [],
+        detects detected: Result<(code: String, confidence: Double), Error> = .success(("en", 1))
+    ) {
         self.behaviour = behaviour
         segmentsToReport = segments
+        self.detected = detected
+    }
+
+    var detectCallCount: Int { lock.withLock { _detectCallCount } }
+
+    func detectLanguage(audioPath _: String) async throws -> (code: String, confidence: Double) {
+        lock.withLock { _detectCallCount += 1 }
+        return try detected.get()
     }
 
     var languages: [String] { lock.withLock { _languages } }
@@ -86,6 +101,7 @@ final class WhisperTranscriberTests: XCTestCase {
     /// A transcriber whose audio "extraction" writes a scratch file, so the
     /// cleanup after a run has something real to delete.
     private func makeTranscriber(
+        language: TranscriptionLanguage? = nil,
         pipeline: FakeWhisperPipeline? = nil,
         loadFailure: Error? = nil,
         downloader: FakeWhisperDownloader = FakeWhisperDownloader(),
@@ -93,7 +109,7 @@ final class WhisperTranscriberTests: XCTestCase {
         audioFile: URL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).wav")
     ) -> WhisperTranscriber {
         WhisperTranscriber(
-            language: kannada,
+            language: language ?? kannada,
             store: sandbox.makeStore(downloader: downloader),
             loader: FakeWhisperLoader(pipeline: pipeline, failure: loadFailure),
             extractAudio: { _ in
@@ -256,6 +272,63 @@ final class WhisperTranscriberTests: XCTestCase {
         downloader.release()
         try await preparing.value
         XCTAssertNil(transcriber.preparation, "the processing screen still says it is preparing")
+    }
+
+    // MARK: - Auto-detect
+
+    func testAutoDetectTranscribesInTheLanguageWhisperHears() async throws {
+        let pipeline = FakeWhisperPipeline(.words([word("ನಮಸ್ಕಾರ", 0, 1)]), detects: .success(("kn", 0.83)))
+        let transcriber = makeTranscriber(language: .autoDetect, pipeline: pipeline)
+
+        _ = try await transcriber.recognizeSpeech(from: video)
+
+        XCTAssertEqual(pipeline.languages, ["kn"], "Whisper was not asked for the detected language")
+        XCTAssertEqual(transcriber.detection, LanguageDetection(language: kannada, confidence: 0.83))
+    }
+
+    func testAChosenLanguageIsNotDetected() async throws {
+        let pipeline = FakeWhisperPipeline(.words([word("ನಮಸ್ಕಾರ", 0, 1)]), detects: .success(("te", 0.9)))
+        let transcriber = makeTranscriber(pipeline: pipeline)
+
+        _ = try await transcriber.recognizeSpeech(from: video)
+
+        XCTAssertEqual(pipeline.detectCallCount, 0)
+        XCTAssertEqual(pipeline.languages, ["kn"])
+        XCTAssertNil(transcriber.detection)
+    }
+
+    func testAutoDetectedEnglishStaysWithWhisper() async throws {
+        // The model is loaded by the time the language is known; handing
+        // over to Apple's recogniser would mean a permission prompt mid-run.
+        let pipeline = FakeWhisperPipeline(.words([word("hello", 0, 1)]), detects: .success(("en", 0.97)))
+        let transcriber = makeTranscriber(language: .autoDetect, pipeline: pipeline)
+
+        let segments = try await transcriber.recognizeSpeech(from: video)
+
+        XCTAssertEqual(pipeline.languages, ["en"])
+        XCTAssertEqual(segments.map(\.text), ["hello"])
+        XCTAssertEqual(transcriber.detection?.language, .english)
+    }
+
+    func testADetectedLanguageThePickerDoesNotListReadsAsEnglish() {
+        XCTAssertEqual(WhisperTranscriber.detection(fromCode: "yue", confidence: 0.6).language, .english)
+    }
+
+    func testConfidenceIsKeptBetweenZeroAndOne() {
+        XCTAssertEqual(WhisperTranscriber.detection(fromCode: "kn", confidence: 1.4).confidence, 1)
+        XCTAssertEqual(WhisperTranscriber.detection(fromCode: "kn", confidence: -0.2).confidence, 0)
+    }
+
+    func testAFailedDetectionIsARecognitionFailure() async {
+        let pipeline = FakeWhisperPipeline(.words([word("ನಮಸ್ಕಾರ", 0, 1)]), detects: .failure(FakeLoadError()))
+        do {
+            _ = try await makeTranscriber(language: .autoDetect, pipeline: pipeline).recognizeSpeech(from: video)
+            XCTFail("expected a failure")
+        } catch SpeechError.recognitionFailed {
+            XCTAssertEqual(pipeline.languages, [], "transcribed without knowing the language")
+        } catch {
+            XCTFail("unexpected \(error)")
+        }
     }
 
     // MARK: - Cleaning
