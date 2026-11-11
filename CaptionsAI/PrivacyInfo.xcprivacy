@@ -2,9 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- The app has no network code, no analytics provider, no crash
-	     reporter and no third-party SDKs. Nothing leaves the device except
-	     a video the user explicitly exports to their own photo library.
+	<!-- The app has no analytics provider, no crash reporter and no
+	     tracking. Its one network use is the WhisperKit model download
+	     from huggingface.co, which sends no user data (see PRIVACY.md).
+	     WhisperKit is linked statically and ships no privacy manifest of
+	     its own; it calls none of Apple's required-reason APIs (checked
+	     against the 1.1.1 sources), so it adds nothing below.
 	     These three keys are what lets the App Store nutrition label's
 	     "Data Not Collected" be a claim the binary can back up. -->
 	<key>NSPrivacyTracking</key>
