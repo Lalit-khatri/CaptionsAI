@@ -241,9 +241,14 @@ final class EditorViewModel {
     /// and then looked at Export came back to a fresh transcript they had not
     /// asked for; a clip with no speech was re-transcribed, and the same
     /// error shown, on every return.
+    ///
+    /// Not when the video is missing: the editor already shows
+    /// `MissingVideoView` for that, and starting a run only stacked a
+    /// "Video file not found" alert on top of it every time the project
+    /// was opened.
     @MainActor
     func transcribeIfNeeded() {
-        guard segments.isEmpty, !hasFinishedTranscription, transcriptionTask == nil else { return }
+        guard segments.isEmpty, !hasFinishedTranscription, transcriptionTask == nil, !videoIsMissing else { return }
         startTranscription()
     }
 
@@ -263,7 +268,9 @@ final class EditorViewModel {
         do {
             let authorized = await speechRecognizer.requestAuthorization()
             guard authorized else {
-                error = "Speech recognition not authorized"
+                // Says where to fix it; the bare "not authorized" left the
+                // user with no way forward.
+                error = SpeechError.notAuthorized.localizedDescription
                 isProcessing = false
                 return
             }
