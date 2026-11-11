@@ -102,3 +102,43 @@ extension XCUIApplication {
         menu.tap()
     }
 }
+
+// MARK: - Sliders
+
+@MainActor
+extension XCUIElement {
+    enum SliderEnd {
+        case minimum, maximum
+    }
+
+    /// Half the width of UIKit's slider thumb. The thumb's centre runs from
+    /// this far inside the left edge of the slider's frame to this far
+    /// inside the right edge, not from edge to edge.
+    private static let sliderThumbRadius: CGFloat = 14
+    /// How far past the end of the track to drag. Inside the sheet's 20pt
+    /// inset, so the drag never leaves the screen.
+    private static let sliderOvershoot: CGFloat = 12
+
+    /// Moves a slider to one end and waits for `reading` to appear, retrying
+    /// the drag a couple of times.
+    ///
+    /// `adjust(toNormalizedSliderPosition:)` aims for the exact end and on
+    /// the stepped text-size slider (4...48 in steps of 2) sometimes stopped
+    /// short, so the tests that needed 4pt or 48pt failed intermittently in
+    /// runs that changed nothing near the editor. This presses on the
+    /// thumb's centre and drags past the end, which clamps to the end value.
+    func drag(toEnd end: SliderEnd, until reading: XCUIElement, attempts: Int = 3) -> Bool {
+        let radius = Self.sliderThumbRadius
+        for _ in 0 ..< attempts {
+            let width = frame.width
+            let leftEdge = coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            let thumb = leftEdge.withOffset(CGVector(dx: radius + normalizedSliderPosition * (width - 2 * radius), dy: 0))
+            let target = leftEdge.withOffset(
+                CGVector(dx: end == .minimum ? -Self.sliderOvershoot : width + Self.sliderOvershoot, dy: 0)
+            )
+            thumb.press(forDuration: 0.1, thenDragTo: target)
+            if reading.waitForExistence(timeout: 3) { return true }
+        }
+        return false
+    }
+}

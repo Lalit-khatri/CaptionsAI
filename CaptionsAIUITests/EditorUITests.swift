@@ -126,11 +126,8 @@ final class EditorUITests: XCTestCase {
         let slider = app.sliders.firstMatch
         XCTAssertTrue(slider.exists)
 
-        slider.adjust(toNormalizedSliderPosition: 0)
-        XCTAssertTrue(app.staticTexts["4pt"].waitForExistence(timeout: uiTimeout))
-
-        slider.adjust(toNormalizedSliderPosition: 1)
-        XCTAssertTrue(app.staticTexts["48pt"].waitForExistence(timeout: uiTimeout))
+        XCTAssertTrue(slider.drag(toEnd: .minimum, until: app.staticTexts["4pt"]))
+        XCTAssertTrue(slider.drag(toEnd: .maximum, until: app.staticTexts["48pt"]))
     }
 
     @MainActor
@@ -196,8 +193,7 @@ final class EditorUITests: XCTestCase {
         XCTAssertLessThanOrEqual(slider.frame.maxY, window.maxY, "slider pushed off screen: \(slider.frame)")
         XCTAssertTrue(slider.isHittable)
 
-        slider.adjust(toNormalizedSliderPosition: 0)
-        XCTAssertTrue(app.staticTexts["4pt"].waitForExistence(timeout: uiTimeout))
+        XCTAssertTrue(slider.drag(toEnd: .minimum, until: app.staticTexts["4pt"]))
     }
 
     @MainActor
