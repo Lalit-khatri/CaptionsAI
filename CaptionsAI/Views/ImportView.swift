@@ -135,9 +135,15 @@ struct ImportView: View {
             .padding(.horizontal, 24)
 
             // PhotosPicker button
+            // `.current` hands over the file as it is stored. The default,
+            // `.automatic`, lets Photos transcode first, which on a long 4K
+            // HEVC clip means a long "Importing..." with no progress and a
+            // second full-size temporary copy. AVFoundation reads HEVC on
+            // every iOS 17 device, so nothing is gained by converting.
             PhotosPicker(
                 selection: $selectedItem,
-                matching: .videos
+                matching: .videos,
+                preferredItemEncoding: .current
             ) {
                 HStack {
                     if viewModel.isLoading {
