@@ -100,6 +100,11 @@ final class WhisperModelStore {
         URL.applicationSupportDirectory.appendingPathComponent("WhisperModels", isDirectory: true)
     }
 
+    var isDownloading: Bool {
+        if case .downloading = state { return true }
+        return false
+    }
+
     var approximateMegabytes: Int {
         WhisperModelChoice.approximateMegabytes(of: variant)
     }

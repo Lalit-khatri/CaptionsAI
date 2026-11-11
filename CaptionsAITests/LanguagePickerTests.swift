@@ -14,6 +14,10 @@ final class LanguagePickerTests: XCTestCase {
         XCTAssertFalse(LanguagePickerView.needsDownloadConfirmation(for: kannada, modelDownloaded: true))
     }
 
+    func testPickingAnotherLanguageWhileTheModelDownloadsDoesNotAskAgain() {
+        XCTAssertFalse(LanguagePickerView.needsDownloadConfirmation(for: kannada, modelDownloaded: false, modelDownloading: true))
+    }
+
     func testEnglishNeverAsks() {
         XCTAssertFalse(LanguagePickerView.needsDownloadConfirmation(for: .english, modelDownloaded: false))
     }

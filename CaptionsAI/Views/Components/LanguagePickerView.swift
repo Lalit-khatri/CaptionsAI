@@ -73,7 +73,7 @@ struct LanguagePickerView: View {
     // MARK: - Choosing
 
     private func choose(_ language: TranscriptionLanguage) {
-        if Self.needsDownloadConfirmation(for: language, modelDownloaded: store.downloadedFolder != nil) {
+        if Self.needsDownloadConfirmation(for: language, modelDownloaded: store.downloadedFolder != nil, modelDownloading: store.isDownloading) {
             pendingDownload = language
         } else {
             selection = language
@@ -82,8 +82,15 @@ struct LanguagePickerView: View {
     }
 
     /// Whether picking `language` has to ask before it downloads anything.
-    static func needsDownloadConfirmation(for language: TranscriptionLanguage, modelDownloaded: Bool) -> Bool {
-        language.engine == .whisper && !modelDownloaded
+    /// Not while the model is already downloading: the user agreed to it a
+    /// moment ago, and being asked for "466 MB" again reads as a second
+    /// download.
+    static func needsDownloadConfirmation(
+        for language: TranscriptionLanguage,
+        modelDownloaded: Bool,
+        modelDownloading: Bool = false
+    ) -> Bool {
+        language.engine == .whisper && !modelDownloaded && !modelDownloading
     }
 
     static let downloadTitle = "Download speech model?"
