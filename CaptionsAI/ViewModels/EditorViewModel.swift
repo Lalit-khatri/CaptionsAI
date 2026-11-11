@@ -16,6 +16,10 @@ let kMinimumTranscriptionBudget: TimeInterval = 90
 /// progress at all, not to hurry a slow one along.
 let kTranscriptionBudgetFactor: Double = 6
 
+/// The shortest a caption can be made in the editor, in seconds: one step
+/// of the timing steppers.
+let kMinimumCaptionLength: Double = 0.1
+
 // MARK: - EditorViewModel
 
 /// Manages caption editing, style selection, and video playback.
@@ -370,14 +374,21 @@ final class EditorViewModel {
         finishSegmentEdit()
     }
 
+    /// Keeps a caption inside the video and at least
+    /// `kMinimumCaptionLength` long.
+    ///
+    /// A caption with End equal to Start used to be saved as given; with no
+    /// length it is active at no instant, so it vanished from the preview
+    /// and the export while still sitting in the transcript.
     private func validatedTiming(start: Double, end: Double) -> (start: Double, end: Double) {
-        let validStart = max(0, start)
-        var validEnd = max(validStart, end)
-        if project.videoDuration > 0 {
-            if validStart > project.videoDuration {
-                return (project.videoDuration, project.videoDuration)
-            }
-            validEnd = min(validEnd, project.videoDuration)
+        let duration = project.videoDuration
+        var validStart = max(0, start)
+        if duration > 0 {
+            validStart = min(validStart, max(0, duration - kMinimumCaptionLength))
+        }
+        var validEnd = max(validStart + kMinimumCaptionLength, end)
+        if duration > 0 {
+            validEnd = min(validEnd, duration)
         }
         return (validStart, validEnd)
     }

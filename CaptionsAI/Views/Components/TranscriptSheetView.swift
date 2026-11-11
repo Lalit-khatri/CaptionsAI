@@ -158,6 +158,13 @@ struct SegmentEditorSheet: View {
         max(videoDuration, max(start, end))
     }
 
+    /// The smallest end time the stepper offers: one step after the start,
+    /// so a caption cannot be shrunk to nothing. Never above `latestEnd`, or
+    /// the range would not form.
+    static func earliestEnd(start: Double, end: Double, videoDuration: Double) -> Double {
+        min(start + kMinimumCaptionLength, latestEnd(start: start, end: end, videoDuration: videoDuration))
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -171,7 +178,7 @@ struct SegmentEditorSheet: View {
                         Text("Start")
                         Spacer()
                         Text(String(format: "%.1fs", startTime))
-                        Stepper("", value: $startTime, in: 0 ... endTime, step: 0.1)
+                        Stepper("", value: $startTime, in: 0 ... max(0, endTime - kMinimumCaptionLength), step: 0.1)
                             .labelsHidden()
                     }
 
@@ -182,7 +189,8 @@ struct SegmentEditorSheet: View {
                         Stepper(
                             "",
                             value: $endTime,
-                            in: startTime ... Self.latestEnd(start: startTime, end: endTime, videoDuration: videoDuration),
+                            in: Self.earliestEnd(start: startTime, end: endTime, videoDuration: videoDuration)
+                                ... Self.latestEnd(start: startTime, end: endTime, videoDuration: videoDuration),
                             step: 0.1
                         )
                         .labelsHidden()

@@ -47,6 +47,30 @@ final class CaptionTimingValidationTests: XCTestCase {
         XCTAssertLessThanOrEqual(segment.endTime, 10.0, "End time should not exceed video duration")
     }
 
+    func testACaptionCannotBeMadeZeroLength() throws {
+        let (editor, _, segment) = try makeEditor()
+
+        editor.updateSegmentTiming(segment, start: 3.0, end: 3.0)
+
+        XCTAssertEqual(segment.startTime, 3.0)
+        XCTAssertEqual(segment.endTime, 3.1, accuracy: 1e-9, "a zero-length caption is shown at no instant")
+    }
+
+    func testAZeroLengthCaptionAtTheVeryEndMovesItsStartBack() throws {
+        let (editor, _, segment) = try makeEditor(videoDuration: 10.0)
+
+        editor.updateSegmentTiming(segment, start: 10.0, end: 10.0)
+
+        XCTAssertEqual(segment.startTime, 9.9, accuracy: 1e-9)
+        XCTAssertEqual(segment.endTime, 10.0, accuracy: 1e-9)
+    }
+
+    func testTheEndStepperStartsOneStepAfterTheStart() {
+        XCTAssertEqual(SegmentEditorSheet.earliestEnd(start: 2.0, end: 3.0, videoDuration: 10), 2.1, accuracy: 1e-9)
+        // Never above the latest end, or the stepper's range would trap.
+        XCTAssertEqual(SegmentEditorSheet.earliestEnd(start: 10.0, end: 10.0, videoDuration: 10), 10.0, accuracy: 1e-9)
+    }
+
     func testRetimingReordersSegmentsChronologically() throws {
         let (editor, project, segmentA) = try makeEditor()
         let segmentB = CaptionSegment(startTime: 4.0, endTime: 6.0, text: "second caption", sortOrder: 1)
