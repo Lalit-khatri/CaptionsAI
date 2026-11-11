@@ -40,6 +40,8 @@ final class FakeTranscriber: Transcribing {
     /// Thrown by `prepare()` once `prepareDuration` has passed.
     var prepareError: Error?
     private(set) var prepareCallCount = 0
+    /// What the run reports it detected, as auto-detect would.
+    var detection: LanguageDetection?
 
     func requestAuthorization() async -> Bool {
         authorizationCallCount += 1

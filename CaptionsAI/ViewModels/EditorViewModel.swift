@@ -55,7 +55,18 @@ final class EditorViewModel {
 
     /// Injected so tests can drive the transcription lifecycle with a fake.
     /// Defaults to the real recognizer, so call sites are unchanged.
-    let speechRecognizer: any Transcribing
+    /// Replaced by `retranscribe(in:)` when the user corrects an
+    /// auto-detected language.
+    private(set) var speechRecognizer: any Transcribing
+
+    /// The language auto-detect settled on in this editor's last run, for
+    /// the "Detected: … · Change" chip. Nil when a language was chosen
+    /// rather than detected, and again once the user picks one.
+    private(set) var detection: LanguageDetection?
+
+    /// Builds the recogniser for a corrected language. Injected so tests can
+    /// re-transcribe without a real Whisper download.
+    private let transcriberFactory: (TranscriptionLanguage) -> any Transcribing
 
     /// The in-flight transcription, held so that `cancelTranscription()` has
     /// something to cancel. Driving this from the view's `.task` instead left
@@ -106,12 +117,14 @@ final class EditorViewModel {
     init(
         project: Project,
         speechRecognizer: any Transcribing = EditorViewModel.makeTranscriber(for: LanguagePreference().language),
+        transcriberFactory: @escaping (TranscriptionLanguage) -> any Transcribing = EditorViewModel.makeTranscriber(for:),
         playbackClock: (any PeriodicTimeObserving)? = nil,
         audioSession: any AudioSessionControlling = AVAudioSession.sharedInstance(),
         transcriptionBudget: TimeInterval? = nil
     ) {
         self.project = project
         self.speechRecognizer = speechRecognizer
+        self.transcriberFactory = transcriberFactory
         self.audioSession = audioSession
         injectedPlaybackClock = playbackClock
         injectedTranscriptionBudget = transcriptionBudget
@@ -202,6 +215,19 @@ final class EditorViewModel {
         isProcessing = false
     }
 
+    /// Transcribes again in `language`, replacing the current captions.
+    ///
+    /// For when auto-detect guessed wrong. Only this project: the remembered
+    /// choice stays on Auto-detect, because one misheard clip says nothing
+    /// about the next.
+    @MainActor
+    func retranscribe(in language: TranscriptionLanguage) {
+        cancelTranscription()
+        speechRecognizer = transcriberFactory(language)
+        detection = nil
+        startTranscription()
+    }
+
     /// Whether a transcription has run to an end — captions, an error, or
     /// a refusal — in this editor. A cancelled run does not count: it was
     /// cut short, usually by the editor going off screen, and deserves
@@ -274,6 +300,7 @@ final class EditorViewModel {
                 project.addSegment(segment)
             }
             segments = project.sortedSegments
+            detection = speechRecognizer.detection
 
             AnalyticsService.captionsGenerated(
                 wordCount: newSegments.reduce(0) { $0 + $1.words.count }

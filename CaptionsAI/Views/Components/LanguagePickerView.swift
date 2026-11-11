@@ -10,6 +10,9 @@ import SwiftUI
 struct LanguagePickerView: View {
     @Binding var selection: TranscriptionLanguage
     let store: WhisperModelStore
+    /// What to list. The editor's "Change" leaves out Auto-detect: it is
+    /// there to say what the clip really is.
+    var options: [TranscriptionLanguage] = TranscriptionLanguage.pickerOptions
 
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
@@ -19,7 +22,7 @@ struct LanguagePickerView: View {
 
     var body: some View {
         NavigationStack {
-            List(TranscriptionLanguage.matching(query)) { language in
+            List(TranscriptionLanguage.matching(query, in: options)) { language in
                 Button {
                     choose(language)
                 } label: {
@@ -29,7 +32,7 @@ struct LanguagePickerView: View {
             }
             .listStyle(.plain)
             .overlay {
-                if TranscriptionLanguage.matching(query).isEmpty {
+                if TranscriptionLanguage.matching(query, in: options).isEmpty {
                     ContentUnavailableView.search(text: query)
                 }
             }
@@ -172,3 +175,42 @@ struct LanguageButton: View {
         }
     }
 }
+
+// MARK: - DetectedLanguageChip
+
+/// "Detected: Kannada · Change", over the top of the editor's video after
+/// auto-detect has picked a language.
+struct DetectedLanguageChip: View {
+    let detection: LanguageDetection
+    let onChange: () -> Void
+
+    /// Below this, Whisper's pick is shown as a guess.
+    static let unsureBelow = 0.5
+
+    var body: some View {
+        Button(action: onChange) {
+            HStack(spacing: 6) {
+                Image(systemName: "globe")
+                Text(Self.text(for: detection))
+                Text("·")
+                    .foregroundColor(.white.opacity(0.6))
+                Text("Change")
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color(hex: "#A78BFA"))
+            }
+            .font(.footnote)
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(.black.opacity(0.6))
+            .clipShape(Capsule())
+        }
+        .accessibilityIdentifier("detectedLanguageChip")
+    }
+
+    static func text(for detection: LanguageDetection) -> String {
+        let name = detection.language.name
+        return detection.confidence < unsureBelow ? "Detected: \(name)?" : "Detected: \(name)"
+    }
+}
+

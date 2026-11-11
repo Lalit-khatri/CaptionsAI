@@ -9,6 +9,9 @@ struct EditorView: View {
     @State private var viewModel: EditorViewModel
     @State private var showStyleSheet = false
     @State private var showTranscriptSheet = false
+    @State private var showLanguageChange = false
+    @State private var chosenLanguage: TranscriptionLanguage?
+    @State private var pendingRetranscription: TranscriptionLanguage?
 
     init(project: Project) {
         self.project = project
@@ -25,6 +28,17 @@ struct EditorView: View {
 
                 // Bottom action bar
                 actionBar
+            }
+
+            if let detection = viewModel.detection, !viewModel.isProcessing {
+                VStack {
+                    DetectedLanguageChip(detection: detection) {
+                        chosenLanguage = nil
+                        showLanguageChange = true
+                    }
+                    .padding(.top, 12)
+                    Spacer()
+                }
             }
 
             // Processing overlay
@@ -90,6 +104,41 @@ struct EditorView: View {
                 }
             )
         }
+        // Correcting an auto-detected language. The confirmation waits for
+        // the sheet to finish closing: presenting an alert while a sheet is
+        // still on its way down is dropped.
+        .sheet(isPresented: $showLanguageChange, onDismiss: {
+            if let chosenLanguage, chosenLanguage != viewModel.detection?.language {
+                pendingRetranscription = chosenLanguage
+            }
+        }) {
+            LanguagePickerView(
+                selection: Binding(
+                    get: { chosenLanguage ?? viewModel.detection?.language ?? .english },
+                    set: { chosenLanguage = $0 }
+                ),
+                store: WhisperModelStore.shared,
+                options: TranscriptionLanguage.all
+            )
+        }
+        .alert(
+            Self.retranscribeTitle(for: pendingRetranscription),
+            isPresented: Binding(
+                get: { pendingRetranscription != nil },
+                set: { if !$0 { pendingRetranscription = nil } }
+            ),
+            presenting: pendingRetranscription
+        ) { language in
+            Button("Re-transcribe") {
+                viewModel.retranscribe(in: language)
+                pendingRetranscription = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingRetranscription = nil
+            }
+        } message: { _ in
+            Text(Self.retranscribeMessage)
+        }
         .alert("Error", isPresented: .init(
             get: { viewModel.error != nil },
             set: {
@@ -103,6 +152,14 @@ struct EditorView: View {
             Text(viewModel.error ?? "")
         }
     }
+
+    // MARK: - Re-transcription
+
+    static func retranscribeTitle(for language: TranscriptionLanguage?) -> String {
+        "Re-transcribe in \(language?.name ?? "")?"
+    }
+
+    static let retranscribeMessage = "This replaces the current captions, including any edits."
 
     // MARK: - Export Availability
 
