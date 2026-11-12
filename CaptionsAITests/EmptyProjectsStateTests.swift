@@ -76,7 +76,7 @@ final class EmptyProjectsStateTests: XCTestCase {
     /// 603pt and the import box plus its button already take the bulk of it, so
     /// an empty state that renders as a second hero block pushes the real
     /// action off screen. `ContentUnavailableView` is used without a symbol for
-    /// exactly this reason — the screen already has a 48pt `film.stack` glyph,
+    /// exactly this reason — the screen already has a `film.stack` glyph in the import box,
     /// and a second one below it would be the tallest thing on the page.
     func testTheEmptyStateIsAFootnoteRatherThanASecondHero() throws {
         let height = try render(EmptyProjectsView()).height

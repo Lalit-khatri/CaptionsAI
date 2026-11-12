@@ -16,19 +16,26 @@ struct ImportView: View {
     private let modelStore = WhisperModelStore.shared
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 32) {
-                // Import area
-                importSection
+        GeometryReader { viewport in
+            ScrollView {
+                VStack(spacing: importBoxLayout.sectionSpacing) {
+                    // Import area
+                    importSection
 
-                // Recent projects, or an acknowledgement that there are none
-                if Self.showsEmptyState(projectCount: viewModel.recentProjects.count) {
-                    EmptyProjectsView()
-                } else {
-                    recentProjectsSection
+                    // Recent projects, or an acknowledgement that there are none
+                    if Self.showsEmptyState(projectCount: viewModel.recentProjects.count) {
+                        EmptyProjectsView()
+                    } else {
+                        recentProjectsSection
+                    }
                 }
+                .padding(.top, 20)
+                .padding(.bottom, importBoxLayout.bottomGap)
+                // At least a screen tall, so that with projects the import
+                // box can grow into whatever the strip leaves free; see
+                // ImportBoxLayout.fills.
+                .frame(minHeight: viewport.size.height, alignment: .top)
             }
-            .padding(.top, 20)
         }
         .navigationTitle("CaptionsAI")
         .feedbackMenu()
@@ -108,31 +115,46 @@ struct ImportView: View {
 
     // MARK: - Import Section
 
+    // MARK: - Import Section Layout
+
+    /// How the import box is sized.
+    ///
+    /// It used to be one fixed size, about 190pt tall, which on a phone
+    /// pushed the Recent Projects strip partly off the bottom of the screen.
+    /// An empty library still gets the centred welcome box. With projects,
+    /// the box takes exactly the height the strip leaves free, so the strip
+    /// ends `bottomGap` above the bottom of the screen; on a screen too
+    /// short for that it shrinks to a single row and the page scrolls.
+    enum ImportBoxLayout {
+        case hero
+        case compact
+
+        init(hasProjects: Bool) {
+            self = hasProjects ? .compact : .hero
+        }
+
+        var iconSize: CGFloat { self == .hero ? 36 : 24 }
+        var verticalPadding: CGFloat { self == .hero ? 28 : 14 }
+        var spacing: CGFloat { self == .hero ? 10 : 12 }
+        /// Gap between the import area and what follows it.
+        var sectionSpacing: CGFloat { self == .hero ? 28 : 20 }
+        /// Whether the box stretches to fill the free height.
+        var fills: Bool { self == .compact }
+        /// Space left between the bottom of the page's content and the
+        /// bottom of the screen.
+        var bottomGap: CGFloat { self == .compact ? 8 : 20 }
+        /// The shortest the stretching box gets: one row.
+        static let minimumFillHeight: CGFloat = 64
+    }
+
+    private var importBoxLayout: ImportBoxLayout {
+        ImportBoxLayout(hasProjects: !Self.showsEmptyState(projectCount: viewModel.recentProjects.count))
+    }
+
     private var importSection: some View {
-        VStack(spacing: 24) {
-            // Dashed border area
-            VStack(spacing: 16) {
-                Image(systemName: "film.stack")
-                    .font(.system(size: 48))
-                    .foregroundColor(.gray)
-
-                Text("Import Video")
-                    .font(.title2.bold())
-                    .foregroundColor(.white)
-
-                Text("Pick a video from your library to get started")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 48)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [8]))
-                    .foregroundColor(.gray.opacity(0.3))
-            )
-            .padding(.horizontal, 24)
+        VStack(spacing: 16) {
+            importBox
+                .padding(.horizontal, 24)
 
             // PhotosPicker button
             // `.current` hands over the file as it is stored. The default,
@@ -187,6 +209,72 @@ struct ImportView: View {
                 store: modelStore
             )
         }
+    }
+
+    static let importTitle = "Import Video"
+    static let importMessage = "Pick a video from your library to get started"
+
+    /// The dashed "Import Video" box, in the layout the library calls for.
+    @ViewBuilder
+    private var importBox: some View {
+        let layout = importBoxLayout
+        Group {
+            if layout.fills {
+                // The welcome content when the free height allows it,
+                // otherwise the one-row form.
+                ViewThatFits(in: .vertical) {
+                    importBoxStack(.hero)
+                    importBoxRow
+                }
+                .frame(maxWidth: .infinity, minHeight: ImportBoxLayout.minimumFillHeight, maxHeight: .infinity)
+            } else {
+                importBoxStack(layout)
+                    .padding(.vertical, layout.verticalPadding)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [8]))
+                .foregroundColor(.gray.opacity(0.3))
+        )
+        .accessibilityElement(children: .combine)
+    }
+
+    private func importBoxStack(_ layout: ImportBoxLayout) -> some View {
+        VStack(spacing: layout.spacing) {
+            Image(systemName: "film.stack")
+                .font(.system(size: layout.iconSize))
+                .foregroundColor(.gray)
+            Text(Self.importTitle)
+                .font(.title3.bold())
+                .foregroundColor(.white)
+            Text(Self.importMessage)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+    }
+
+    private var importBoxRow: some View {
+        let layout = ImportBoxLayout.compact
+        return HStack(spacing: layout.spacing) {
+            Image(systemName: "film.stack")
+                .font(.system(size: layout.iconSize))
+                .foregroundColor(.gray)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(Self.importTitle)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Text(Self.importMessage)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, layout.verticalPadding)
     }
 
     // MARK: - Recent Projects Section

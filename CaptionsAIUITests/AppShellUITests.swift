@@ -41,6 +41,27 @@ final class AppShellUITests: XCTestCase {
     }
 
     @MainActor
+    func testWithAProjectTheImportBoxFillsTheScreenDownToTheStrip() {
+        let app = AppLauncher.launch(seed: .projectWithCaptions)
+        let card = app.button(containing: Copy.seededProjectName)
+        XCTAssertTrue(card.waitForExistence(timeout: uiTimeout))
+        let box = app.elements(labelMatching: "label CONTAINS %@", "Import Video").firstMatch
+        XCTAssertTrue(box.exists)
+
+        // The strip ends 8pt above the bottom of the safe area. The pinned
+        // simulator is an iPhone 17, whose home-indicator inset is 34pt.
+        let homeIndicatorInset: CGFloat = 34
+        let window = app.windows.firstMatch.frame
+        let gap = window.maxY - homeIndicatorInset - card.frame.maxY
+        XCTAssertEqual(gap, 8, accuracy: 4, "card \(card.frame) in window \(window)")
+        XCTAssertTrue(card.isHittable)
+
+        // And the box took the rest, rather than staying a thin row.
+        XCTAssertGreaterThan(box.frame.height, 150, "import box: \(box.frame)")
+        XCTAssertTrue(app.buttons["Choose Video"].isHittable)
+    }
+
+    @MainActor
     func testDeletingTheOnlyProjectAsksFirstThenEmptiesTheLibrary() {
         let app = AppLauncher.launch(seed: .projectWithCaptions)
         let card = app.button(containing: Copy.seededProjectName)
