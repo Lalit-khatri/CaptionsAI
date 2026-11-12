@@ -662,12 +662,15 @@ private struct PricingCard: View {
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 2) {
+                // On the tinted card, the theme's button-label colour: with
+                // the White theme that card is light grey, and white text on
+                // it could not be read.
                 Text(price)
                     .font(.title2.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(isGradient ? AppTheme.current.onPrimary : .white)
                 Text(period)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(isGradient ? AppTheme.current.onPrimary.opacity(0.75) : .secondary)
             }
         }
         .frame(maxWidth: .infinity)

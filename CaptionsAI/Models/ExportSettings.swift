@@ -14,6 +14,16 @@ enum ExportResolution: String, CaseIterable, Identifiable, Codable {
         rawValue
     }
 
+    /// For the segmented control, where four `displayName`s do not fit.
+    var shortName: String {
+        switch self {
+        case .original: return "Original"
+        case .hd720: return "720p"
+        case .full1080: return "1080p"
+        case .uhd4K: return "4K"
+        }
+    }
+
     var displayName: String {
         switch self {
         case .original: return "Original"

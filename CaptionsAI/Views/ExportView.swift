@@ -154,8 +154,10 @@ struct ExportView: View {
             sectionHeader("Resolution", icon: "arrow.up.backward.and.arrow.down.forward")
 
             Picker("Resolution", selection: $viewModel.settings.resolution) {
+                // Short labels: in four segments "1080p Full HD" was cut to
+                // "1080p Full...".
                 ForEach(ExportResolution.allCases) { res in
-                    Text(res.displayName).tag(res)
+                    Text(res.shortName).tag(res)
                 }
             }
             .pickerStyle(.segmented)

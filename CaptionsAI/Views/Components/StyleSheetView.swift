@@ -346,7 +346,9 @@ struct StylePreviewCard: View {
                         .font(.system(size: 14))
                         .foregroundColor(AppTheme.current.accent)
                         .background(Circle().fill(Color.black))
-                        .offset(x: 4, y: -4)
+                        // Inside the corner. Hanging 4pt outside it, the
+                        // badge was cut off by the edge of the row.
+                        .padding(5)
                 }
             }
 

@@ -72,3 +72,9 @@ final class ExportDefaultsTests: XCTestCase {
         XCTAssertEqual(calls.last, false)
     }
 }
+
+final class ExportResolutionLabelTests: XCTestCase {
+    func testTheSegmentedControlUsesLabelsThatFitInAQuarterOfTheWidth() {
+        XCTAssertEqual(ExportResolution.allCases.map(\.shortName), ["Original", "720p", "1080p", "4K"])
+    }
+}
