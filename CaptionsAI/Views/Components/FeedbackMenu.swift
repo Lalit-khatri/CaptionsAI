@@ -103,8 +103,10 @@ struct FeedbackMenuModifier: ViewModifier {
                         // expect to find without hunting: the policy, and
                         // which build the user is on.
                         Section {
+                            // In-app, so it reads offline; it links to the
+                            // published copy from there.
                             Button {
-                                openURL(PaywallView.privacyPolicyURL)
+                                presented = .privacyPolicy
                             } label: {
                                 Label(FeedbackMail.privacyTitle, systemImage: FeedbackMail.privacySymbol)
                             }
@@ -164,6 +166,8 @@ struct FeedbackMenuModifier: ViewModifier {
                         .environment(storeKit)
                 case .acknowledgements:
                     AcknowledgementsView()
+                case .privacyPolicy:
+                    PrivacyPolicyView()
                 }
             }
             .overlay(alignment: .bottom) {
@@ -255,6 +259,7 @@ enum FeedbackSheet: Identifiable, Equatable {
     case contact(FeedbackKind)
     case paywall
     case acknowledgements
+    case privacyPolicy
 
     /// Apple's composer only when Apple Mail can send; otherwise the contact
     /// sheet. Never a `mailto:` opened without asking — see
@@ -269,6 +274,7 @@ enum FeedbackSheet: Identifiable, Equatable {
         case .contact(let kind): return "contact-\(kind.id)"
         case .paywall: return "paywall"
         case .acknowledgements: return "acknowledgements"
+        case .privacyPolicy: return "privacyPolicy"
         }
     }
 }

@@ -56,6 +56,10 @@ targets:
       - path: CaptionsAI
         excludes:
           - "**/*.md"
+      # The privacy policy ships inside the app too (PrivacyPolicyView), from
+      # the same file the website publishes, so the two cannot disagree.
+      - path: PRIVACY.md
+        buildPhase: resources
     settings:
       base:
         INFOPLIST_FILE: CaptionsAI/Info.plist
