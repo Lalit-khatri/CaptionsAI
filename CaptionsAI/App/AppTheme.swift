@@ -6,21 +6,21 @@ import SwiftUI
 /// links. Caption styles keep their own colours; this never touches what is
 /// burned into a video.
 ///
-/// Midnight (black) is what ships. The others exist so the look can be
+/// Snow (white) is what ships. The others exist so the look can be
 /// compared on a real screen, from the Theme switch that only Debug builds
 /// show in the top-right menu.
 enum AppTheme: String, CaseIterable, Identifiable {
-    /// Charcoal buttons, the icon's yellow for selection. The default.
+    /// Charcoal buttons, the icon's yellow for selection.
     case midnight
     /// The original violet-to-blue.
     case violet
-    /// White buttons with black text.
+    /// White buttons with black text. The default.
     case snow
     case ocean
     case sunset
     case emerald
 
-    static let `default`: AppTheme = .midnight
+    static let `default`: AppTheme = .snow
 
     var id: String { rawValue }
 

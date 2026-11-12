@@ -4,9 +4,14 @@ import XCTest
 final class AppThemeTests: XCTestCase {
     // MARK: - The set
 
-    func testBlackShipsByDefault() {
-        XCTAssertEqual(AppTheme.default, .midnight)
-        XCTAssertEqual(AppTheme.midnight.displayName, "Black")
+    func testWhiteShipsByDefault() {
+        XCTAssertEqual(AppTheme.default, .snow)
+        XCTAssertEqual(AppTheme.snow.displayName, "White")
+    }
+
+    func testWhiteHasBlackLabelsOnItsWhiteButtons() {
+        XCTAssertEqual(AppTheme.snow.gradientHex.first, "#FFFFFF")
+        XCTAssertEqual(AppTheme.snow.onPrimaryHex, "#000000")
     }
 
     func testTheSwitchOffersTheAgreedThemesInOrder() {
@@ -94,12 +99,16 @@ final class AppThemeTests: XCTestCase {
 
     func testAReleaseBuildIgnoresAStoredChoice() {
         defaults.set(AppTheme.sunset.rawValue, forKey: ThemeStore.storageKey)
-        XCTAssertEqual(ThemeStore(defaults: defaults, honoursStoredChoice: false).theme, .midnight)
+        XCTAssertEqual(ThemeStore(defaults: defaults, honoursStoredChoice: false).theme, .snow)
     }
 
-    func testAnUnknownStoredValueFallsBackToBlack() {
+    func testAnUnknownStoredValueFallsBackToWhite() {
         defaults.set("neon", forKey: ThemeStore.storageKey)
-        XCTAssertEqual(ThemeStore(defaults: defaults, honoursStoredChoice: true).theme, .midnight)
+        XCTAssertEqual(ThemeStore(defaults: defaults, honoursStoredChoice: true).theme, .snow)
+    }
+
+    func testANewInstallStartsOnWhite() {
+        XCTAssertEqual(ThemeStore(defaults: defaults, honoursStoredChoice: true).theme, .snow)
     }
 
     func testTheSwitchIsOnlyInDebugBuilds() {
