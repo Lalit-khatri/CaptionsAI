@@ -39,7 +39,7 @@ struct ProcessingView: View {
                     progressBar
                         .tint(
                             LinearGradient(
-                                colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                                colors: AppTheme.current.vividGradient,
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
@@ -137,7 +137,7 @@ struct ProcessingView: View {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(
                         LinearGradient(
-                            colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                            colors: AppTheme.current.vividGradient,
                             startPoint: .bottom,
                             endPoint: .top
                         )

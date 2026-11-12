@@ -336,7 +336,7 @@ struct PaywallView: View {
             }
             .background(
                 LinearGradient(
-                    colors: [Color(hex: "#1A1040").opacity(0.5), Color(uiColor: .systemBackground)],
+                    colors: [AppTheme.current.backdrop[0].opacity(0.5), Color(uiColor: .systemBackground)],
                     startPoint: .top,
                     endPoint: .center
                 )
@@ -424,7 +424,7 @@ struct PaywallView: View {
         VStack(spacing: 8) {
             Image(systemName: "crown.fill")
                 .font(.system(size: 40))
-                .foregroundColor(Color(hex: "#7C3AED"))
+                .foregroundColor(AppTheme.current.accent)
 
             Text("CaptionsAI Pro")
                 .font(.system(size: 32, weight: .bold))
@@ -445,7 +445,7 @@ struct PaywallView: View {
                     .frame(width: 70)
                 Text("Pro")
                     .font(.headline)
-                    .foregroundColor(Color(hex: "#7C3AED"))
+                    .foregroundColor(AppTheme.current.accent)
                     .frame(width: 70)
             }
             .padding(.horizontal, 24)
@@ -528,18 +528,18 @@ struct PaywallView: View {
             Group {
                 if ctaState == .loading || ctaState == .purchasing {
                     ProgressView()
-                        .tint(.white)
+                        .tint(AppTheme.current.onPrimary)
                 } else {
                     Text(Self.ctaTitle(hasFreeTrial: freeTrialName != nil))
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.current.onPrimary)
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(
                 LinearGradient(
-                    colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                    colors: AppTheme.current.gradient,
                     startPoint: .leading,
                     endPoint: .trailing
                 )
@@ -621,7 +621,7 @@ private struct ComparisonRow: View {
                 if proIsGood {
                     Image(systemName: "checkmark")
                         .font(.caption.bold())
-                        .foregroundColor(Color(hex: "#7C3AED"))
+                        .foregroundColor(AppTheme.current.accent)
                 }
                 Text(pro)
                     .font(.subheadline.bold())
@@ -648,10 +648,10 @@ private struct PricingCard: View {
             if let badge {
                 Text(badge)
                     .font(.caption2.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.current.onAccent)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color(hex: "#3B82F6"))
+                    .background(AppTheme.current.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
             }
 
@@ -670,7 +670,7 @@ private struct PricingCard: View {
             Group {
                 if isGradient {
                     LinearGradient(
-                        colors: [Color(hex: "#7C3AED").opacity(0.6), Color(hex: "#3B82F6").opacity(0.6)],
+                        colors: AppTheme.current.gradient.map { $0.opacity(0.6) },
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -682,7 +682,7 @@ private struct PricingCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(isSelected ? Color(hex: "#7C3AED") : Color.gray.opacity(0.3), lineWidth: 2)
+                .stroke(isSelected ? AppTheme.current.accent : Color.gray.opacity(0.3), lineWidth: 2)
         )
     }
 }

@@ -10,7 +10,7 @@ struct OnboardingView: View {
         ZStack {
             // Background gradient
             LinearGradient(
-                colors: [Color(hex: "#1A1040"), Color(hex: "#0F1B3D")],
+                colors: AppTheme.current.backdrop,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -24,7 +24,7 @@ struct OnboardingView: View {
                     .font(.system(size: 80))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                            colors: AppTheme.current.vividGradient,
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -61,12 +61,12 @@ struct OnboardingView: View {
                 } label: {
                     Text("Get Started")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.current.onPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
                             LinearGradient(
-                                colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                                colors: AppTheme.current.gradient,
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
@@ -94,7 +94,7 @@ private struct FeatureRow: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(Color(hex: "#7C3AED"))
+                .foregroundColor(AppTheme.current.accent)
                 .frame(width: 32)
 
             Text(text)

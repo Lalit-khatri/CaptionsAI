@@ -55,7 +55,7 @@ struct PreviewView: View {
                         player?.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600))
                     }
                 }
-                .tint(Color(hex: "#7C3AED"))
+                .tint(AppTheme.current.accent)
 
                 // Time + Play/Pause
                 HStack {
@@ -101,7 +101,7 @@ struct PreviewView: View {
                         .padding(.vertical, 14)
                         .background(
                             LinearGradient(
-                                colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                                colors: AppTheme.current.gradient,
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )

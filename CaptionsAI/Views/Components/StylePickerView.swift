@@ -60,13 +60,13 @@ private struct StyleCard: View {
             }
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color(hex: "#7C3AED") : .clear, lineWidth: 2)
+                    .stroke(isSelected ? AppTheme.current.accent : .clear, lineWidth: 2)
             )
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.caption2)
-                        .foregroundColor(Color(hex: "#7C3AED"))
+                        .foregroundColor(AppTheme.current.accent)
                         .offset(x: 4, y: -4)
                 }
             }

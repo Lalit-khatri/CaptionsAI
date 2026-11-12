@@ -271,12 +271,12 @@ struct EditorView: View {
                 VStack(spacing: 4) {
                     ZStack {
                         Circle()
-                            .fill(Color(hex: "#7C3AED"))
+                            .fill(AppTheme.current.accent)
                             .frame(width: 48, height: 48)
 
                         Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
                             .font(.title3)
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.current.onAccent)
                     }
 
                     Text(viewModel.isPlaying ? "Pause" : "Play")

@@ -122,6 +122,23 @@ struct FeedbackMenuModifier: ViewModifier {
                             // version is.
                             Label(versionLabel, systemImage: FeedbackMail.versionSymbol)
                         }
+
+                        // Design tool for comparing colour schemes on a real
+                        // screen. Compiled into Debug ("CaptionsAI (Dev)")
+                        // builds only; TestFlight and App Store builds are
+                        // Release and never show it.
+                        #if DEBUG
+                        Section {
+                            Picker(selection: themeBinding) {
+                                ForEach(AppTheme.allCases) { theme in
+                                    Text(theme.displayName).tag(theme)
+                                }
+                            } label: {
+                                Label(FeedbackMail.themeTitle, systemImage: FeedbackMail.themeSymbol)
+                            }
+                            .pickerStyle(.menu)
+                        }
+                        #endif
                     } label: {
                         Image(systemName: FeedbackMail.buttonSymbol)
                     }
@@ -197,6 +214,10 @@ struct FeedbackMenuModifier: ViewModifier {
 
     private var appBuild: String {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? Self.unknownValue
+    }
+
+    private var themeBinding: Binding<AppTheme> {
+        Binding(get: { ThemeStore.shared.theme }, set: { ThemeStore.shared.theme = $0 })
     }
 
     private var versionLabel: String {

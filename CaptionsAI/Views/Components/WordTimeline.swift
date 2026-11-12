@@ -129,11 +129,11 @@ private struct WordBlock: View {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color(hex: "#7C3AED") : Color(uiColor: .tertiarySystemBackground))
+                    .fill(isSelected ? AppTheme.current.accent : Color(uiColor: .tertiarySystemBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? Color(hex: "#7C3AED") : .clear, lineWidth: 1.5)
+                    .stroke(isSelected ? AppTheme.current.accent : .clear, lineWidth: 1.5)
             )
     }
 }

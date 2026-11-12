@@ -36,7 +36,7 @@ struct CaptionsAIApp: App {
                 .environment(appState)
                 .environment(storeKitManager)
                 .preferredColorScheme(.dark)
-                .tint(Color(hex: "#7C3AED"))
+                .themedTint()
                 .uiTestContainer(testContainer)
         }
         .modelContainer(for: [Project.self, CaptionSegment.self])

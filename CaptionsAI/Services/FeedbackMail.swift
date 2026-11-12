@@ -127,6 +127,9 @@ enum FeedbackMail {
 
     static let privacyTitle = "Privacy Policy"
     static let acknowledgementsSymbol = "doc.text"
+    /// The Debug-only colour scheme switch.
+    static let themeTitle = "Theme (Dev)"
+    static let themeSymbol = "paintpalette"
 
     /// The read-only "Version 1.0 (7)" row at the bottom of the menu.
     ///

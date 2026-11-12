@@ -122,7 +122,7 @@ struct LanguagePickerView: View {
             if language == selection {
                 Image(systemName: "checkmark")
                     .font(.body.weight(.semibold))
-                    .foregroundColor(Color(hex: "#A78BFA"))
+                    .foregroundColor(AppTheme.current.accentText)
                     .accessibilityLabel("Selected")
             }
         }
@@ -203,7 +203,7 @@ struct DetectedLanguageChip: View {
                     .foregroundColor(.white.opacity(0.6))
                 Text("Change")
                     .fontWeight(.semibold)
-                    .foregroundColor(Color(hex: "#A78BFA"))
+                    .foregroundColor(AppTheme.current.accentText)
             }
             .font(.footnote)
             .foregroundColor(.white)

@@ -148,19 +148,19 @@ struct ImportView: View {
                 HStack {
                     if viewModel.isLoading {
                         ProgressView()
-                            .tint(.white)
+                            .tint(AppTheme.current.onPrimary)
                     } else {
                         Image(systemName: "plus.circle.fill")
                     }
                     Text(viewModel.isLoading ? "Importing..." : "Choose Video")
                 }
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.current.onPrimary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(
                     LinearGradient(
-                        colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                        colors: AppTheme.current.gradient,
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -204,10 +204,10 @@ struct ImportView: View {
                     NavigationLink(value: AppScreen.allProjects) {
                         Text("See All")
                             .font(.subheadline.weight(.semibold))
-                            // #A78BFA rather than the #7C3AED used elsewhere:
-                            // the darker purple is 3.69:1 on black and fails
-                            // the 4.5:1 contrast minimum for body text.
-                            .foregroundColor(Color(hex: "#A78BFA"))
+                            // accentText rather than accent: violet's accent
+                            // is 3.69:1 on black and fails the 4.5:1 contrast
+                            // minimum for body text.
+                            .foregroundColor(AppTheme.current.accentText)
                     }
                 }
             }

@@ -100,7 +100,7 @@ struct StyleSheetView: View {
                         .foregroundColor(.secondary)
 
                     Slider(value: $fontSize, in: Self.fontSizeRange, step: Self.fontSizeStep)
-                        .tint(Color(hex: "#7C3AED"))
+                        .tint(AppTheme.current.accent)
 
                     Image(systemName: "textformat.size.larger")
                         .font(.caption)
@@ -196,11 +196,11 @@ struct StyleSheetView: View {
         } label: {
             Text(title)
                 .font(.subheadline.weight(isSelected ? .semibold : .regular))
-                .foregroundColor(isSelected ? .white : .secondary)
+                .foregroundColor(isSelected ? AppTheme.current.onAccent : .secondary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 6)
                 .background(
-                    Capsule().fill(isSelected ? Color(hex: "#7C3AED") : Color.white.opacity(0.08))
+                    Capsule().fill(isSelected ? AppTheme.current.accent : Color.white.opacity(0.08))
                 )
         }
         .buttonStyle(.plain)
@@ -338,13 +338,13 @@ struct StylePreviewCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(isSelected ? Color(hex: "#7C3AED") : Color.white.opacity(0.12), lineWidth: isSelected ? 2.5 : 1)
+                    .stroke(isSelected ? AppTheme.current.accent : Color.white.opacity(0.12), lineWidth: isSelected ? 2.5 : 1)
             )
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 14))
-                        .foregroundColor(Color(hex: "#7C3AED"))
+                        .foregroundColor(AppTheme.current.accent)
                         .background(Circle().fill(Color.black))
                         .offset(x: 4, y: -4)
                 }
@@ -354,7 +354,7 @@ struct StylePreviewCard: View {
             Text(style.name)
                 .font(.caption2)
                 .fontWeight(isSelected ? .bold : .medium)
-                .foregroundColor(isSelected ? Color(hex: "#A78BFA") : .secondary)
+                .foregroundColor(isSelected ? AppTheme.current.accentText : .secondary)
         }
         // The chip is a swatch, not body copy, and it has to keep the height
         // of the row it scrolls in. Measured with this line removed (and the

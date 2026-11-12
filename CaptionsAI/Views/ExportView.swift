@@ -200,7 +200,7 @@ struct ExportView: View {
 
                 Text(viewModel.estimatedFileSize(videoDuration: videoDuration))
                     .font(.title3.bold())
-                    .foregroundColor(Color(hex: "#7C3AED"))
+                    .foregroundColor(AppTheme.current.accent)
             }
             .padding(16)
             .background(Color(uiColor: .secondarySystemBackground))
@@ -242,12 +242,12 @@ struct ExportView: View {
         } label: {
             Label("Export Video", systemImage: "square.and.arrow.up")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.current.onPrimary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(
                     LinearGradient(
-                        colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                        colors: AppTheme.current.gradient,
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -275,7 +275,7 @@ struct ExportView: View {
                             RoundedRectangle(cornerRadius: 16)
                                 .stroke(Color.white.opacity(0.15), lineWidth: 1)
                         )
-                        .shadow(color: Color(hex: "#7C3AED").opacity(0.35), radius: 16, y: 4)
+                        .shadow(color: AppTheme.current.accent.opacity(0.35), radius: 16, y: 4)
 
                     // Duration badge
                     if videoDuration > 0 {
@@ -300,7 +300,7 @@ struct ExportView: View {
                     .trim(from: 0, to: viewModel.exportEngine.progress)
                     .stroke(
                         LinearGradient(
-                            colors: [Color(hex: "#7C3AED"), Color(hex: "#3B82F6")],
+                            colors: AppTheme.current.vividGradient,
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
@@ -509,7 +509,7 @@ private struct FormatCard: View {
         HStack(spacing: 12) {
             Image(systemName: preset.iconName)
                 .font(.title2)
-                .foregroundColor(isSelected ? Color(hex: "#7C3AED") : .gray)
+                .foregroundColor(isSelected ? AppTheme.current.accent : .gray)
                 .frame(width: 40)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -526,7 +526,7 @@ private struct FormatCard: View {
 
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(Color(hex: "#7C3AED"))
+                    .foregroundColor(AppTheme.current.accent)
             }
         }
         .padding(16)
@@ -534,7 +534,7 @@ private struct FormatCard: View {
         .clipShape(RoundedRectangle(cornerRadius: kCardCornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: kCardCornerRadius)
-                .stroke(isSelected ? Color(hex: "#7C3AED") : .clear, lineWidth: 2)
+                .stroke(isSelected ? AppTheme.current.accent : .clear, lineWidth: 2)
         )
     }
 }

@@ -50,7 +50,7 @@ struct TranscriptSheetView: View {
                     }
                     .listRowBackground(
                         segment.isActive(at: currentPlaybackTime)
-                            ? Color(hex: "#7C3AED").opacity(0.15)
+                            ? AppTheme.current.accent.opacity(0.15)
                             : Color.clear
                     )
                 }
@@ -238,7 +238,7 @@ private struct TranscriptRow: View {
             // Time range
             Text(segment.formattedTimeRange)
                 .font(.caption.monospaced())
-                .foregroundColor(isActive ? Color(hex: "#7C3AED") : .secondary)
+                .foregroundColor(isActive ? AppTheme.current.accent : .secondary)
                 .frame(width: 90, alignment: .leading)
 
             // Caption text
