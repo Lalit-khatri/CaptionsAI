@@ -10,7 +10,7 @@
 
 ## ✨ Features
 
-- **AI-Powered Captions** — Apple's Speech framework, on-device wherever the device and language support it (see [PRIVACY.md](PRIVACY.md))
+- **AI-Powered Captions** — Apple's Speech framework, on-device wherever the device and language support it (see [PRIVACY.md](PRIVACY.md), published at https://lalit-khatri.github.io/captionsai-site/privacy/)
 - **30 Caption Styles** — from Hormozi-style word-by-word highlighting to outlined, boxed, monospaced, serif and hand-lettered looks
 - **Word-by-Word Highlighting** — colour switch, pill box, pop scale, underline and dim-inactive effects
 - **Export Presets** — Instagram Reels / TikTok / Shorts (9:16), YouTube (16:9), Original

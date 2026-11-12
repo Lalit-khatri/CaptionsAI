@@ -207,16 +207,22 @@ struct PaywallView: View {
         string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
     )!
 
-    /// The policy lives in this repository rather than on separate hosting.
+    /// The published policy, on GitHub Pages from the public
+    /// `Lalit-khatri/captionsai-site` repository.
     ///
     /// A privacy policy URL is a mandatory App Store Connect field *and* a
-    /// mandatory in-app link under 3.1.2, and the usual failure is that the
-    /// domain it points at lapses years later while the shipped binary keeps
-    /// pointing at it. Keeping the document next to the code means the link is
-    /// live the moment the commit lands, it is versioned with the behaviour it
-    /// describes, and it cannot rot on its own.
+    /// mandatory in-app link under 3.1.2. It used to point at PRIVACY.md in
+    /// this repository, which only works while the code is public. The site
+    /// repository holds nothing but the public pages, generated from
+    /// PRIVACY.md here (scripts/publish-site.sh), so the code can be private
+    /// and the link still free hosting that cannot lapse with a domain.
     static let privacyPolicyURL = URL(
-        string: "https://github.com/Lalit-khatri/CaptionsAI/blob/main/PRIVACY.md"
+        string: "https://lalit-khatri.github.io/captionsai-site/privacy/"
+    )!
+
+    /// Contact and subscription help, for App Store Connect's Support URL.
+    static let supportURL = URL(
+        string: "https://lalit-khatri.github.io/captionsai-site/support/"
     )!
 
     /// Both documents, as data, so the footer's wiring can be asserted.

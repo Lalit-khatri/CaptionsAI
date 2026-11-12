@@ -15,9 +15,8 @@ import XCTest
 /// What these tests can and cannot do: they pin that two distinct HTTPS
 /// documents are configured and wired into the footer. They cannot fetch
 /// either one, so a URL that returns 404 passes here. The Privacy Policy
-/// therefore points at a file committed to this repository rather than at
-/// hosting that has to be set up separately — the link works the moment the
-/// commit lands, which is the property worth having.
+/// is published on GitHub Pages from a public repository that holds only the
+/// public pages, so the app's own source can be private.
 final class PaywallLegalLinksTests: XCTestCase {
 
     func testBothRequiredDocumentsAreConfiguredOverHTTPS() {
@@ -46,14 +45,14 @@ final class PaywallLegalLinksTests: XCTestCase {
         )
     }
 
-    /// The policy is a file in this repository. That is deliberate: it needs no
-    /// hosting, no DNS and no separate deploy, so the link cannot rot
-    /// independently of the code that points at it.
+    /// The policy is on the CaptionsAI site's GitHub Pages, not in the source
+    /// repository, which stops being readable the moment it is made private.
     func testThePrivacyPolicyIsAConcreteDocumentAndNotAPlaceholder() {
         let address = PaywallView.privacyPolicyURL.absoluteString
-        XCTAssertTrue(
-            address.contains("Lalit-khatri/CaptionsAI"),
-            "The policy should live with the source, not on unowned hosting."
+        XCTAssertEqual(address, "https://lalit-khatri.github.io/captionsai-site/privacy/")
+        XCTAssertFalse(
+            address.contains("github.com/Lalit-khatri/CaptionsAI"),
+            "The policy must not depend on the source repository being public."
         )
         for placeholder in ["example.com", "TODO", "localhost", "yourdomain"] {
             XCTAssertFalse(
